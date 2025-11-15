@@ -1,9 +1,9 @@
 import { useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { 
-  ArrowRight, Users, Shield, Zap, TrendingUp, CheckCircle, MapPin, 
-  Search, FileText, Building2, Globe, Award, Newspaper, 
-  Calendar, Phone, Mail, ExternalLink, BarChart3, Target, 
+  ArrowRight, Users, Zap, TrendingUp, MapPin, 
+  Search, FileText, Building2, Globe, Award, 
+  Calendar, Phone, BarChart3, Target, 
   Heart, Lightbulb, BookOpen, Users2, Briefcase
 } from "lucide-react";
 import { Button } from "../ui/button";
@@ -51,22 +51,22 @@ export function LandingPage() {
     },
   ];
 
-  const benefits = [
-    "Complete transparency in governance",
-    "Direct citizen engagement platform",
-    "Showcase development projects",
-    "Track scheme implementation",
-    "Multi-language support",
-    "Mobile-responsive design",
-  ];
+  // const benefits = [
+  //   "Complete transparency in governance",
+  //   "Direct citizen engagement platform",
+  //   "Showcase development projects",
+  //   "Track scheme implementation",
+  //   "Multi-language support",
+  //   "Mobile-responsive design",
+  // ];
 
 
-  const stats = [
-    { value: "500+", label: "Active Panchayats" },
-    { value: "2.5M+", label: "Citizens Reached" },
-    { value: "8,500+", label: "Schemes Implemented" },
-    { value: "98%", label: "Satisfaction Rate" },
-  ];
+  // const stats = [
+  //   { value: "500+", label: "Active Panchayats" },
+  //   { value: "2.5M+", label: "Citizens Reached" },
+  //   { value: "8,500+", label: "Schemes Implemented" },
+  //   { value: "98%", label: "Satisfaction Rate" },
+  // ];
 
   return (
     <div className="min-h-screen bg-[#F5F5F5]">

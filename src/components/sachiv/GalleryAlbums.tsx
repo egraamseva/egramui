@@ -5,7 +5,7 @@
 
 import { useState, useEffect } from "react";
 import { Plus, Image as ImageIcon, Edit, Trash2, Folder } from "lucide-react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../ui/card";
+import { Card, CardContent } from "../ui/card";
 import { Button } from "../ui/button";
 import { Input } from "../ui/input";
 import { Label } from "../ui/label";

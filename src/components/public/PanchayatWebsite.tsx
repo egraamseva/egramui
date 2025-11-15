@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useParams } from "react-router-dom";
-import { Phone, Mail, MapPin, Calendar, Users, TrendingUp, Download, AlertCircle, Shield, ExternalLink } from "lucide-react";
+import { Phone, Mail, MapPin, Calendar, Users, TrendingUp, Download, AlertCircle, ExternalLink } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../ui/card";
 import { Badge } from "../ui/badge";
 import { Button } from "../ui/button";

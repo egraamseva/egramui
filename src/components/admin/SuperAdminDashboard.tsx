@@ -11,7 +11,6 @@ import {
   Building2,
   BarChart3,
   FileText,
-  Settings,
   Plus,
   Search,
   Filter,
@@ -35,7 +34,7 @@ import {
   TableRow,
 } from "../ui/table";
 import { Badge } from "../ui/badge";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "../ui/tabs";
+// import { Tabs, TabsContent, TabsList, TabsTrigger } from "../ui/tabs";
 import {
   DropdownMenu,
   DropdownMenuContent,

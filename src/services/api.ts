@@ -26,7 +26,6 @@ import type {
   EngagementStats,
   SuperAdminPanchayat,
   AuditLog,
-  PostWithStatus,
   UserStatus,
   PanchayatStatus,
 } from '../types';
@@ -357,7 +356,7 @@ const mockData = {
       name: 'Rajesh Sharma',
       email: 'sachiv@ramnagar.egramseva.gov.in',
       role: 'Panchayat Sachiv',
-      status: 'active' as const,
+      status: 'active' as UserStatus,
       createdAt: '2024-06-01T00:00:00Z',
       lastActive: '2025-01-15T09:00:00Z',
     },
@@ -844,7 +843,7 @@ export const analyticsAPI = {
     };
   },
 
-  getPageViews: async (panchayatId: string): Promise<PageView[]> => {
+  getPageViews: async (_panchayatId: string): Promise<PageView[]> => {
     await delay(800);
     const dates = Array.from({ length: 30 }, (_, i) => {
       const date = new Date();
@@ -1025,7 +1024,7 @@ export const superAdminAPI = {
     await delay(600);
     const user = mockData.adminUsers.find((u) => u.id === id);
     if (!user) throw new Error('User not found');
-    user.status = status;
+    (user as AdminUser).status = status;
     return user;
   },
 
@@ -1079,10 +1078,11 @@ export const teamAPI = {
       name: data.name,
       email: data.email,
       role: data.role,
-      status: 'active',
+      status: 'active' as UserStatus,
       createdAt: new Date().toISOString(),
+      lastActive: undefined,
     };
-    mockData.teamMembers.push(newMember);
+    (mockData.teamMembers as TeamMember[]).push(newMember);
     return newMember;
   },
 
@@ -1103,7 +1103,7 @@ export const teamAPI = {
     await delay(600);
     const member = mockData.teamMembers.find((tm) => tm.id === userId);
     if (!member) throw new Error('Team member not found');
-    member.status = status;
+    (member as TeamMember).status = status;
     return member;
   },
 };
@@ -1118,7 +1118,7 @@ export const documentsAPI = {
       id: `doc-${Date.now()}`,
       panchayatId,
       title: data.title,
-      description: data.description,
+      description: data.description || undefined,
       category: data.category,
       fileUrl: URL.createObjectURL(file),
       fileName: file.name,
@@ -1128,7 +1128,7 @@ export const documentsAPI = {
       uploadedAt: new Date().toISOString(),
       isPublic: data.isPublic,
     };
-    mockData.documents.push(newDoc);
+    (mockData.documents as Document[]).push(newDoc);
     return newDoc;
   },
 
@@ -1181,12 +1181,12 @@ export const commentsAPI = {
       postId,
       panchayatId,
       author: data.author,
-      authorEmail: data.authorEmail,
+      authorEmail: data.authorEmail || undefined,
       content: data.content,
       status: 'pending',
       createdAt: new Date().toISOString(),
     };
-    mockData.comments.push(newComment);
+    (mockData.comments as Comment[]).push(newComment);
     // Update post comment count
     const post = mockData.posts.find((p) => p.id === postId);
     if (post) post.comments += 1;
@@ -1225,13 +1225,13 @@ export const albumsAPI = {
       id: `album-${Date.now()}`,
       panchayatId,
       title: data.title,
-      description: data.description,
-      coverImage: data.coverImage,
+      description: data.description || undefined,
+      coverImage: data.coverImage || undefined,
       imageCount: 0,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     };
-    mockData.albums.push(newAlbum);
+    (mockData.albums as Album[]).push(newAlbum);
     return newAlbum;
   },
 
@@ -1287,9 +1287,9 @@ export const settingsAPI = {
     await delay(1000);
     const index = mockData.settings.findIndex((s) => s.panchayatId === panchayatId);
     if (index === -1) throw new Error('Settings not found');
-    mockData.settings[index].hero = hero;
+    (mockData.settings[index] as PanchayatSettings).hero = hero;
     mockData.settings[index].updatedAt = new Date().toISOString();
-    return mockData.settings[index];
+    return mockData.settings[index] as PanchayatSettings;
   },
 
   updateAbout: async (panchayatId: string, about: PanchayatSettings['about']): Promise<PanchayatSettings> => {
@@ -1314,9 +1314,9 @@ export const settingsAPI = {
     await delay(2000);
     const index = mockData.settings.findIndex((s) => s.panchayatId === panchayatId);
     if (index === -1) throw new Error('Settings not found');
-    mockData.settings[index].logo = URL.createObjectURL(file);
+    (mockData.settings[index] as PanchayatSettings).logo = URL.createObjectURL(file);
     mockData.settings[index].updatedAt = new Date().toISOString();
-    return mockData.settings[index];
+    return mockData.settings[index] as PanchayatSettings;
   },
 
   uploadHeroImage: async (panchayatId: string, file: File): Promise<PanchayatSettings> => {
@@ -1337,17 +1337,18 @@ export const authAPIEnhanced = {
   
   register: async (data: { name: string; email: string; password: string; panchayatId: string }) => {
     await delay(1500);
-    const newUser = {
+    const newUser: AdminUser = {
       id: `user-${Date.now()}`,
       email: data.email,
       name: data.name,
       role: 'panchayat_admin' as const,
       panchayatId: data.panchayatId,
       panchayatName: 'New Panchayat',
-      status: 'active' as const,
+      status: 'active' as UserStatus,
       createdAt: new Date().toISOString(),
+      lastLogin: undefined,
     };
-    mockData.adminUsers.push(newUser);
+    (mockData.adminUsers as AdminUser[]).push(newUser);
     const { password: _, ...userWithoutPassword } = newUser as any;
     const token = `mock-token-${newUser.id}-${Date.now()}`;
     return { user: userWithoutPassword, token };
@@ -1363,7 +1364,7 @@ export const authAPIEnhanced = {
     return { success: true, message: 'Password reset link sent to your email.' };
   },
 
-  resetPassword: async (token: string, newPassword: string) => {
+  resetPassword: async (_token: string, _newPassword: string) => {
     await delay(1000);
     // In real implementation, validate token
     return { success: true, message: 'Password reset successfully.' };
@@ -1380,7 +1381,7 @@ export const authAPIEnhanced = {
     return user;
   },
 
-  changePassword: async (currentPassword: string, newPassword: string) => {
+  changePassword: async (_currentPassword: string, _newPassword: string) => {
     await delay(800);
     const token = localStorage.getItem('authToken');
     if (!token) throw new Error('Not authenticated');
@@ -1436,7 +1437,7 @@ export const schemesAPIEnhanced = {
     await delay(600);
     const scheme = mockData.schemes.find((s) => s.id === id);
     if (!scheme) throw new Error('Scheme not found');
-    scheme.status = status;
+    (scheme as Scheme).status = status as Scheme['status'];
     return scheme;
   },
 };

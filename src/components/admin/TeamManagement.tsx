@@ -4,7 +4,7 @@
  */
 
 import { useState, useEffect } from "react";
-import { Plus, X, Mail, User, Shield, Trash2, MoreVertical } from "lucide-react";
+import { Plus, Shield, Trash2, MoreVertical } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../ui/card";
 import { Button } from "../ui/button";
 import { Input } from "../ui/input";

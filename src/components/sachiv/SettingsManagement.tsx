@@ -4,7 +4,7 @@
  */
 
 import { useState, useEffect } from "react";
-import { Upload, Save, Image as ImageIcon, Building2, Mail, Phone, MapPin, X } from "lucide-react";
+import { Upload, Save, Mail, Phone, MapPin, X } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../ui/card";
 import { Button } from "../ui/button";
 import { Input } from "../ui/input";

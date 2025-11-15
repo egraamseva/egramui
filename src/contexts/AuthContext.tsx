@@ -37,7 +37,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     
     if (token && storedUser) {
       try {
-        setUser(JSON.parse(storedUser));
+        const parsedUser = JSON.parse(storedUser) as User;
+        setUser(parsedUser);
       } catch (error) {
         console.error('Error parsing user data:', error);
         localStorage.removeItem('authToken');
@@ -51,9 +52,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       setLoading(true);
       const { user: userData, token } = await authAPI.login(email, password);
+      
+      // Map role to match User interface type
+      const mappedRole = 
+        userData.role === 'Panchayat Sachiv' || userData.role === 'panchayat_admin' 
+          ? 'panchayat_admin' 
+          : userData.role === 'super_admin' 
+          ? 'super_admin' 
+          : 'user';
+      
+      const user: User = {
+        ...userData,
+        role: mappedRole as "super_admin" | "panchayat_admin" | "user",
+      };
+      
       localStorage.setItem('authToken', token);
-      localStorage.setItem('user', JSON.stringify(userData));
-      setUser(userData);
+      localStorage.setItem('user', JSON.stringify(user));
+      setUser(user);
       toast.success('Login successful!');
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Login failed';
