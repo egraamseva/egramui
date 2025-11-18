@@ -7,6 +7,7 @@ import { AppRoutes } from "./routes";
 import { useLocalStorage } from "./hooks/useLocalStorage";
 import type { Language } from "./types";
 import { Header } from "./components/main/Header";
+import "./utils/testAPI"; // Load test API for browser console testing
 
 function AppContent() {
   const location = useLocation();

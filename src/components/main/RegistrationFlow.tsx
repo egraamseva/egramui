@@ -13,6 +13,10 @@ import { panchayatAPI } from "../../services/api";
 import { toast } from "sonner";
 import type { RegistrationFormData } from "../../types";
 
+// Debug: Log panchayatAPI to verify register method exists
+console.log('panchayatAPI:', panchayatAPI);
+console.log('panchayatAPI.register:', panchayatAPI.register);
+
 export function RegistrationFlow() {
   const navigate = useNavigate();
   const [step, setStep] = useState(1);
@@ -23,6 +27,8 @@ export function RegistrationFlow() {
     email: "",
     phone: "",
     designation: "",
+    password: "",
+    confirmPassword: "",
     // Panchayat Details
     panchayatName: "",
     district: "",
@@ -61,6 +67,24 @@ export function RegistrationFlow() {
   const handleSubmit = async () => {
     if (!formData.acceptTerms) {
       toast.error("Please accept the terms and conditions");
+      return;
+    }
+
+    // Validate password
+    if (!formData.password || formData.password.length < 8) {
+      toast.error("Password must be at least 8 characters long");
+      return;
+    }
+
+    if (formData.password !== formData.confirmPassword) {
+      toast.error("Passwords do not match");
+      return;
+    }
+
+    // Validate password strength
+    const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]/;
+    if (!passwordRegex.test(formData.password)) {
+      toast.error("Password must contain uppercase, lowercase, number, and special character");
       return;
     }
 
@@ -197,6 +221,31 @@ export function RegistrationFlow() {
                       placeholder="+91 XXXXX XXXXX"
                       value={formData.phone}
                       onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                    />
+                  </div>
+                </div>
+                <div className="grid gap-6 md:grid-cols-2">
+                  <div className="space-y-2">
+                    <Label htmlFor="password">Password *</Label>
+                    <Input
+                      id="password"
+                      type="password"
+                      placeholder="Enter password"
+                      value={formData.password}
+                      onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                    />
+                    <p className="text-xs text-gray-500">
+                      Must be 8+ characters with uppercase, lowercase, number & special character
+                    </p>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="confirmPassword">Confirm Password *</Label>
+                    <Input
+                      id="confirmPassword"
+                      type="password"
+                      placeholder="Confirm password"
+                      value={formData.confirmPassword}
+                      onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}
                     />
                   </div>
                 </div>

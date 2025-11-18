@@ -29,7 +29,7 @@ export function ForgotPassword() {
 
     setLoading(true);
     try {
-      await authAPIEnhanced.forgotPassword(email);
+      await authAPIEnhanced.forgotPassword({ email });
       setSuccess(true);
       toast.success("Password reset link sent to your email");
     } catch (error) {

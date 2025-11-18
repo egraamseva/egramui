@@ -1,4 +1,5 @@
 import { Facebook, Twitter, Youtube, Mail, Phone, MapPin, ExternalLink } from "lucide-react";
+import { Link } from "react-router-dom";
 
 interface FooterProps {
   variant?: "platform" | "panchayat";
@@ -58,24 +59,45 @@ export function Footer({ variant = "platform" }: FooterProps) {
             <h4 className="mb-4 text-base font-semibold text-white">Quick Links</h4>
             <ul className="space-y-2 text-sm">
               <li>
-                <a href="#" className="text-white/80 transition-colors hover:text-white">
+                <Link to="/" className="text-white/80 transition-colors hover:text-white">
                   Home
-                </a>
+                </Link>
               </li>
               <li>
-                <a href="#" className="text-white/80 transition-colors hover:text-white">
-                  {variant === "platform" ? "Register" : "Schemes"}
-                </a>
+                {variant === "platform" ? (
+                  <Link to="/registration" className="text-white/80 transition-colors hover:text-white">
+                    Register
+                  </Link>
+                ) : (
+                  <button onClick={() => {
+                    const element = document.querySelector('#schemes');
+                    if (element) element.scrollIntoView({ behavior: 'smooth' });
+                  }} className="text-white/80 transition-colors hover:text-white bg-transparent border-none cursor-pointer">
+                    Schemes
+                  </button>
+                )}
               </li>
               <li>
-                <a href="#" className="text-white/80 transition-colors hover:text-white">
-                  {variant === "platform" ? "Panchayats" : "Projects"}
-                </a>
+                {variant === "platform" ? (
+                  <Link to="/panchayats" className="text-white/80 transition-colors hover:text-white">
+                    Panchayats
+                  </Link>
+                ) : (
+                  <button onClick={() => {
+                    const element = document.querySelector('#projects');
+                    if (element) element.scrollIntoView({ behavior: 'smooth' });
+                  }} className="text-white/80 transition-colors hover:text-white bg-transparent border-none cursor-pointer">
+                    Projects
+                  </button>
+                )}
               </li>
               <li>
-                <a href="#" className="text-white/80 transition-colors hover:text-white">
+                <button onClick={() => {
+                  const element = document.querySelector('#contact');
+                  if (element) element.scrollIntoView({ behavior: 'smooth' });
+                }} className="text-white/80 transition-colors hover:text-white bg-transparent border-none cursor-pointer">
                   Contact
-                </a>
+                </button>
               </li>
               <li>
                 <a href="#" className="text-white/80 transition-colors hover:text-white">

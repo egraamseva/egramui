@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useParams } from "react-router-dom";
+import { useParams, Link } from "react-router-dom";
 import { Phone, Mail, MapPin, Calendar, Users, TrendingUp, Download, AlertCircle, ExternalLink } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../ui/card";
 import { Badge } from "../ui/badge";
@@ -141,11 +141,11 @@ export function PanchayatWebsite() {
           <nav className="mb-4 text-sm text-[#666]" aria-label="Breadcrumb">
             <ol className="flex items-center gap-2">
               <li>
-                <a href="/" className="hover:text-[#E31E24] transition-colors">Home</a>
+                <Link to="/" className="hover:text-[#E31E24] transition-colors">Home</Link>
               </li>
               <li>/</li>
               <li>
-                <a href="#" className="hover:text-[#E31E24] transition-colors">Panchayats</a>
+                <Link to="/panchayats" className="hover:text-[#E31E24] transition-colors">Panchayats</Link>
               </li>
               <li>/</li>
               <li className="text-[#1B2B5E] font-medium">

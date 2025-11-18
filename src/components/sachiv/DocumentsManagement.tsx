@@ -59,8 +59,12 @@ export function DocumentsManagement({ panchayatId }: DocumentsManagementProps) {
   const fetchDocuments = async () => {
     setLoading(true);
     try {
-      const data = await documentsAPI.getAll(panchayatId, categoryFilter !== "all" ? categoryFilter : undefined);
-      setDocuments(data);
+      const data = await documentsAPI.getAll(panchayatId);
+      // Filter by category on the client side if needed
+      const filteredData = categoryFilter !== "all"
+        ? data.filter(doc => doc.category === categoryFilter)
+        : data;
+      setDocuments(filteredData);
     } catch (error) {
       toast.error("Failed to load documents");
     } finally {

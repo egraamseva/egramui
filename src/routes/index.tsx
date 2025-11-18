@@ -6,6 +6,7 @@
 import { Routes, Route, Navigate } from 'react-router-dom';
 
 import { SuccessPage } from '../pages/SuccessPage';
+import { TestAPIPage } from '../pages/TestAPIPage';
 import { LandingPage } from '@/components/main/LandingPage';
 import { RegistrationFlow } from '@/components/main/RegistrationFlow';
 import { PanchayatWebsite } from '@/components/public/PanchayatWebsite';
@@ -30,6 +31,7 @@ export function AppRoutes() {
       <Route path="/forgot-password" element={<ForgotPassword />} />
       <Route path="/reset-password" element={<ResetPassword />} />
       <Route path="/success" element={<SuccessPage />} />
+      <Route path="/test-api" element={<TestAPIPage />} />
 
       {/* Protected Routes */}
       <Route

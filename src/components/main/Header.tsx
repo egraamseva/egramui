@@ -1,4 +1,4 @@
-import { Link, useLocation } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { Menu, Globe, User, Search, Calendar, Accessibility } from "lucide-react";
 import { Button } from "../ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "../ui/sheet";
@@ -22,13 +22,37 @@ export function Header({ variant = "platform", panchayatName, onLanguageChange }
 
   const {user} = useAuth();
   const location = useLocation();
-  
+  const navigate = useNavigate();
+
   // Don't show header if user is authenticated OR if on dashboard/admin routes
   if (user !== null || location.pathname === '/admin' || location.pathname === '/dashboard') {
     return null;
   }
-  
-  const navigationItems = variant === "platform" 
+
+  const handleNavClick = (href: string) => {
+    // For hash links, navigate to home page first if not already there
+    if (href.startsWith('#')) {
+      // If we're on the landing page, just scroll
+      if (location.pathname === '/') {
+        const element = document.querySelector(href);
+        if (element) {
+          element.scrollIntoView({ behavior: 'smooth' });
+        }
+      } else {
+        // Navigate to home page with hash
+        navigate(`/${href}`);
+        // After navigation, scroll to the section
+        setTimeout(() => {
+          const element = document.querySelector(href);
+          if (element) {
+            element.scrollIntoView({ behavior: 'smooth' });
+          }
+        }, 100);
+      }
+    }
+  };
+
+  const navigationItems = variant === "platform"
     ? [
         { label: "Home", href: "#home" },
         { label: "Features", href: "#features" },
@@ -50,7 +74,7 @@ export function Header({ variant = "platform", panchayatName, onLanguageChange }
       <div className="container mx-auto px-4 lg:px-8">
         <div className="flex h-16 items-center justify-between">
           {/* Logo and Brand */}
-          <div className="flex items-center gap-3">
+          <Link to="/" className="flex items-center gap-3 hover:opacity-80 transition-opacity">
             <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-gradient-to-br from-[#FF9933] via-white to-[#138808] p-[2px]">
               <div className="flex h-full w-full items-center justify-center rounded-md bg-white">
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
@@ -70,18 +94,18 @@ export function Header({ variant = "platform", panchayatName, onLanguageChange }
                 </p>
               )}
             </div>
-          </div>
+          </Link>
 
           {/* Desktop Navigation */}
           <nav className="hidden items-center gap-6 md:flex">
             {navigationItems.map((item) => (
-              <a
+              <button
                 key={item.label}
-                href={item.href}
-                className="text-sm font-medium text-[#333] transition-colors hover:text-[#E31E24]"
+                onClick={() => handleNavClick(item.href)}
+                className="text-sm font-medium text-[#333] transition-colors hover:text-[#E31E24] cursor-pointer bg-transparent border-none"
               >
                 {item.label}
-              </a>
+              </button>
             ))}
           </nav>
 
@@ -144,13 +168,13 @@ export function Header({ variant = "platform", panchayatName, onLanguageChange }
               <SheetContent side="right" className="w-[300px] sm:w-[400px]">
                 <nav className="flex flex-col gap-4 pt-8">
                   {navigationItems.map((item) => (
-                    <a
+                    <button
                       key={item.label}
-                      href={item.href}
-                      className="border-b border-[#E5E5E5] pb-3 text-base font-medium text-[#333] transition-colors hover:text-[#E31E24]"
+                      onClick={() => handleNavClick(item.href)}
+                      className="border-b border-[#E5E5E5] pb-3 text-base font-medium text-[#333] transition-colors hover:text-[#E31E24] text-left bg-transparent border-none w-full cursor-pointer"
                     >
                       {item.label}
-                    </a>
+                    </button>
                   ))}
                   {variant === "platform" && (
                     <Button 

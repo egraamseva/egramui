@@ -71,7 +71,7 @@ export function LandingPage() {
   return (
     <div className="min-h-screen bg-[#F5F5F5]">
       {/* Hero Section with Gradient Overlay */}
-      <section className="relative min-h-[500px] overflow-hidden bg-gradient-to-br from-[#1B2B5E] via-[#2A3F6F] to-[#6C5CE7]">
+      <section id="home" className="relative min-h-[500px] overflow-hidden bg-gradient-to-br from-[#1B2B5E] via-[#2A3F6F] to-[#6C5CE7]">
         <div className="absolute inset-0 bg-black/30" />
         <div className="container relative mx-auto px-4 py-20 lg:px-8 lg:py-32">
           <div className="mx-auto max-w-4xl text-center">
@@ -384,7 +384,7 @@ export function LandingPage() {
       </section>
 
       {/* MyGov Connect Section - Red/Gradient */}
-      <section className="bg-gradient-to-r from-[#E31E24] to-[#DC143C] py-16 text-white lg:py-24">
+      <section id="about" className="bg-gradient-to-r from-[#E31E24] to-[#DC143C] py-16 text-white lg:py-24">
         <div className="container mx-auto px-4 lg:px-8">
           <div className="mb-12 text-center">
             <h2 className="mb-4 text-3xl font-bold text-white">MyGov Connect</h2>
@@ -411,7 +411,7 @@ export function LandingPage() {
       </section>
 
       {/* CTA Section */}
-      <section className="bg-white py-16">
+      <section id="contact" className="bg-white py-16">
         <div className="container mx-auto px-4 text-center lg:px-8">
           <h2 className="mb-4 text-3xl font-bold text-[#1B2B5E]">
             Ready to Get Started?

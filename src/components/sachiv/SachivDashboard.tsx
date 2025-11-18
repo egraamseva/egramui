@@ -137,11 +137,9 @@ export function SachivDashboard() {
     
     try {
       const newPost = await postsAPI.create({
-        panchayatId: user.panchayatId,
-        author: user.name,
-        authorRole: user.role,
-        content: postData.content,
-        media: postData.media,
+        title: postData.content.substring(0, 100), // Use first 100 chars as title
+        bodyText: postData.content,
+        mediaUrl: postData.media?.[0]?.url,
       });
       setPosts([newPost, ...posts]);
       toast.success("Post published successfully!");

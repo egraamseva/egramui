@@ -61,7 +61,7 @@ export function CommentsManagement({ panchayatId }: CommentsManagementProps) {
 
   const handleApprove = async (postId: string, commentId: string) => {
     try {
-      await commentsAPI.approve(postId, commentId);
+      await commentsAPI.approve(postId, parseInt(commentId));
       toast.success("Comment approved");
       fetchComments(postId);
       fetchPosts();
@@ -74,7 +74,7 @@ export function CommentsManagement({ panchayatId }: CommentsManagementProps) {
     if (!confirm("Are you sure you want to delete this comment?")) return;
 
     try {
-      await commentsAPI.delete(postId, commentId);
+      await commentsAPI.delete(postId, parseInt(commentId));
       toast.success("Comment deleted");
       fetchComments(postId);
       fetchPosts();

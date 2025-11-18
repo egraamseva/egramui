@@ -50,6 +50,8 @@ export function TeamManagement({ panchayatId }: TeamManagementProps) {
   const [formData, setFormData] = useState({
     name: "",
     email: "",
+    phone: "",
+    password: "",
     role: "",
   });
 
@@ -71,16 +73,21 @@ export function TeamManagement({ panchayatId }: TeamManagementProps) {
 
   const handleAddMember = async (e?: React.FormEvent) => {
     e?.preventDefault();
-    if (!formData.name || !formData.email || !formData.role) {
-      toast.error("Please fill all fields");
+    if (!formData.name || !formData.email || !formData.phone || !formData.password) {
+      toast.error("Please fill all required fields");
       return;
     }
 
     try {
-      await teamAPI.addMember(panchayatId, formData);
+      await teamAPI.addMember(panchayatId, {
+        name: formData.name,
+        email: formData.email,
+        phone: formData.phone,
+        password: formData.password,
+      });
       toast.success("Team member added successfully");
       setIsDialogOpen(false);
-      setFormData({ name: "", email: "", role: "" });
+      setFormData({ name: "", email: "", phone: "", password: "", role: "" });
       fetchMembers();
     } catch (error: any) {
       toast.error(error.message || "Failed to add team member");
@@ -250,7 +257,27 @@ export function TeamManagement({ panchayatId }: TeamManagementProps) {
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="role">Role</Label>
+              <Label htmlFor="phone">Phone</Label>
+              <Input
+                id="phone"
+                type="tel"
+                placeholder="Enter phone number"
+                value={formData.phone}
+                onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="password">Password</Label>
+              <Input
+                id="password"
+                type="password"
+                placeholder="Enter password"
+                value={formData.password}
+                onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="role">Role (Optional)</Label>
               <Select value={formData.role} onValueChange={(value) => setFormData({ ...formData, role: value })}>
                 <SelectTrigger>
                   <SelectValue placeholder="Select role" />
@@ -265,19 +292,19 @@ export function TeamManagement({ panchayatId }: TeamManagementProps) {
             </div>
           </div>
           <DialogFooter>
-            <Button 
-              variant="outline" 
+            <Button
+              variant="outline"
               type="button"
               onClick={() => {
                 setIsDialogOpen(false);
-                setFormData({ name: "", email: "", role: "" });
+                setFormData({ name: "", email: "", phone: "", password: "", role: "" });
               }}
             >
               Cancel
             </Button>
-            <Button 
+            <Button
               type="button"
-              onClick={(e) => handleAddMember(e)} 
+              onClick={(e) => handleAddMember(e)}
               disabled={isMaxReached}
             >
               Add Member

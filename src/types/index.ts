@@ -117,6 +117,8 @@ export interface RegistrationFormData {
   email: string;
   phone: string;
   designation: string;
+  password: string;
+  confirmPassword: string;
   // Panchayat Details
   panchayatName: string;
   district: string;

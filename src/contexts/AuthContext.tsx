@@ -1,11 +1,13 @@
 /**
  * Authentication Context
- * Manages user authentication state
+ * Manages user authentication state using Redux
  */
 
-import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { authAPI } from '../services/api';
+import { createContext, useContext, useEffect, ReactNode } from 'react';
+import { useAppDispatch, useAppSelector } from '../store/hooks';
+import { login as loginAction, logout as logoutAction, getCurrentUser } from '../store/slices/authSlice';
 import { toast } from 'sonner';
+import type { User as ApiUser } from '../types/api';
 
 interface User {
   id: string;
@@ -26,69 +28,59 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+// Helper function to map API user to context user
+const mapApiUserToContextUser = (apiUser: ApiUser): User => {
+  const mappedRole =
+    apiUser.role === 'PANCHAYAT_ADMIN'
+      ? 'panchayat_admin'
+      : apiUser.role === 'SUPER_ADMIN'
+      ? 'super_admin'
+      : 'user';
+
+  return {
+    id: apiUser.userId.toString(),
+    email: apiUser.email,
+    name: apiUser.name,
+    role: mappedRole as "super_admin" | "panchayat_admin" | "user",
+    panchayatId: apiUser.panchayatId?.toString(),
+    panchayatName: apiUser.panchayatName,
+  };
+};
+
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<User | null>(null);
-  const [loading, setLoading] = useState(true);
+  const dispatch = useAppDispatch();
+  const { user: reduxUser, loading, isAuthenticated } = useAppSelector((state) => state.auth);
+
+  // Map Redux user to context user format
+  const user = reduxUser ? mapApiUserToContextUser(reduxUser) : null;
 
   useEffect(() => {
-    // Check for existing session
+    // Check for existing session and fetch current user
     const token = localStorage.getItem('authToken');
-    const storedUser = localStorage.getItem('user');
-    
-    if (token && storedUser) {
-      try {
-        const parsedUser = JSON.parse(storedUser) as User;
-        setUser(parsedUser);
-      } catch (error) {
-        console.error('Error parsing user data:', error);
-        localStorage.removeItem('authToken');
-        localStorage.removeItem('user');
-      }
+    if (token && !reduxUser) {
+      dispatch(getCurrentUser());
     }
-    setLoading(false);
-  }, []);
+  }, [dispatch, reduxUser]);
 
   const login = async (email: string, password: string) => {
     try {
-      setLoading(true);
-      const { user: userData, token } = await authAPI.login(email, password);
-      
-      // Map role to match User interface type
-      const mappedRole = 
-        userData.role === 'Panchayat Sachiv' || userData.role === 'panchayat_admin' 
-          ? 'panchayat_admin' 
-          : userData.role === 'super_admin' 
-          ? 'super_admin' 
-          : 'user';
-      
-      const user: User = {
-        ...userData,
-        role: mappedRole as "super_admin" | "panchayat_admin" | "user",
-      };
-      
-      localStorage.setItem('authToken', token);
-      localStorage.setItem('user', JSON.stringify(user));
-      setUser(user);
+      await dispatch(loginAction({ email, password })).unwrap();
       toast.success('Login successful!');
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Login failed';
+      const message = typeof error === 'string' ? error : 'Login failed';
       toast.error(message);
       throw error;
-    } finally {
-      setLoading(false);
     }
   };
 
   const logout = async () => {
     try {
-      setLoading(true);
-      await authAPI.logout();
-      setUser(null);
+      await dispatch(logoutAction()).unwrap();
       toast.success('Logged out successfully');
     } catch (error) {
       console.error('Logout error:', error);
-    } finally {
-      setLoading(false);
+      // Still clear local state even if API call fails
+      toast.success('Logged out successfully');
     }
   };
 
@@ -99,7 +91,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         loading,
         login,
         logout,
-        isAuthenticated: !!user,
+        isAuthenticated,
       }}
     >
       {children}

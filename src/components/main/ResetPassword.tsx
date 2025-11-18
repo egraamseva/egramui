@@ -43,7 +43,7 @@ export function ResetPassword() {
 
     setLoading(true);
     try {
-      await authAPIEnhanced.resetPassword(token, password);
+      await authAPIEnhanced.resetPassword({ token, password });
       toast.success("Password reset successfully");
       navigate("/login");
     } catch (error) {
