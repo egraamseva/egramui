@@ -95,7 +95,7 @@ export function DocumentsManagement({ panchayatId }: DocumentsManagementProps) {
     if (!confirm("Are you sure you want to delete this document?")) return;
 
     try {
-      await documentsAPI.delete(id);
+      await documentsAPI.delete(panchayatId, id);
       toast.success("Document deleted successfully");
       fetchDocuments();
     } catch (error) {

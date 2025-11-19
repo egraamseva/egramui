@@ -289,8 +289,8 @@ export interface EngagementStats {
 // Super Admin Types
 export interface SuperAdminPanchayat {
   id: string;
-  name: string;
-  subdomain: string;
+  panchayatName: string;
+  slug: string;
   district: string;
   state: string;
   status: PanchayatStatus;

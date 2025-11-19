@@ -43,9 +43,9 @@ import {
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../ui/select";
 import { toast } from "sonner";
 import { useAuth } from "../../contexts/AuthContext";
-import { superAdminAPI } from "../../services/api";
 import type { SuperAdminPanchayat, AdminUser, AuditLog, PanchayatStatus } from "../../types";
 import { formatTimeAgo } from "../../utils/format";
+import { superAdminAPI } from "@/services/api.old";
 
 export function SuperAdminDashboard() {
   const navigate = useNavigate();
@@ -85,6 +85,7 @@ export function SuperAdminDashboard() {
       ]);
 
       setPanchayats(panchayatsData);
+      console.log(panchayatsData);
       setUsers(usersData);
       setAnalytics(analyticsData);
       setAuditLogs(logsData);
@@ -401,8 +402,8 @@ export function SuperAdminDashboard() {
                       <TableBody>
                         {panchayats.map((panchayat) => (
                           <TableRow key={panchayat.id}>
-                            <TableCell className="font-medium">{panchayat.name}</TableCell>
-                            <TableCell>{panchayat.subdomain}</TableCell>
+                            <TableCell className="font-medium">{panchayat.panchayatName}</TableCell>
+                            <TableCell>{panchayat.slug}</TableCell>
                             <TableCell>{panchayat.district}, {panchayat.state}</TableCell>
                             <TableCell>{panchayat.adminCount}</TableCell>
                             <TableCell>

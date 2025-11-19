@@ -81,7 +81,7 @@ export function GalleryAlbums({ panchayatId }: GalleryAlbumsProps) {
     }
 
     try {
-      await albumsAPI.update(editingAlbum.id, formData);
+      await albumsAPI.update(panchayatId,editingAlbum.id, formData);
       toast.success("Album updated successfully");
       closeDialog();
       fetchAlbums();
@@ -94,7 +94,7 @@ export function GalleryAlbums({ panchayatId }: GalleryAlbumsProps) {
     if (!confirm("Are you sure you want to delete this album?")) return;
 
     try {
-      await albumsAPI.delete(id);
+      await albumsAPI.delete(panchayatId, id);
       toast.success("Album deleted successfully");
       fetchAlbums();
     } catch (error) {
