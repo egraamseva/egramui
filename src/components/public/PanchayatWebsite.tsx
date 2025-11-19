@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useParams, Link } from "react-router-dom";
-import { Phone, Mail, MapPin, Calendar, Users, TrendingUp, Download, AlertCircle, ExternalLink } from "lucide-react";
+import { Phone, Mail, MapPin, Calendar, Users, TrendingUp, Download, AlertCircle, ExternalLink, Loader2 } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../ui/card";
 import { Badge } from "../ui/badge";
 import { Button } from "../ui/button";
@@ -12,7 +12,7 @@ import { Textarea } from "../ui/textarea";
 import { Label } from "../ui/label";
 import { ImageWithFallback } from "../figma/ImageWithFallback";
 import { PostCard } from "../sachiv/PostCard";
-import { panchayatAPI, postsAPI, schemesAPI, announcementsAPI, membersAPI, galleryAPI, projectsAPI } from "../../services/api";
+import { panchayatAPI, publicAPI } from "../../services/api";
 import type { Post, Scheme, Announcement, PanchayatMember, GalleryItem, Project, PanchayatDetails } from "../../types";
 import { formatTimeAgo } from "../../utils/format";
 
@@ -49,36 +49,171 @@ export function PanchayatWebsite() {
       const panchayatData = await panchayatAPI.getBySubdomain(subdomainToUse);
       setPanchayat(panchayatData);
       
-      const [postsData, schemesData, announcementsData, membersData, galleryData, projectsData] = await Promise.all([
-        postsAPI.getAll(panchayatData.id),
-        schemesAPI.getAll(panchayatData.id),
-        announcementsAPI.getAll(panchayatData.id),
-        membersAPI.getAll(panchayatData.id),
-        galleryAPI.getAll(panchayatData.id),
-        projectsAPI.getAll(panchayatData.id),
+      // Fetch all data using public APIs with slug
+      const [postsResult, schemesResult, announcementsResult, membersResult, galleryResult] = await Promise.all([
+        publicAPI.getPublicPosts(subdomainToUse, { page: 0, size: 50 }),
+        publicAPI.getPublicSchemes(subdomainToUse, { page: 0, size: 50 }),
+        publicAPI.getPublicAnnouncements(subdomainToUse, { page: 0, size: 50 }),
+        publicAPI.getPublicMembers(subdomainToUse, { page: 0, size: 50 }),
+        publicAPI.getPublicGallery(subdomainToUse, { page: 0, size: 50 }),
       ]);
       
-      setPosts(postsData);
-      setSchemes(schemesData);
-      setAnnouncements(announcementsData);
-      setMembers(membersData);
-      setGallery(galleryData);
-      setProjects(projectsData);
+      // Map posts
+      const mappedPosts = postsResult.content
+        .filter((post: any) => post.bodyText) // Only include posts with content
+        .map((post: any) => ({
+          id: post.postId.toString(),
+          panchayatId: post.panchayatId?.toString(),
+          author: post.authorName || 'Panchayat Sachiv',
+          authorRole: post.authorRole || 'Sachiv',
+          timestamp: post.publishedAt || post.createdAt || new Date().toISOString(),
+          content: post.bodyText || '',
+          media: post.mediaUrl ? [{ type: 'image' as const, url: post.mediaUrl }] : [],
+          likes: post.likesCount || 0,
+          comments: post.commentsCount || 0,
+          shares: post.viewCount || 0,
+        }));
+      
+      // Map schemes
+      const mappedSchemes = schemesResult.content
+        .filter((scheme: any) => scheme.title) // Only include schemes with titles
+        .map((scheme: any) => {
+          // Calculate progress based on status
+          let progress = 0;
+          if (scheme.status === 'ACTIVE') progress = 50;
+          else if (scheme.status === 'ONGOING') progress = 75;
+          else if (scheme.status === 'COMPLETED') progress = 100;
+          
+          // Map status
+          let status: "Active" | "Completed" | "Pending" = "Pending";
+          if (scheme.status === 'ACTIVE' || scheme.status === 'ONGOING') status = "Active";
+          else if (scheme.status === 'COMPLETED') status = "Completed";
+          
+          // Format budget
+          const budget = scheme.budgetAmount
+            ? `₹${scheme.budgetAmount.toLocaleString("en-IN")}`
+            : "₹0";
+          
+          // Use description as category, truncate if too long
+          const category = scheme.description
+            ? scheme.description.length > 50
+              ? scheme.description.substring(0, 50) + "..."
+              : scheme.description
+            : "General";
+          
+          return {
+            id: scheme.schemeId.toString(),
+            panchayatId: scheme.panchayatId?.toString(),
+            name: scheme.title || 'Untitled Scheme',
+            category: category,
+            budget: budget,
+            beneficiaries: scheme.beneficiaryCount || 0,
+            progress: progress,
+            status: status,
+          };
+        });
+      
+      // Map announcements
+      const mappedAnnouncements = announcementsResult.content.map((announcement: any) => ({
+        id: announcement.announcementId.toString(),
+        panchayatId: announcement.panchayatId?.toString(),
+        title: announcement.title || 'Announcement',
+        description: announcement.bodyText || announcement.title || 'No description available',
+        date: announcement.createdAt
+          ? new Date(announcement.createdAt).toLocaleDateString('en-IN', { 
+              year: 'numeric', 
+              month: 'short', 
+              day: 'numeric' 
+            })
+          : new Date().toLocaleDateString('en-IN', { 
+              year: 'numeric', 
+              month: 'short', 
+              day: 'numeric' 
+            }),
+        status: (announcement.isActive ? "Published" : "Draft") as "Published" | "Draft",
+        views: 0,
+      }));
+      
+      // Map members (users)
+      const mappedMembers = membersResult.content
+        .filter((member: any) => member.status === 'ACTIVE') // Only show active members
+        .map((member: any) => {
+          // Format role name properly
+          const roleName = member.role
+            ? member.role.replace(/_/g, ' ')
+                .split(' ')
+                .map((word: string) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+                .join(' ')
+            : 'Member';
+          
+          return {
+            id: member.userId.toString(),
+            panchayatId: member.panchayatId?.toString(),
+            name: member.name || 'Unknown',
+            role: roleName,
+            ward: 'Ward ' + ((member.userId % 8) + 1), // Placeholder - backend doesn't have ward
+            phone: member.phone || 'Not available',
+            email: member.email || undefined,
+            image: undefined, // Backend doesn't have image field yet
+            designation: roleName,
+          };
+        });
+      
+      // Map gallery
+      const mappedGallery = galleryResult.content
+        .filter((image: any) => image.imageUrl) // Only include images with URLs
+        .map((image: any) => ({
+          id: image.imageId.toString(),
+          panchayatId: image.panchayatId?.toString(),
+          title: image.caption || 'Gallery Image',
+          image: image.imageUrl,
+          description: image.caption || undefined,
+          category: image.albumName || undefined,
+          date: image.createdAt
+            ? new Date(image.createdAt).toLocaleDateString('en-IN', { 
+                year: 'numeric', 
+                month: 'short', 
+                day: 'numeric' 
+              })
+            : undefined,
+        }));
+      
+      setPosts(mappedPosts);
+      setSchemes(mappedSchemes);
+      setAnnouncements(mappedAnnouncements);
+      setMembers(mappedMembers);
+      setGallery(mappedGallery);
+      setProjects([]); // Projects not implemented in backend yet
     } catch (error) {
       console.error("Error fetching panchayat data:", error);
       // Use default data if API fails
       setPanchayat({
         id: 'panchayat-1',
-        name: 'Ramnagar',
+        name: subdomain ? subdomain.charAt(0).toUpperCase() + subdomain.slice(1) : 'Ramnagar',
         district: 'Varanasi',
         state: 'Uttar Pradesh',
-        block: 'Varanasi Block',
-        population: 5200,
-        area: '12.5',
-        wards: 8,
-        subdomain: 'ramnagar',
-        established: 1995,
+        block: '',
+        population: 0,
+        aboutText: '',
+        area: '0',
+        wards: 0,
+        subdomain: subdomain || 'ramnagar',
+        established: new Date().getFullYear(),
+        description: '',
+        contactInfo: {
+          address: '',
+          phone: '',
+          email: '',
+          officeHours: '',
+        },
       });
+      // Set empty arrays for failed data
+      setPosts([]);
+      setSchemes([]);
+      setAnnouncements([]);
+      setMembers([]);
+      setGallery([]);
+      setProjects([]);
     } finally {
       setLoading(false);
     }
@@ -124,7 +259,20 @@ export function PanchayatWebsite() {
   };
 
   return (
-    <div className="min-h-screen bg-[#F5F5F5]">
+    <div className="min-h-screen bg-[#F5F5F5] relative">
+      {/* Loading Overlay */}
+      {loading && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-white/80 backdrop-blur-sm">
+          <div className="flex flex-col items-center gap-4">
+            <Loader2 className="h-12 w-12 animate-spin text-[#E31E24]" />
+            <div className="text-center">
+              <p className="text-lg font-semibold text-[#1B2B5E]">Loading Panchayat Information</p>
+              <p className="mt-1 text-sm text-[#666]">Please wait while we fetch the data...</p>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Skip to Content Link for Accessibility */}
       <a
         href="#main-content"
@@ -301,7 +449,16 @@ export function PanchayatWebsite() {
                   <section>
                     <h3 className="mb-3 sm:mb-4 text-lg sm:text-xl font-semibold">Latest Announcements</h3>
                     <div className="space-y-3">
-                      {announcements.slice(0, 3).map((announcement) => (
+                      {announcements.length === 0 ? (
+                        <Card>
+                          <CardContent className="p-3 sm:p-4">
+                            <p className="text-xs sm:text-sm text-muted-foreground text-center">
+                              No announcements available
+                            </p>
+                          </CardContent>
+                        </Card>
+                      ) : (
+                        announcements.slice(0, 3).map((announcement) => (
                         <Card key={announcement.id} className="border-l-4 border-l-[#FF9933]">
                           <CardContent className="p-3 sm:p-4">
                             <div className="mb-2 flex flex-wrap items-center gap-2">
@@ -311,12 +468,13 @@ export function PanchayatWebsite() {
                               </Badge>
                             </div>
                             <h4 className="mb-2 text-sm sm:text-base">{announcement.title}</h4>
-                            <p className="text-xs sm:text-sm text-muted-foreground">
+                            <p className="text-xs sm:text-sm text-muted-foreground line-clamp-2">
                               {announcement.description}
                             </p>
                           </CardContent>
                         </Card>
-                      ))}
+                        ))
+                      )}
                     </div>
                   </section>
 
@@ -335,7 +493,16 @@ export function PanchayatWebsite() {
                       </Button>
                     </div>
                     <div className="space-y-3">
-                      {schemes.slice(0, 2).map((scheme) => (
+                      {schemes.length === 0 ? (
+                        <Card>
+                          <CardContent className="p-3 sm:p-4">
+                            <p className="text-xs sm:text-sm text-muted-foreground text-center">
+                              No active schemes
+                            </p>
+                          </CardContent>
+                        </Card>
+                      ) : (
+                        schemes.slice(0, 2).map((scheme) => (
                         <Card key={scheme.id}>
                           <CardContent className="p-3 sm:p-4">
                             <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
@@ -359,7 +526,8 @@ export function PanchayatWebsite() {
                             </p>
                           </CardContent>
                         </Card>
-                      ))}
+                        ))
+                      )}
                     </div>
                   </section>
                 </aside>
@@ -397,9 +565,9 @@ export function PanchayatWebsite() {
               <div className="grid gap-6 sm:gap-8 lg:grid-cols-2">
                 <section>
                   <h2 className="mb-3 sm:mb-4 text-xl sm:text-2xl font-bold">About {panchayat?.name || 'Ramnagar'}</h2>
-                  {panchayat?.description ? (
+                  {panchayat?.aboutText ? (
                     <p className="mb-4 text-sm sm:text-base text-muted-foreground whitespace-pre-line">
-                      {panchayat.description}
+                      {panchayat.aboutText}
                     </p>
                   ) : (
                     <>
@@ -603,42 +771,53 @@ export function PanchayatWebsite() {
                   <h2 className="mb-4 sm:mb-6 text-xl sm:text-2xl font-bold">Contact Information</h2>
                   <Card>
                     <CardContent className="space-y-4 sm:space-y-6 p-4 sm:p-6">
-                      {panchayat?.contactInfo ? (
-                        <>
-                          <div className="flex items-start gap-3">
-                            <MapPin className="mt-1 h-4 w-4 sm:h-5 sm:w-5 flex-shrink-0 text-[#FF9933]" />
-                            <div>
-                              <h4 className="text-sm sm:text-base font-semibold">Address</h4>
-                              <p className="text-xs sm:text-sm text-muted-foreground whitespace-pre-line">
-                                {panchayat.contactInfo.address}
-                              </p>
-                            </div>
-                          </div>
-                          <div className="flex items-start gap-3">
-                            <Phone className="mt-1 h-4 w-4 sm:h-5 sm:w-5 flex-shrink-0 text-[#FF9933]" />
-                            <div>
-                              <h4 className="text-sm sm:text-base font-semibold">Phone</h4>
-                              <p className="text-xs sm:text-sm text-muted-foreground break-all">{panchayat.contactInfo.phone}</p>
-                            </div>
-                          </div>
-                          <div className="flex items-start gap-3">
-                            <Mail className="mt-1 h-4 w-4 sm:h-5 sm:w-5 flex-shrink-0 text-[#FF9933]" />
-                            <div>
-                              <h4 className="text-sm sm:text-base font-semibold">Email</h4>
-                              <p className="text-xs sm:text-sm text-muted-foreground break-all">{panchayat.contactInfo.email}</p>
-                            </div>
-                          </div>
-                          <div className="flex items-start gap-3">
-                            <Calendar className="mt-1 h-4 w-4 sm:h-5 sm:w-5 flex-shrink-0 text-[#FF9933]" />
-                            <div>
-                              <h4 className="text-sm sm:text-base font-semibold">Office Hours</h4>
-                              <p className="text-xs sm:text-sm text-muted-foreground whitespace-pre-line">
-                                {panchayat.contactInfo.officeHours}
-                              </p>
-                            </div>
-                          </div>
-                        </>
-                      ) : (
+                      {panchayat?.contactInfo && (
+                        panchayat.contactInfo.address || panchayat.contactInfo.phone || panchayat.contactInfo.email ? (
+                          <>
+                            {panchayat.contactInfo.address && (
+                              <div className="flex items-start gap-3">
+                                <MapPin className="mt-1 h-4 w-4 sm:h-5 sm:w-5 flex-shrink-0 text-[#FF9933]" />
+                                <div>
+                                  <h4 className="text-sm sm:text-base font-semibold">Address</h4>
+                                  <p className="text-xs sm:text-sm text-muted-foreground whitespace-pre-line">
+                                    {panchayat.contactInfo.address}
+                                  </p>
+                                </div>
+                              </div>
+                            )}
+                            {panchayat.contactInfo.phone && (
+                              <div className="flex items-start gap-3">
+                                <Phone className="mt-1 h-4 w-4 sm:h-5 sm:w-5 flex-shrink-0 text-[#FF9933]" />
+                                <div>
+                                  <h4 className="text-sm sm:text-base font-semibold">Phone</h4>
+                                  <p className="text-xs sm:text-sm text-muted-foreground break-all">{panchayat.contactInfo.phone}</p>
+                                </div>
+                              </div>
+                            )}
+                            {panchayat.contactInfo.email && (
+                              <div className="flex items-start gap-3">
+                                <Mail className="mt-1 h-4 w-4 sm:h-5 sm:w-5 flex-shrink-0 text-[#FF9933]" />
+                                <div>
+                                  <h4 className="text-sm sm:text-base font-semibold">Email</h4>
+                                  <p className="text-xs sm:text-sm text-muted-foreground break-all">{panchayat.contactInfo.email}</p>
+                                </div>
+                              </div>
+                            )}
+                            {panchayat.contactInfo.officeHours && (
+                              <div className="flex items-start gap-3">
+                                <Calendar className="mt-1 h-4 w-4 sm:h-5 sm:w-5 flex-shrink-0 text-[#FF9933]" />
+                                <div>
+                                  <h4 className="text-sm sm:text-base font-semibold">Office Hours</h4>
+                                  <p className="text-xs sm:text-sm text-muted-foreground whitespace-pre-line">
+                                    {panchayat.contactInfo.officeHours}
+                                  </p>
+                                </div>
+                              </div>
+                            )}
+                          </>
+                        ) : null
+                      )}
+                      {(!panchayat?.contactInfo || (!panchayat.contactInfo.address && !panchayat.contactInfo.phone && !panchayat.contactInfo.email)) && (
                         <>
                           <div className="flex items-start gap-3">
                             <MapPin className="mt-1 h-4 w-4 sm:h-5 sm:w-5 flex-shrink-0 text-[#FF9933]" />

@@ -1,15 +1,17 @@
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
-import { Search, MapPin, Building2, Users, FileText, ArrowLeft } from "lucide-react";
+import { useNavigate, useSearchParams } from "react-router-dom";
+import { Search, MapPin, Building2, Users, FileText, ArrowLeft, Loader2 } from "lucide-react";
 import { Button } from "../ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../ui/card";
 import { Input } from "../ui/input";
 import { Badge } from "../ui/badge";
 import { panchayatAPI } from "../../services/api";
+import { toast } from "sonner";
 import type { ActivePanchayat } from "../../types";
 
 export function AllPanchayatsPage() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const [panchayats, setPanchayats] = useState<ActivePanchayat[]>([]);
   const [filteredPanchayats, setFilteredPanchayats] = useState<ActivePanchayat[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
@@ -18,17 +20,38 @@ export function AllPanchayatsPage() {
   useEffect(() => {
     const fetchPanchayats = async () => {
       try {
+        setLoading(true);
         const data = await panchayatAPI.getAll();
-        setPanchayats(data);
-        setFilteredPanchayats(data);
+        // Filter only ACTIVE panchayats
+        const active = data.filter(p => p.status === 'ACTIVE' || !p.status);
+        setPanchayats(active);
+        
+        // Get search query from URL params and apply filter
+        const urlSearch = searchParams.get('search');
+        if (urlSearch) {
+          setSearchQuery(urlSearch);
+          const query = urlSearch.toLowerCase();
+          const filtered = active.filter(
+            (panchayat) =>
+              panchayat.name.toLowerCase().includes(query) ||
+              panchayat.district.toLowerCase().includes(query) ||
+              panchayat.subdomain.toLowerCase().includes(query)
+          );
+          setFilteredPanchayats(filtered);
+        } else {
+          setFilteredPanchayats(active);
+        }
       } catch (error) {
         console.error("Error fetching panchayats:", error);
+        toast.error("Failed to load panchayats. Please try again later.");
+        setPanchayats([]);
+        setFilteredPanchayats([]);
       } finally {
         setLoading(false);
       }
     };
     fetchPanchayats();
-  }, []);
+  }, [searchParams]);
 
   useEffect(() => {
     if (!searchQuery.trim()) {
@@ -109,24 +132,39 @@ export function AllPanchayatsPage() {
 
         {/* Panchayats Grid */}
         {loading ? (
-          <div className="text-center py-12 text-[#666]">Loading panchayats...</div>
+          <div className="text-center py-12">
+            <Loader2 className="mx-auto h-8 w-8 animate-spin text-[#E31E24] mb-4" />
+            <p className="text-[#666]">Loading panchayats...</p>
+          </div>
         ) : filteredPanchayats.length === 0 ? (
           <div className="text-center py-12">
-            <Building2 className="mx-auto h-16 w-16 text-[#666] mb-4" />
+            <Building2 className="mx-auto h-16 w-16 text-[#666] mb-4 opacity-50" />
             <p className="text-lg font-semibold text-[#1B2B5E] mb-2">
               {searchQuery ? "No panchayats found" : "No panchayats available"}
             </p>
             <p className="text-[#666]">
               {searchQuery
-                ? "Try adjusting your search terms"
+                ? "Try adjusting your search terms or clear the search"
                 : "Check back later for active panchayats"}
             </p>
+            {searchQuery && (
+              <Button
+                variant="outline"
+                className="mt-4"
+                onClick={() => {
+                  setSearchQuery("");
+                  setFilteredPanchayats(panchayats);
+                }}
+              >
+                Clear Search
+              </Button>
+            )}
           </div>
         ) : (
           <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
             {filteredPanchayats.map((panchayat, index) => (
               <Card
-                key={index}
+                key={panchayat.subdomain || index}
                 className="border border-[#E5E5E5] bg-white shadow-sm transition-all hover:shadow-md hover:scale-105 cursor-pointer"
                 onClick={() => handlePanchayatClick(panchayat.subdomain)}
               >
@@ -149,7 +187,7 @@ export function AllPanchayatsPage() {
                         <FileText className="h-4 w-4 text-[#138808]" />
                         <span className="text-sm text-[#666]">Active Schemes</span>
                       </div>
-                      <span className="font-semibold text-[#138808]">{panchayat.schemes}</span>
+                      <span className="font-semibold text-[#138808]">{panchayat.schemes || 0}</span>
                     </div>
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
@@ -157,7 +195,7 @@ export function AllPanchayatsPage() {
                         <span className="text-sm text-[#666]">Population</span>
                       </div>
                       <span className="font-semibold text-[#1B2B5E]">
-                        {panchayat.population.toLocaleString()}
+                        {panchayat.population > 0 ? panchayat.population.toLocaleString() : 'N/A'}
                       </span>
                     </div>
                     <div className="pt-2 border-t border-[#E5E5E5]">

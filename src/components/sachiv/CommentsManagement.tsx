@@ -297,4 +297,3 @@ export function CommentsManagement({ panchayatId }: CommentsManagementProps) {
     </div>
   );
 }
-

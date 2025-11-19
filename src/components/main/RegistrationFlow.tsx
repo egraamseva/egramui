@@ -65,6 +65,56 @@ export function RegistrationFlow() {
   };
 
   const handleSubmit = async () => {
+    // Validate required fields
+    if (!formData.sachivName.trim()) {
+      toast.error("Please enter your full name");
+      return;
+    }
+
+    if (!formData.designation) {
+      toast.error("Please select your designation");
+      return;
+    }
+
+    if (!formData.email.trim()) {
+      toast.error("Please enter your email address");
+      return;
+    }
+
+    // Validate phone number (should be 10 digits)
+    const phoneDigits = formData.phone?.replace(/\D/g, '') || '';
+    if (!phoneDigits || phoneDigits.length !== 10) {
+      toast.error("Please enter a valid 10-digit phone number");
+      return;
+    }
+
+    if (!formData.panchayatName.trim()) {
+      toast.error("Please enter panchayat name");
+      return;
+    }
+
+    if (!formData.district.trim()) {
+      toast.error("Please enter district");
+      return;
+    }
+
+    if (!formData.state) {
+      toast.error("Please select state");
+      return;
+    }
+
+    if (!formData.subdomain.trim()) {
+      toast.error("Please enter subdomain");
+      return;
+    }
+
+    // Validate subdomain format (lowercase, alphanumeric, hyphens only)
+    const subdomainRegex = /^[a-z0-9-]+$/;
+    if (!subdomainRegex.test(formData.subdomain.toLowerCase())) {
+      toast.error("Subdomain can only contain lowercase letters, numbers, and hyphens");
+      return;
+    }
+
     if (!formData.acceptTerms) {
       toast.error("Please accept the terms and conditions");
       return;
@@ -90,7 +140,13 @@ export function RegistrationFlow() {
 
     setIsSubmitting(true);
     try {
-      await panchayatAPI.register(formData);
+      // Clean phone number before sending
+      const cleanedFormData = {
+        ...formData,
+        phone: phoneDigits,
+        subdomain: formData.subdomain.toLowerCase().trim(),
+      };
+      await panchayatAPI.register(cleanedFormData);
       toast.success("Registration submitted successfully!");
       navigate("/success");
     } catch (error) {

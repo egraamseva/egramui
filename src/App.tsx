@@ -13,9 +13,19 @@ function AppContent() {
   const location = useLocation();
   const [, setLanguage] = useLocalStorage<Language>("language", "en");
   
+  // Routes where header should NOT be shown
   const isDashboard = location.pathname.startsWith("/dashboard");
-  const isPanchayat = location.pathname.startsWith("/panchayat");
-  const isLogin = location.pathname === "/login";
+  const isAdmin = location.pathname.startsWith("/admin");
+  const isAuthPage = location.pathname === "/login" || 
+                     location.pathname === "/forgot-password" || 
+                     location.pathname === "/reset-password";
+  
+  // Public panchayat website routes (header SHOULD show here)
+  const isPanchayatWebsite = location.pathname.startsWith("/panchayat/") || 
+                             location.pathname === "/panchayat-demo";
+  
+  // Determine if header should be shown
+  const shouldShowHeader = !isDashboard && !isAdmin && !isAuthPage;
 
   const handleLanguageChange = (lang: Language) => {
     setLanguage(lang);
@@ -25,10 +35,10 @@ function AppContent() {
     <ErrorBoundary>
       <div className="min-h-screen bg-[#F5F5F5]">
         {/* Render header based on current route */}
-        {!isDashboard && !isLogin && (
+        {shouldShowHeader && (
           <Header
-            variant={isPanchayat ? "panchayat" : "platform"}
-            panchayatName={isPanchayat ? "Ramnagar" : undefined}
+            variant={isPanchayatWebsite ? "panchayat" : "platform"}
+            panchayatName={isPanchayatWebsite ? "Ramnagar" : undefined}
             onLanguageChange={handleLanguageChange}
           />
         )}
@@ -39,8 +49,8 @@ function AppContent() {
         </ErrorBoundary>
 
         {/* Render footer based on current route */}
-        {!isDashboard && !isLogin && (
-          <Footer variant={isPanchayat ? "panchayat" : "platform"} />
+        {shouldShowHeader && (
+          <Footer variant={isPanchayatWebsite ? "panchayat" : "platform"} />
         )}
 
         {/* Toast notifications */}

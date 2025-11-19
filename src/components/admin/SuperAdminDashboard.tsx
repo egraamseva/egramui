@@ -17,7 +17,7 @@ import {
   MoreVertical,
   Edit,
   Trash2,
-  Eye,
+  
   LogOut,
   Menu,
   X,
@@ -25,6 +25,8 @@ import {
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../ui/card";
 import { Button } from "../ui/button";
 import { Input } from "../ui/input";
+import { Label } from "../ui/label";
+import { Textarea } from "../ui/textarea";
 import {
   Table,
   TableBody,
@@ -40,12 +42,20 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "../ui/dropdown-menu";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "../ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../ui/select";
 import { toast } from "sonner";
 import { useAuth } from "../../contexts/AuthContext";
 import type { SuperAdminPanchayat, AdminUser, AuditLog, PanchayatStatus } from "../../types";
 import { formatTimeAgo } from "../../utils/format";
-import { superAdminAPI } from "@/services/api.old";
+import { superAdminAPI } from "@/services/api";
 
 export function SuperAdminDashboard() {
   const navigate = useNavigate();
@@ -65,6 +75,18 @@ export function SuperAdminDashboard() {
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<PanchayatStatus | "all">("all");
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [isPanchayatDialogOpen, setIsPanchayatDialogOpen] = useState(false);
+  const [editingPanchayat, setEditingPanchayat] = useState<SuperAdminPanchayat | null>(null);
+  const [panchayatFormData, setPanchayatFormData] = useState({
+    panchayatName: "",
+    slug: "",
+    district: "",
+    state: "",
+    address: "",
+    contactPhone: "",
+    contactEmail: "",
+    description: "",
+  });
 
   useEffect(() => {
     if (user?.role !== "SUPER_ADMIN") {
@@ -126,6 +148,161 @@ export function SuperAdminDashboard() {
       fetchDashboardData();
     } catch (error) {
       toast.error("Failed to delete panchayat");
+    }
+  };
+
+  const openCreatePanchayatDialog = () => {
+    setEditingPanchayat(null);
+    setPanchayatFormData({
+      panchayatName: "",
+      slug: "",
+      district: "",
+      state: "",
+      address: "",
+      contactPhone: "",
+      contactEmail: "",
+      description: "",
+    });
+    setIsPanchayatDialogOpen(true);
+  };
+
+  const openEditPanchayatDialog = async (panchayat: SuperAdminPanchayat) => {
+    try {
+      const { adminPanchayatApi } = await import('@/routes/api');
+      const fullPanchayat = await adminPanchayatApi.getById(parseInt(panchayat.id));
+      setEditingPanchayat(panchayat);
+      setPanchayatFormData({
+        panchayatName: fullPanchayat.panchayatName || panchayat.panchayatName,
+        slug: fullPanchayat.slug || panchayat.slug,
+        district: fullPanchayat.district || panchayat.district,
+        state: fullPanchayat.state || panchayat.state,
+        address: (fullPanchayat as any).address || (fullPanchayat as any).officeAddress || "",
+        contactPhone: (fullPanchayat as any).contactPhone || (fullPanchayat as any).officePhone || "",
+        contactEmail: (fullPanchayat as any).contactEmail || (fullPanchayat as any).officeEmail || "",
+        description: (fullPanchayat as any).description || "",
+      });
+      setIsPanchayatDialogOpen(true);
+    } catch (error) {
+      console.error("Error loading panchayat:", error);
+      // Fallback to using the panchayat data we already have
+      setEditingPanchayat(panchayat);
+      setPanchayatFormData({
+        panchayatName: panchayat.panchayatName,
+        slug: panchayat.slug,
+        district: panchayat.district,
+        state: panchayat.state,
+        address: "",
+        contactPhone: "",
+        contactEmail: "",
+        description: "",
+      });
+      setIsPanchayatDialogOpen(true);
+    }
+  };
+
+  const closePanchayatDialog = () => {
+    setIsPanchayatDialogOpen(false);
+    setEditingPanchayat(null);
+    setPanchayatFormData({
+      panchayatName: "",
+      slug: "",
+      district: "",
+      state: "",
+      address: "",
+      contactPhone: "",
+      contactEmail: "",
+      description: "",
+    });
+  };
+
+  const handleCreatePanchayat = async () => {
+    if (!panchayatFormData.panchayatName.trim()) {
+      toast.error("Please enter panchayat name");
+      return;
+    }
+    if (!panchayatFormData.slug.trim()) {
+      toast.error("Please enter subdomain/slug");
+      return;
+    }
+    if (!panchayatFormData.district.trim()) {
+      toast.error("Please enter district");
+      return;
+    }
+    if (!panchayatFormData.state.trim()) {
+      toast.error("Please enter state");
+      return;
+    }
+
+    // Validate slug format
+    const slugRegex = /^[a-z0-9-]+$/;
+    if (!slugRegex.test(panchayatFormData.slug.toLowerCase())) {
+      toast.error("Subdomain can only contain lowercase letters, numbers, and hyphens");
+      return;
+    }
+
+    try {
+      await superAdminAPI.createPanchayat({
+        panchayatName: panchayatFormData.panchayatName.trim(),
+        slug: panchayatFormData.slug.toLowerCase().trim(),
+        district: panchayatFormData.district.trim(),
+        state: panchayatFormData.state.trim(),
+        address: panchayatFormData.address.trim() || undefined,
+        contactPhone: panchayatFormData.contactPhone.trim() || undefined,
+        contactEmail: panchayatFormData.contactEmail.trim() || undefined,
+        description: panchayatFormData.description.trim() || undefined,
+      });
+      toast.success("Panchayat created successfully");
+      closePanchayatDialog();
+      fetchDashboardData();
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Failed to create panchayat";
+      toast.error(message);
+    }
+  };
+
+  const handleUpdatePanchayat = async () => {
+    if (!editingPanchayat) return;
+    if (!panchayatFormData.panchayatName.trim()) {
+      toast.error("Please enter panchayat name");
+      return;
+    }
+    if (!panchayatFormData.slug.trim()) {
+      toast.error("Please enter subdomain/slug");
+      return;
+    }
+    if (!panchayatFormData.district.trim()) {
+      toast.error("Please enter district");
+      return;
+    }
+    if (!panchayatFormData.state.trim()) {
+      toast.error("Please enter state");
+      return;
+    }
+
+    // Validate slug format
+    const slugRegex = /^[a-z0-9-]+$/;
+    if (!slugRegex.test(panchayatFormData.slug.toLowerCase())) {
+      toast.error("Subdomain can only contain lowercase letters, numbers, and hyphens");
+      return;
+    }
+
+    try {
+      await superAdminAPI.updatePanchayat(editingPanchayat.id, {
+        panchayatName: panchayatFormData.panchayatName.trim(),
+        slug: panchayatFormData.slug.toLowerCase().trim(),
+        district: panchayatFormData.district.trim(),
+        state: panchayatFormData.state.trim(),
+        address: panchayatFormData.address.trim() || undefined,
+        contactPhone: panchayatFormData.contactPhone.trim() || undefined,
+        contactEmail: panchayatFormData.contactEmail.trim() || undefined,
+        description: panchayatFormData.description.trim() || undefined,
+      });
+      toast.success("Panchayat updated successfully");
+      closePanchayatDialog();
+      fetchDashboardData();
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Failed to update panchayat";
+      toast.error(message);
     }
   };
 
@@ -355,7 +532,7 @@ export function SuperAdminDashboard() {
                     <h2 className="text-3xl font-bold text-[#1B2B5E]">Panchayat Management</h2>
                     <p className="text-[#666] mt-1">Manage all registered panchayats</p>
                   </div>
-                  <Button onClick={() => toast.info("Create panchayat feature coming soon")}>
+                  <Button onClick={openCreatePanchayatDialog}>
                     <Plus className="h-4 w-4 mr-2" />
                     Add Panchayat
                   </Button>
@@ -419,13 +596,22 @@ export function SuperAdminDashboard() {
                                   </Button>
                                 </DropdownMenuTrigger>
                                 <DropdownMenuContent align="end">
-                                  <DropdownMenuItem onClick={() => navigate(`/admin/panchayats/${panchayat.id}`)}>
-                                    <Eye className="h-4 w-4 mr-2" />
-                                    View Details
+                                  <DropdownMenuItem onClick={() => openEditPanchayatDialog(panchayat)}>
+                                    <Edit className="h-4 w-4 mr-2" />
+                                    Edit
                                   </DropdownMenuItem>
                                   <DropdownMenuItem onClick={() => handlePanchayatStatusChange(panchayat.id, panchayat.status === "active" ? "inactive" : "active")}>
-                                    <Edit className="h-4 w-4 mr-2" />
-                                    {panchayat.status === "active" ? "Deactivate" : "Activate"}
+                                    {panchayat.status === "active" ? (
+                                      <>
+                                        <X className="h-4 w-4 mr-2" />
+                                        Mark Inactive
+                                      </>
+                                    ) : (
+                                      <>
+                                        <Edit className="h-4 w-4 mr-2" />
+                                        Activate
+                                      </>
+                                    )}
                                   </DropdownMenuItem>
                                   <DropdownMenuItem
                                     className="text-red-600"
@@ -594,6 +780,122 @@ export function SuperAdminDashboard() {
           </div>
         </div>
       </div>
+
+      {/* Panchayat Create/Edit Dialog */}
+      <Dialog open={isPanchayatDialogOpen} onOpenChange={setIsPanchayatDialogOpen}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>
+              {editingPanchayat ? "Edit Panchayat" : "Create New Panchayat"}
+            </DialogTitle>
+            <DialogDescription>
+              {editingPanchayat
+                ? "Update panchayat information below"
+                : "Enter the panchayat details to create a new panchayat"}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="panchayatName">Panchayat Name *</Label>
+              <Input
+                id="panchayatName"
+                placeholder="Enter panchayat name"
+                value={panchayatFormData.panchayatName}
+                onChange={(e) => setPanchayatFormData({ ...panchayatFormData, panchayatName: e.target.value })}
+                required
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="slug">Subdomain/Slug *</Label>
+              <Input
+                id="slug"
+                placeholder="e.g., ramnagar"
+                value={panchayatFormData.slug}
+                onChange={(e) => setPanchayatFormData({ ...panchayatFormData, slug: e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '') })}
+                required
+              />
+              <p className="text-xs text-muted-foreground">
+                Only lowercase letters, numbers, and hyphens allowed
+              </p>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="district">District *</Label>
+                <Input
+                  id="district"
+                  placeholder="Enter district"
+                  value={panchayatFormData.district}
+                  onChange={(e) => setPanchayatFormData({ ...panchayatFormData, district: e.target.value })}
+                  required
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="state">State *</Label>
+                <Input
+                  id="state"
+                  placeholder="Enter state"
+                  value={panchayatFormData.state}
+                  onChange={(e) => setPanchayatFormData({ ...panchayatFormData, state: e.target.value })}
+                  required
+                />
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="address">Address</Label>
+              <Textarea
+                id="address"
+                placeholder="Enter panchayat address"
+                value={panchayatFormData.address}
+                onChange={(e) => setPanchayatFormData({ ...panchayatFormData, address: e.target.value })}
+                rows={2}
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="contactPhone">Contact Phone</Label>
+                <Input
+                  id="contactPhone"
+                  placeholder="10-digit phone number"
+                  value={panchayatFormData.contactPhone}
+                  onChange={(e) => setPanchayatFormData({ ...panchayatFormData, contactPhone: e.target.value.replace(/\D/g, '').substring(0, 10) })}
+                  maxLength={10}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="contactEmail">Contact Email</Label>
+                <Input
+                  id="contactEmail"
+                  type="email"
+                  placeholder="contact@example.com"
+                  value={panchayatFormData.contactEmail}
+                  onChange={(e) => setPanchayatFormData({ ...panchayatFormData, contactEmail: e.target.value })}
+                />
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="description">Description</Label>
+              <Textarea
+                id="description"
+                placeholder="Enter panchayat description"
+                value={panchayatFormData.description}
+                onChange={(e) => setPanchayatFormData({ ...panchayatFormData, description: e.target.value })}
+                rows={4}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={closePanchayatDialog}>
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              onClick={editingPanchayat ? handleUpdatePanchayat : handleCreatePanchayat}
+            >
+              {editingPanchayat ? "Update" : "Create"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

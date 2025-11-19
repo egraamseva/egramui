@@ -27,7 +27,18 @@ const SuccessPage = lazy(() => import('../pages/SuccessPage').then(m => ({ defau
 const TestAPIPage = lazy(() => import('../pages/TestAPIPage').then(m => ({ default: m.TestAPIPage })));
 
 // Dashboard pages (heavy components - definitely should be lazy loaded)
-const SachivDashboard = lazy(() => import('@/components/sachiv/SachivDashboard').then(m => ({ default: m.SachivDashboard })));
+const SachivDashboardLayout = lazy(() => import('@/components/sachiv/SachivDashboardLayout').then(m => ({ default: m.SachivDashboardLayout })));
+const DashboardPage = lazy(() => import('@/components/sachiv/pages/DashboardPage').then(m => ({ default: m.DashboardPage })));
+const PostsPage = lazy(() => import('@/components/sachiv/pages/PostsPage').then(m => ({ default: m.PostsPage })));
+const AnnouncementsPage = lazy(() => import('@/components/sachiv/pages/AnnouncementsPage').then(m => ({ default: m.AnnouncementsPage })));
+const SchemesPage = lazy(() => import('@/components/sachiv/pages/SchemesPage').then(m => ({ default: m.SchemesPage })));
+const GalleryPage = lazy(() => import('@/components/sachiv/pages/GalleryPage').then(m => ({ default: m.GalleryPage })));
+const AlbumsPage = lazy(() => import('@/components/sachiv/pages/AlbumsPage').then(m => ({ default: m.AlbumsPage })));
+const DocumentsPage = lazy(() => import('@/components/sachiv/pages/DocumentsPage').then(m => ({ default: m.DocumentsPage })));
+const CommentsPage = lazy(() => import('@/components/sachiv/pages/CommentsPage').then(m => ({ default: m.CommentsPage })));
+const TeamPage = lazy(() => import('@/components/sachiv/pages/TeamPage').then(m => ({ default: m.TeamPage })));
+const AnalyticsPage = lazy(() => import('@/components/sachiv/pages/AnalyticsPage').then(m => ({ default: m.AnalyticsPage })));
+const SettingsPage = lazy(() => import('@/components/sachiv/pages/SettingsPage').then(m => ({ default: m.SettingsPage })));
 const SuperAdminDashboard = lazy(() => import('@/components/admin/SuperAdminDashboard').then(m => ({ default: m.SuperAdminDashboard })));
 
 export function AppRoutes() {
@@ -46,15 +57,27 @@ export function AppRoutes() {
         <Route path="/success" element={<SuccessPage />} />
         <Route path="/test-api" element={<TestAPIPage />} />
 
-        {/* Protected Routes */}
+        {/* Protected Routes - Sachiv Dashboard */}
         <Route
-          path="/dashboard"
+          path="/panchayat/dashboard"
           element={
             <ProtectedRoute>
-              <SachivDashboard />
+              <SachivDashboardLayout />
             </ProtectedRoute>
           }
-        />
+        >
+          <Route index element={<DashboardPage />} />
+          <Route path="posts" element={<PostsPage />} />
+          <Route path="announcements" element={<AnnouncementsPage />} />
+          <Route path="schemes" element={<SchemesPage />} />
+          <Route path="gallery" element={<GalleryPage />} />
+          <Route path="albums" element={<AlbumsPage />} />
+          <Route path="documents" element={<DocumentsPage />} />
+          <Route path="comments" element={<CommentsPage />} />
+          <Route path="team" element={<TeamPage />} />
+          <Route path="analytics" element={<AnalyticsPage />} />
+          <Route path="settings" element={<SettingsPage />} />
+        </Route>
         <Route
           path="/admin"
           element={

@@ -26,6 +26,7 @@ import type {
   ResetPasswordRequest,
   PanchayatStats,
 } from '../types/api';
+import type { SuperAdminPanchayat, AdminUser, AuditLog, PanchayatStatus } from '../types';
 
 // Create axios instance
 const api: AxiosInstance = axios.create({
@@ -147,6 +148,26 @@ export const publicAPI = {
     const response = await api.post<any, ApiResponse<Comment>>(`/public/${slug}/posts/${postId}/comments`, data);
     return response.data;
   },
+
+  getPublicSchemes: async (slug: string, params?: { page?: number; size?: number }): Promise<PaginatedResponse<Scheme>> => {
+    const response = await api.get<any, ApiResponse<PaginatedResponse<any>>>(`/public/${slug}/schemes`, { params });
+    return response.data;
+  },
+
+  getPublicAnnouncements: async (slug: string, params?: { page?: number; size?: number }): Promise<PaginatedResponse<Announcement>> => {
+    const response = await api.get<any, ApiResponse<PaginatedResponse<any>>>(`/public/${slug}/announcements`, { params });
+    return response.data;
+  },
+
+  getPublicGallery: async (slug: string, params?: { page?: number; size?: number; albumId?: number }): Promise<PaginatedResponse<GalleryItem>> => {
+    const response = await api.get<any, ApiResponse<PaginatedResponse<any>>>(`/public/${slug}/gallery`, { params });
+    return response.data;
+  },
+
+  getPublicMembers: async (slug: string, params?: { page?: number; size?: number }): Promise<PaginatedResponse<PanchayatMember>> => {
+    const response = await api.get<any, ApiResponse<PaginatedResponse<any>>>(`/public/${slug}/members`, { params });
+    return response.data;
+  },
 };
 
 // ============================================================================
@@ -208,28 +229,6 @@ export const commentsAPI = {
   getPostComments: async (postId: number, params?: { page?: number; size?: number }): Promise<PaginatedResponse<Comment>> => {
     const response = await api.get<any, ApiResponse<PaginatedResponse<Comment>>>(`/panchayat/posts/${postId}/comments`, { params });
     return response.data;
-  },
-
-  getAllComments: async (params?: { page?: number; size?: number }): Promise<Comment[]> => {
-    // Mock implementation - get comments from all posts
-    try {
-      const postsResponse = await postsAPI.getAllPosts({ page: 0, size: 50 });
-      const allComments: Comment[] = [];
-      
-      for (const post of postsResponse.content) {
-        try {
-          const commentsResponse = await commentsAPI.getPostComments(post.postId, { page: 0, size: 100 });
-          allComments.push(...commentsResponse.content);
-        } catch (error) {
-          console.error(`Error fetching comments for post ${post.postId}:`, error);
-        }
-      }
-      
-      return allComments;
-    } catch (error) {
-      console.error('Error fetching all comments:', error);
-      return [];
-    }
   },
 
   // Compatibility alias for getPostComments
@@ -354,352 +353,6 @@ export const adminPanchayatsAPI = {
 // These maintain compatibility with existing code that uses the old API structure
 // ============================================================================
 
-// Remove or comment out this duplicate re-declaration:
-// export const postsAPI = { ... }
-// ... if any usage expects another export, use the first postsAPI
-
-// ============================================================================
-// Post Comments API (Authenticated)
-// ============================================================================
-export const commentsAPI2 = {
-  getPostComments: async (postId: number, params?: { page?: number; size?: number }): Promise<PaginatedResponse<Comment>> => {
-    const response = await api.get<any, ApiResponse<PaginatedResponse<Comment>>>(`/panchayat/posts/${postId}/comments`, { params });
-    return response.data;
-  },
-
-  getAllComments: async (params?: { page?: number; size?: number }): Promise<Comment[]> => {
-    // Mock implementation - get comments from all posts
-    try {
-      const postsResponse = await postsAPI.getAllPosts({ page: 0, size: 50 });
-      const allComments: Comment[] = [];
-      
-      for (const post of postsResponse.content) {
-        try {
-          const commentsResponse = await commentsAPI.getPostComments(post.postId, { page: 0, size: 100 });
-          allComments.push(...commentsResponse.content);
-        } catch (error) {
-          console.error(`Error fetching comments for post ${post.postId}:`, error);
-        }
-      }
-      
-      return allComments;
-    } catch (error) {
-      console.error('Error fetching all comments:', error);
-      return [];
-    }
-  },
-
-  deleteComment: async (postId: number, commentId: number): Promise<void> => {
-    await api.delete(`/panchayat/posts/${postId}/comments/${commentId}`);
-  },
-
-  approveComment: async (postId: number, commentId: number): Promise<Comment> => {
-    const response = await api.patch<any, ApiResponse<Comment>>(`/panchayat/posts/${postId}/comments/${commentId}/approve`);
-    return response.data;
-  },
-};
-
-// ============================================================================
-// Team Management API
-// ============================================================================
-export const teamAPI2 = {
-  getTeamMembers: async (params?: { page?: number; size?: number }): Promise<PaginatedResponse<TeamMember>> => {
-    const response = await api.get<any, ApiResponse<PaginatedResponse<TeamMember>>>('/panchayat/team', { params });
-    return response.data;
-  },
-
-  addTeamMember: async (data: AddTeamMemberRequest): Promise<TeamMember> => {
-    const response = await api.post<any, ApiResponse<TeamMember>>('/panchayat/team', data);
-    return response.data;
-  },
-
-  removeTeamMember: async (userId: number): Promise<void> => {
-    await api.delete(`/panchayat/team/${userId}`);
-  },
-
-  updateTeamMemberStatus: async (userId: number, status: string): Promise<TeamMember> => {
-    const response = await api.patch<any, ApiResponse<TeamMember>>(`/panchayat/team/${userId}/status`, { status });
-    return response.data;
-  },
-};
-
-// ============================================================================
-// Announcements API (Mock - Add to backend later)
-// ============================================================================
-export const announcementsAPI = {
-  getAll: async (panchayatId: string): Promise<any[]> => {
-    // Mock data stored in localStorage
-    const key = `announcements_${panchayatId}`;
-    const stored = localStorage.getItem(key);
-    return stored ? JSON.parse(stored) : [];
-  },
-
-  create: async (panchayatId: string, data: any): Promise<any> => {
-    const announcements = await announcementsAPI.getAll(panchayatId);
-    const newAnnouncement = {
-      id: Date.now().toString(),
-      ...data,
-      date: new Date().toISOString().split('T')[0],
-      views: 0,
-      panchayatId
-    };
-    announcements.unshift(newAnnouncement);
-    localStorage.setItem(`announcements_${panchayatId}`, JSON.stringify(announcements));
-    return newAnnouncement;
-  },
-
-  update: async (panchayatId: string, id: string, updates: any): Promise<any> => {
-    const announcements = await announcementsAPI.getAll(panchayatId);
-    const index = announcements.findIndex(a => a.id === id);
-    if (index !== -1) {
-      announcements[index] = { ...announcements[index], ...updates };
-      localStorage.setItem(`announcements_${panchayatId}`, JSON.stringify(announcements));
-      return announcements[index];
-    }
-    throw new Error('Announcement not found');
-  },
-
-  delete: async (panchayatId: string, id: string): Promise<void> => {
-    const announcements = await announcementsAPI.getAll(panchayatId);
-    const filtered = announcements.filter(a => a.id !== id);
-    localStorage.setItem(`announcements_${panchayatId}`, JSON.stringify(filtered));
-  },
-};
-
-// ============================================================================
-// Schemes API (Mock - Add to backend later)
-// ============================================================================
-export const schemesAPI = {
-  getAll: async (panchayatId: string): Promise<any[]> => {
-    const key = `schemes_${panchayatId}`;
-    const stored = localStorage.getItem(key);
-    return stored ? JSON.parse(stored) : [];
-  },
-
-  create: async (panchayatId: string, data: any): Promise<any> => {
-    const schemes = await schemesAPI.getAll(panchayatId);
-    const newScheme = {
-      id: Date.now().toString(),
-      ...data,
-      progress: 0,
-      panchayatId
-    };
-    schemes.unshift(newScheme);
-    localStorage.setItem(`schemes_${panchayatId}`, JSON.stringify(schemes));
-    return newScheme;
-  },
-
-  update: async (panchayatId: string, id: string, updates: any): Promise<any> => {
-    const schemes = await schemesAPI.getAll(panchayatId);
-    const index = schemes.findIndex(s => s.id === id);
-    if (index !== -1) {
-      schemes[index] = { ...schemes[index], ...updates };
-      localStorage.setItem(`schemes_${panchayatId}`, JSON.stringify(schemes));
-      return schemes[index];
-    }
-    throw new Error('Scheme not found');
-  },
-
-  delete: async (panchayatId: string, id: string): Promise<void> => {
-    const schemes = await schemesAPI.getAll(panchayatId);
-    const filtered = schemes.filter(s => s.id !== id);
-    localStorage.setItem(`schemes_${panchayatId}`, JSON.stringify(filtered));
-  },
-};
-
-// ============================================================================
-// Gallery API (Mock - Add to backend later)
-// ============================================================================
-export const galleryAPI = {
-  getAll: async (panchayatId: string): Promise<any[]> => {
-    const key = `gallery_${panchayatId}`;
-    const stored = localStorage.getItem(key);
-    return stored ? JSON.parse(stored) : [];
-  },
-
-  upload: async (panchayatId: string, file: File, data: any): Promise<any> => {
-    const gallery = await galleryAPI.getAll(panchayatId);
-    // Convert file to base64 for storage
-    const base64 = await new Promise<string>((resolve) => {
-      const reader = new FileReader();
-      reader.onloadend = () => resolve(reader.result as string);
-      reader.readAsDataURL(file);
-    });
-    
-    const newItem = {
-      id: Date.now().toString(),
-      url: base64,
-      title: data.title || file.name,
-      date: new Date().toISOString().split('T')[0],
-      category: data.category || 'General',
-      panchayatId
-    };
-    gallery.unshift(newItem);
-    localStorage.setItem(`gallery_${panchayatId}`, JSON.stringify(gallery));
-    return newItem;
-  },
-
-  delete: async (panchayatId: string, id: string): Promise<void> => {
-    const gallery = await galleryAPI.getAll(panchayatId);
-    const filtered = gallery.filter(g => g.id !== id);
-    localStorage.setItem(`gallery_${panchayatId}`, JSON.stringify(filtered));
-  },
-};
-
-// ============================================================================
-// Albums API (Mock - Add to backend later)
-// ============================================================================
-export const albumsAPI = {
-  getAll: async (panchayatId: string): Promise<any[]> => {
-    const key = `albums_${panchayatId}`;
-    const stored = localStorage.getItem(key);
-    return stored ? JSON.parse(stored) : [];
-  },
-
-  create: async (panchayatId: string, data: any): Promise<any> => {
-    const albums = await albumsAPI.getAll(panchayatId);
-    const newAlbum = {
-      id: Date.now().toString(),
-      name: data.name,
-      description: data.description || '',
-      cover: '/api/placeholder/400/300',
-      photoCount: 0,
-      date: new Date().toISOString().split('T')[0],
-      photos: [],
-      panchayatId
-    };
-    albums.unshift(newAlbum);
-    localStorage.setItem(`albums_${panchayatId}`, JSON.stringify(albums));
-    return newAlbum;
-  },
-
-  update: async (panchayatId: string, id: string, updates: any): Promise<any> => {
-    const albums = await albumsAPI.getAll(panchayatId);
-    const index = albums.findIndex(a => a.id === id);
-    if (index !== -1) {
-      albums[index] = { ...albums[index], ...updates };
-      localStorage.setItem(`albums_${panchayatId}`, JSON.stringify(albums));
-      return albums[index];
-    }
-    throw new Error('Album not found');
-  },
-
-  delete: async (panchayatId: string, id: string): Promise<void> => {
-    const albums = await albumsAPI.getAll(panchayatId);
-    const filtered = albums.filter(a => a.id !== id);
-    localStorage.setItem(`albums_${panchayatId}`, JSON.stringify(filtered));
-  },
-
-  addPhoto: async (panchayatId: string, albumId: string, file: File): Promise<any> => {
-    const albums = await albumsAPI.getAll(panchayatId);
-    const album = albums.find(a => a.id === albumId);
-    if (!album) throw new Error('Album not found');
-
-    const base64 = await new Promise<string>((resolve) => {
-      const reader = new FileReader();
-      reader.onloadend = () => resolve(reader.result as string);
-      reader.readAsDataURL(file);
-    });
-
-    const photo = {
-      id: Date.now().toString(),
-      url: base64,
-      title: file.name,
-      date: new Date().toISOString().split('T')[0]
-    };
-
-    album.photos = album.photos || [];
-    album.photos.push(photo);
-    album.photoCount = album.photos.length;
-    album.cover = album.photos[0]?.url || album.cover;
-
-    localStorage.setItem(`albums_${panchayatId}`, JSON.stringify(albums));
-    return album;
-  },
-};
-
-// ============================================================================
-// Documents API (Mock - Add to backend later)
-// ============================================================================
-export const documentsAPI = {
-  getAll: async (panchayatId: string): Promise<any[]> => {
-    const key = `documents_${panchayatId}`;
-    const stored = localStorage.getItem(key);
-    return stored ? JSON.parse(stored) : [];
-  },
-
-  upload: async (panchayatId: string, file: File, data: any): Promise<any> => {
-    const documents = await documentsAPI.getAll(panchayatId);
-    const newDoc = {
-      id: Date.now().toString(),
-      name: file.name,
-      category: data.category || 'General',
-      size: `${(file.size / 1024).toFixed(2)} KB`,
-      uploadDate: new Date().toISOString().split('T')[0],
-      type: file.type,
-      panchayatId
-    };
-    documents.unshift(newDoc);
-    localStorage.setItem(`documents_${panchayatId}`, JSON.stringify(documents));
-    return newDoc;
-  },
-
-  delete: async (panchayatId: string, id: string): Promise<void> => {
-    const documents = await documentsAPI.getAll(panchayatId);
-    const filtered = documents.filter(d => d.id !== id);
-    localStorage.setItem(`documents_${panchayatId}`, JSON.stringify(filtered));
-  },
-};
-
-// ============================================================================
-// Settings API (Mock - Add to backend later)
-// ============================================================================
-export const settingsAPI = {
-  get: async (panchayatId: string): Promise<any> => {
-    const key = `settings_${panchayatId}`;
-    const stored = localStorage.getItem(key);
-    return stored ? JSON.parse(stored) : {
-      panchayatName: 'Gram Panchayat',
-      heroTitle: 'Welcome to Our Panchayat',
-      heroSubtitle: 'Building a better tomorrow together',
-      aboutText: 'Our panchayat is committed to serving our community...',
-      contactEmail: 'contact@panchayat.gov.in',
-      contactPhone: '+91 1234567890',
-      contactAddress: 'Village Office, District',
-      officeHours: 'Mon-Fri: 9:00 AM - 5:00 PM'
-    };
-  },
-
-  update: async (panchayatId: string, updates: any): Promise<any> => {
-    const settings = await settingsAPI.get(panchayatId);
-    const updated = { ...settings, ...updates };
-    localStorage.setItem(`settings_${panchayatId}`, JSON.stringify(updated));
-    return updated;
-  },
-};
-
-// ============================================================================
-// Analytics API (Mock - Add to backend later)
-// ============================================================================
-export const analyticsAPI = {
-  getOverview: async (panchayatId: string): Promise<any> => {
-    const posts = await postsAPI.getAllPosts({ page: 0, size: 100 });
-    const announcements = await announcementsAPI.getAll(panchayatId);
-    const schemes = await schemesAPI.getAll(panchayatId);
-    const gallery = await galleryAPI.getAll(panchayatId);
-
-    return {
-      totalVisitors: posts.content.reduce((sum, post) => sum + (post.likesCount || 0), 0),
-      activeSchemes: schemes.length,
-      announcements: announcements.length,
-      photoGallery: gallery.length,
-      totalPosts: posts.totalElements,
-      totalComments: posts.content.reduce((sum, post) => sum + (post.commentsCount || 0), 0),
-      totalLikes: posts.content.reduce((sum, post) => sum + (post.likesCount || 0), 0),
-    };
-  },
-};
-
 // Import old types for compatibility
 import type {
   Scheme,
@@ -776,25 +429,42 @@ export const panchayatAPI = {
 
   getBySlug: async (slug: string): Promise<PanchayatDetails> => {
     const panchayat = await publicAPI.getPanchayatBySlug(slug);
+    
+    // Use office fields for contact info, fallback to contact fields
+    const contactAddress = panchayat.officeAddress || panchayat.address || '';
+    const contactPhone = panchayat.officePhone || panchayat.contactPhone || '';
+    const contactEmail = panchayat.officeEmail || panchayat.contactEmail || '';
+    const officeHours = panchayat.officeHours || '';
+    
+    // Use description or aboutText for description
+    const description = panchayat.description || panchayat.aboutText || '';
+    
+    // Extract year from createdAt for established year
+    const established = panchayat.createdAt 
+      ? new Date(panchayat.createdAt).getFullYear() 
+      : new Date().getFullYear();
+    
     return {
       id: panchayat.panchayatId.toString(),
-      name: panchayat.panchayatName,
-      district: panchayat.district,
-      state: panchayat.state,
-      block: '',
-      population: 0,
-      area: '0',
-      wards: 0,
-      subdomain: panchayat.slug,
-      established: new Date(panchayat.createdAt).getFullYear(),
-      description: panchayat.description || '',
-      heroImage: panchayat.heroImageUrl,
+      name: panchayat.panchayatName || '',
+      district: panchayat.district || '',
+      state: panchayat.state || '',
+      aboutText: panchayat.aboutText || '',
+      block: '', // Not available in backend
+      population: 0, // Not available in backend
+      area: '0', // Not available in backend
+      wards: 0, // Not available in backend
+      subdomain: panchayat.slug || '',
+      established: established,
+      description: description,
+      heroImage: panchayat.heroImageUrl || undefined,
       contactInfo: {
-        address: panchayat.address || '',
-        phone: panchayat.contactPhone || '',
-        email: panchayat.contactEmail || '',
-        officeHours: '',
+        address: contactAddress,
+        phone: contactPhone,
+        email: contactEmail,
+        officeHours: officeHours,
       },
+      features: [], // Not available in backend yet
     };
   },
 
@@ -808,15 +478,427 @@ export const panchayatAPI = {
     const registerData: RegisterRequest = {
       email: formData.email,
       name: formData.sachivName,
-      panchayatSlug: formData.subdomain,
+      panchayatSlug: formData.subdomain.toLowerCase().trim(),
       password: formData.password,
-      phone: formData.phone,
+      phone: formData.phone?.replace(/\D/g, '').substring(0, 10) || '', // Clean phone number
+      designation: formData.designation || undefined,
+      panchayatName: formData.panchayatName || undefined,
+      district: formData.district || undefined,
+      state: formData.state || undefined,
     };
 
     return await authAPI.register(registerData);
   },
 };
 
+// Schemes API - placeholder (not in backend yet)
+export const schemesAPI = {
+  getAll: async (_panchayatId?: string): Promise<Scheme[]> => {
+    return [];
+  },
+  create: async (_panchayatId: string, _data: Omit<Scheme, 'id'>): Promise<Scheme> => {
+    throw new Error('Not implemented in backend yet');
+  },
+  update: async (_id: string, _updates: Partial<Scheme>): Promise<Scheme> => {
+    throw new Error('Not implemented in backend yet');
+  },
+  delete: async (_id: string): Promise<void> => {
+    throw new Error('Not implemented in backend yet');
+  },
+};
+
+// Announcements API - uses publicAPI for public access, announcementApi for authenticated
+export const announcementsAPI = {
+  getAll: async (): Promise<Announcement[]> => {
+    // For public access, we need slug, not ID
+    // This is a compatibility method - should use publicAPI.getPublicAnnouncements with slug
+    return [];
+  },
+  create: async (_panchayatId: string, _data: Omit<Announcement, 'id'>): Promise<Announcement> => {
+    throw new Error('Use announcementApi.create instead');
+  },
+  update: async (_id: string, _updates: Partial<Announcement>): Promise<Announcement> => {
+    throw new Error('Use announcementApi.update instead');
+  },
+  delete: async (_id: string): Promise<void> => {
+    throw new Error('Use announcementApi.delete instead');
+  },
+};
+
+// Members API - uses publicAPI for public access
+export const membersAPI = {
+  getAll: async (_panchayatId?: string): Promise<PanchayatMember[]> => {
+    // For public access, we need slug, not ID
+    // This is a compatibility method - should use publicAPI.getPublicMembers with slug
+    return [];
+  },
+  create: async (_panchayatId: string, _data: Omit<PanchayatMember, 'id'>): Promise<PanchayatMember> => {
+    throw new Error('Members are managed through team API');
+  },
+  update: async (_id: string, _updates: Partial<PanchayatMember>): Promise<PanchayatMember> => {
+    throw new Error('Members are managed through team API');
+  },
+  delete: async (_id: string): Promise<void> => {
+    throw new Error('Members are managed through team API');
+  },
+};
+
+// Gallery API - uses publicAPI for public access, galleryApi for authenticated
+export const galleryAPI = {
+  getAll: async (): Promise<GalleryItem[]> => {
+    // For public access, we need slug, not ID
+    // This is a compatibility method - should use publicAPI.getPublicGallery with slug
+    return [];
+  },
+  create: async ( data: Omit<GalleryItem, 'id'>): Promise<GalleryItem> => {
+    const { galleryApi } = await import('@/routes/api');
+    return await galleryApi.create({
+      imageUrl: data.image,
+      caption: data.title !== 'Gallery Image' ? data.title : undefined,
+      tags: data.category,
+    });
+  },
+  update: async (id: string, updates: Partial<GalleryItem>): Promise<GalleryItem> => {
+    const { galleryApi } = await import('@/routes/api');
+    return await galleryApi.update(id, {
+      imageUrl: updates.image,
+      caption: updates.title !== 'Gallery Image' ? updates.title : undefined,
+      tags: updates.category,
+    });
+  },
+  delete: async (id: string): Promise<void> => {
+    const { galleryApi } = await import('@/routes/api');
+    await galleryApi.delete(id);
+  },
+};
+
+// Projects API - placeholder (not in backend yet)
+export const projectsAPI = {
+  getAll: async (_panchayatId?: string): Promise<Project[]> => {
+    return [];
+  },
+  create: async (_panchayatId: string, _data: Omit<Project, 'id'>): Promise<Project> => {
+    throw new Error('Not implemented in backend yet');
+  },
+  update: async (_id: string, _updates: Partial<Project>): Promise<Project> => {
+    throw new Error('Not implemented in backend yet');
+  },
+  delete: async (_id: string): Promise<void> => {
+    throw new Error('Not implemented in backend yet');
+  },
+};
+
+// Analytics API - placeholder (not in backend yet)
+export const analyticsAPI = {
+  getStats: async (_panchayatId: string): Promise<AnalyticsOverview> => {
+    return {
+      totalVisitors: 0,
+      activeSchemes: 0,
+      announcements: 0,
+      photoGallery: 0,
+      totalPosts: 0,
+      totalComments: 0,
+      totalLikes: 0,
+    };
+  },
+  getOverview: async (panchayatId: string): Promise<AnalyticsOverview> => {
+    return await analyticsAPI.getStats(panchayatId);
+  },
+  getPageViews: async (_panchayatId: string): Promise<any[]> => {
+    return [];
+  },
+  getPopularPosts: async (_panchayatId: string): Promise<any[]> => {
+    return [];
+  },
+  getEngagement: async (_panchayatId: string): Promise<any> => {
+    return {
+      likes: 0,
+      comments: 0,
+      shares: 0,
+    };
+  },
+};
+
+// Documents API - placeholder (not in backend yet)
+export const documentsAPI = {
+  upload: async (_panchayatId: string, _file: File, _data: any): Promise<Document> => {
+    throw new Error('Not implemented in backend yet');
+  },
+  getAll: async (_panchayatId: string): Promise<Document[]> => {
+    return [];
+  },
+  delete: async (_id: string): Promise<void> => {
+    throw new Error('Not implemented in backend yet');
+  },
+};
+
+// Albums API - uses routes/api.ts albumApi
+export const albumsAPI = {
+  create: async ( data: any): Promise<Album> => {
+    const { albumApi } = await import('@/routes/api');
+    return await albumApi.create(data);
+  },
+  getAll: async (): Promise<Album[]> => {
+    const { albumApi } = await import('@/routes/api');
+    const result = await albumApi.list();
+    return result.items;
+  },
+  update: async (id: string, updates: any): Promise<Album> => {
+    const { albumApi } = await import('@/routes/api');
+    // Note: panchayatId is not needed as it uses TenantContext
+    return await albumApi.update( id, updates);
+  },
+  delete: async (id: string): Promise<void> => {
+    const { albumApi } = await import('@/routes/api');
+    await albumApi.delete( id);
+  },
+};
+
+// Settings API - uses routes/api.ts settingsApi
+export const settingsAPI = {
+  get: async (): Promise<PanchayatSettings> => {
+    const { settingsApi } = await import('@/routes/api');
+    const data = await settingsApi.get();
+    
+    // Parse aboutFeatures JSON string to array
+    let features: string[] = [];
+    if (data.aboutFeatures) {
+      try {
+        features = JSON.parse(data.aboutFeatures);
+        if (!Array.isArray(features)) {
+          features = [];
+        }
+      } catch (e) {
+        features = [];
+      }
+    }
+    
+    // Map backend response to frontend PanchayatSettings
+    return {
+      id: String(data.panchayatId),
+      panchayatId: String(data.panchayatId),
+      hero: {
+        title: data.heroTitle || data.panchayatName || '',
+        subtitle: data.heroSubtitle || data.district || '',
+        description: data.description || '',
+        image: data.heroImageUrl || undefined,
+      },
+      about: {
+        title: data.aboutTitle || 'About Us',
+        content: data.aboutText || '',
+        features: features,
+      },
+      contact: {
+        address: data.officeAddress || data.address || '',
+        phone: data.officePhone || data.contactPhone || '',
+        email: data.officeEmail || data.contactEmail || '',
+        officeHours: data.officeHours || '',
+      },
+      logo: data.logoUrl,
+      updatedAt: data.updatedAt || new Date().toISOString(),
+    };
+  },
+  update: async ( updates: Partial<PanchayatSettings>): Promise<PanchayatSettings> => {
+    const { settingsApi } = await import('@/routes/api');
+    const payload: any = {};
+    
+    if (updates.hero) {
+      if (updates.hero.title !== undefined) payload.heroTitle = updates.hero.title || null;
+      if (updates.hero.subtitle !== undefined) payload.heroSubtitle = updates.hero.subtitle || null;
+      if (updates.hero.description !== undefined) payload.description = updates.hero.description || null;
+      if (updates.hero.image !== undefined) payload.heroImageUrl = updates.hero.image || null;
+    }
+    if (updates.about) {
+      if (updates.about.title !== undefined) payload.aboutTitle = updates.about.title || null;
+      if (updates.about.content !== undefined) payload.aboutText = updates.about.content || null;
+      if (updates.about.features !== undefined) {
+        // Convert features array to JSON string
+        payload.aboutFeatures = JSON.stringify(updates.about.features || []);
+      }
+    }
+    if (updates.contact) {
+      if (updates.contact.address !== undefined) payload.officeAddress = updates.contact.address || null;
+      // Remove non-digit characters from phone for validation
+      if (updates.contact.phone !== undefined) {
+        const phone = updates.contact.phone?.replace(/\D/g, '') || '';
+        payload.officePhone = phone || null;
+      }
+      if (updates.contact.email !== undefined) {
+        const email = updates.contact.email?.trim() || '';
+        payload.officeEmail = email || null;
+      }
+      if (updates.contact.officeHours !== undefined) payload.officeHours = updates.contact.officeHours || null;
+    }
+    if (updates.logo !== undefined) {
+      payload.logoUrl = updates.logo || null;
+    }
+    
+    // Remove null/undefined values to allow partial updates
+    Object.keys(payload).forEach(key => {
+      if (payload[key] === undefined || payload[key] === '') {
+        delete payload[key];
+      }
+    });
+    
+    await settingsApi.update( payload);
+    return await settingsAPI.get();
+  },
+  updateHero: async ( hero: PanchayatSettings['hero']): Promise<PanchayatSettings> => {
+    return await settingsAPI.update( { hero });
+  },
+  updateAbout: async ( about: PanchayatSettings['about']): Promise<PanchayatSettings> => {
+    return await settingsAPI.update( { about });
+  },
+  updateContact: async ( contact: PanchayatSettings['contact']): Promise<PanchayatSettings> => {
+    return await settingsAPI.update( { contact });
+  },
+  uploadLogo: async ( file: File): Promise<PanchayatSettings> => {
+    // For now, return error - file upload needs separate endpoint
+    console.log('Logo upload called with file:', file);
+    throw new Error('Logo upload not implemented - please use image URL in settings');
+  },
+  uploadHeroImage: async ( file: File): Promise<PanchayatSettings> => {
+    // For now, return error - file upload needs separate endpoint
+    console.log('Hero image upload called with file:', file);
+    throw new Error('Hero image upload not implemented - please use image URL in settings');
+  },
+};
+
+// Super Admin API - maps to admin APIs from routes/api.ts
+export const superAdminAPI = {
+  getAllPanchayats: async (params?: { status?: string; search?: string }): Promise<SuperAdminPanchayat[]> => {
+    const { adminPanchayatApi } = await import('@/routes/api');
+    const result = await adminPanchayatApi.getAll({
+      status: params?.status,
+      search: params?.search,
+      page: 0,
+      size: 1000,
+    });
+    return result.content.map((p: any) => ({
+      id: String(p.panchayatId),
+      panchayatName: p.panchayatName,
+      slug: p.slug,
+      district: p.district,
+      state: p.state,
+      status: (p.status?.toLowerCase() || 'active') as PanchayatStatus,
+      adminCount: 0, // Will be calculated from stats if needed
+      createdAt: p.createdAt || new Date().toISOString(),
+    }));
+  },
+  getPanchayatById: async (id: string): Promise<SuperAdminPanchayat> => {
+    const { adminPanchayatApi } = await import('@/routes/api');
+    const p = await adminPanchayatApi.getById(parseInt(id));
+    return {
+      id: String(p.panchayatId),
+      panchayatName: p.panchayatName,
+      slug: p.slug,
+      district: p.district,
+      state: p.state,
+      status: (p.status?.toLowerCase() || 'active') as PanchayatStatus,
+      adminCount: 0,
+      createdAt: p.createdAt || new Date().toISOString(),
+    };
+  },
+  createPanchayat: async (data: {
+    panchayatName: string;
+    slug: string;
+    district: string;
+    state: string;
+    address?: string;
+    contactPhone?: string;
+    contactEmail?: string;
+    description?: string;
+  }): Promise<SuperAdminPanchayat> => {
+    const { adminPanchayatApi } = await import('@/routes/api');
+    const p = await adminPanchayatApi.create(data);
+    return {
+      id: String(p.panchayatId),
+      panchayatName: p.panchayatName,
+      slug: p.slug,
+      district: p.district,
+      state: p.state,
+      status: (p.status?.toLowerCase() || 'active') as PanchayatStatus,
+      adminCount: 0,
+      createdAt: p.createdAt || new Date().toISOString(),
+    };
+  },
+  updatePanchayat: async (id: string, data: Partial<{
+    panchayatName: string;
+    slug: string;
+    district: string;
+    state: string;
+    address?: string;
+    contactPhone?: string;
+    contactEmail?: string;
+    description?: string;
+  }>): Promise<SuperAdminPanchayat> => {
+    const { adminPanchayatApi } = await import('@/routes/api');
+    const p = await adminPanchayatApi.update(parseInt(id), data);
+    return {
+      id: String(p.panchayatId),
+      panchayatName: p.panchayatName,
+      slug: p.slug,
+      district: p.district,
+      state: p.state,
+      status: (p.status?.toLowerCase() || 'active') as PanchayatStatus,
+      adminCount: 0,
+      createdAt: p.createdAt || new Date().toISOString(),
+    };
+  },
+  updatePanchayatStatus: async (id: string, status: string): Promise<void> => {
+    const { adminPanchayatApi } = await import('@/routes/api');
+    await adminPanchayatApi.updateStatus(parseInt(id), status);
+  },
+  deletePanchayat: async (id: string): Promise<void> => {
+    const { adminPanchayatApi } = await import('@/routes/api');
+    await adminPanchayatApi.delete(parseInt(id));
+  },
+  getAllUsers: async (): Promise<AdminUser[]> => {
+    const { adminUserApi } = await import('@/routes/api');
+    const result = await adminUserApi.getAll({ page: 0, size: 1000 });
+    return result.content.map((u: any) => ({
+      id: String(u.userId),
+      name: u.name,
+      email: u.email,
+      role: u.role?.toLowerCase() === 'super_admin' ? 'super_admin' : 'panchayat_admin',
+      panchayatId: u.panchayatId ? String(u.panchayatId) : undefined,
+      panchayatName: u.panchayatName,
+      status: (u.status?.toLowerCase() || 'active') as UserStatus,
+      createdAt: u.createdAt || new Date().toISOString(),
+      lastLogin: u.updatedAt,
+    }));
+  },
+  updateUserStatus: async (id: string, status: string): Promise<void> => {
+    const { adminUserApi } = await import('@/routes/api');
+    await adminUserApi.updateStatus(parseInt(id), status);
+  },
+  getSystemAnalytics: async (): Promise<any> => {
+    const { adminAnalyticsApi } = await import('@/routes/api');
+    const analytics = await adminAnalyticsApi.getSystemAnalytics();
+    return {
+      totalPanchayats: analytics.totalPanchayats || 0,
+      activePanchayats: analytics.activePanchayats || 0,
+      totalUsers: analytics.totalUsers || 0,
+      totalPosts: analytics.totalPosts || 0,
+      totalSchemes: analytics.totalSchemes || 0,
+    };
+  },
+  getAuditLogs: async (): Promise<AuditLog[]> => {
+    const { adminAuditLogApi } = await import('@/routes/api');
+    const result = await adminAuditLogApi.getAll({ page: 0, size: 100 });
+    return result.content.map((log: any) => ({
+      id: String(log.id),
+      userId: String(log.userId),
+      userName: log.userName || 'Unknown',
+      action: log.actionType || 'UNKNOWN',
+      resource: log.targetEntityType || 'Unknown',
+      resourceId: log.targetEntityId ? String(log.targetEntityId) : '',
+      details: log.changes || {},
+      ipAddress: log.ipAddress,
+      createdAt: log.createdAt || new Date().toISOString(),
+    }));
+  },
+};
 
 // Enhanced API exports for backward compatibility
 export const authAPIEnhanced = authAPI;
@@ -827,4 +909,3 @@ export const galleryAPIEnhanced = galleryAPI;
 
 // Export the axios instance for custom requests
 export default api;
-

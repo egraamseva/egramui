@@ -97,6 +97,7 @@ export interface PanchayatDetails {
   block: string;
   population: number;
   area: string;
+  aboutText: string;
   wards: number;
   subdomain: string;
   established: number;
@@ -151,11 +152,17 @@ export interface Feature {
 }
 
 export interface ActivePanchayat {
+  id?: string;
   name: string;
   district: string;
+  state?: string;
   schemes: number;
   population: number;
   subdomain: string;
+  status?: string;
+  established?: number;
+  area?: string;
+  wards?: number;
 }
 
 // Admin & Team Management Types

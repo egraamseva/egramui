@@ -53,8 +53,6 @@ export function TeamManagement({ panchayatId }: TeamManagementProps) {
     phone: "",
     password: "",
     role: "",
-    phone: "",
-    password: "",
   });
 
   useEffect(() => {

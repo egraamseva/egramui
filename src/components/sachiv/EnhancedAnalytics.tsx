@@ -237,4 +237,3 @@ export function EnhancedAnalytics({ panchayatId, refreshKey = 0 }: EnhancedAnaly
     </div>
   );
 }
-

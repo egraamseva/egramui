@@ -23,7 +23,7 @@ import { toast } from "sonner";
 import type { Album } from "../../types";
 import { formatTimeAgo } from "../../utils/format";
 import { ImageWithFallback } from "../figma/ImageWithFallback";
-import { albumsAPI } from "@/services/api";
+import { albumApi } from "@/routes/api";
 
 interface GalleryAlbumsProps {
   panchayatId: string;
@@ -47,8 +47,8 @@ export function GalleryAlbums({ panchayatId }: GalleryAlbumsProps) {
   const fetchAlbums = async () => {
     setLoading(true);
     try {
-      const data = await albumsAPI.getAll(panchayatId);
-      setAlbums(data);
+      const result = await albumApi.list();
+      setAlbums(result.items);
     } catch (error) {
       toast.error("Failed to load albums");
     } finally {
@@ -64,7 +64,7 @@ export function GalleryAlbums({ panchayatId }: GalleryAlbumsProps) {
     }
 
     try {
-      await albumsAPI.create(panchayatId, formData);
+      await albumApi.create( formData);
       toast.success("Album created successfully");
       closeDialog();
       fetchAlbums();
@@ -81,7 +81,7 @@ export function GalleryAlbums({ panchayatId }: GalleryAlbumsProps) {
     }
 
     try {
-      await albumsAPI.update(panchayatId,editingAlbum.id, formData);
+      await albumApi.update( editingAlbum.id, formData);
       toast.success("Album updated successfully");
       closeDialog();
       fetchAlbums();
@@ -94,7 +94,7 @@ export function GalleryAlbums({ panchayatId }: GalleryAlbumsProps) {
     if (!confirm("Are you sure you want to delete this album?")) return;
 
     try {
-      await albumsAPI.delete(panchayatId, id);
+      await albumApi.delete( id);
       toast.success("Album deleted successfully");
       fetchAlbums();
     } catch (error) {
@@ -265,4 +265,3 @@ export function GalleryAlbums({ panchayatId }: GalleryAlbumsProps) {
     </div>
   );
 }
-

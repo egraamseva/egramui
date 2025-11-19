@@ -12,26 +12,46 @@ import { Badge } from "../ui/badge";
 import { Input } from "../ui/input";
 import { ImageWithFallback } from "../figma/ImageWithFallback";
 import { panchayatAPI } from "../../services/api";
+import { toast } from "sonner";
 import type { ActivePanchayat } from "../../types";
 
 export function LandingPage() {
   const navigate = useNavigate();
   const [activePanchayats, setActivePanchayats] = useState<ActivePanchayat[]>([]);
   const [loading, setLoading] = useState(true);
+  const [searchQuery, setSearchQuery] = useState("");
 
   useEffect(() => {
     const fetchPanchayats = async () => {
       try {
+        setLoading(true);
         const data = await panchayatAPI.getAll();
-        setActivePanchayats(data.slice(0, 4)); // Show first 4
+        // Filter only ACTIVE panchayats and show first 4
+        const active = data.filter(p => p.status === 'ACTIVE' || !p.status).slice(0, 4);
+        setActivePanchayats(active);
       } catch (error) {
         console.error("Error fetching panchayats:", error);
+        toast.error("Failed to load panchayats. Please try again later.");
+        setActivePanchayats([]);
       } finally {
         setLoading(false);
       }
     };
     fetchPanchayats();
   }, []);
+
+  const handleSearch = () => {
+    if (searchQuery.trim()) {
+      // Navigate to panchayats page with search query
+      navigate(`/panchayats?search=${encodeURIComponent(searchQuery.trim())}`);
+    }
+  };
+
+  const handleSearchKeyPress = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+      handleSearch();
+    }
+  };
   const features = [
     {
       icon: Users,
@@ -96,9 +116,15 @@ export function LandingPage() {
                     type="search"
                     placeholder="Search schemes, services, or information..."
                     className="border-0 bg-transparent text-[#333] focus-visible:ring-0"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    onKeyPress={handleSearchKeyPress}
                   />
                 </div>
-                <Button className="bg-[#E31E24] text-white hover:bg-[#C91A20]">
+                <Button 
+                  className="bg-[#E31E24] text-white hover:bg-[#C91A20]"
+                  onClick={handleSearch}
+                >
                   Search
                 </Button>
               </div>
@@ -307,13 +333,20 @@ export function LandingPage() {
           </div>
           <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
             {loading ? (
-              <div className="col-span-4 text-center text-[#666]">Loading panchayats...</div>
+              <div className="col-span-4 text-center py-8">
+                <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-[#E31E24] border-r-transparent"></div>
+                <p className="mt-2 text-[#666]">Loading panchayats...</p>
+              </div>
             ) : activePanchayats.length === 0 ? (
-              <div className="col-span-4 text-center text-[#666]">No panchayats available</div>
+              <div className="col-span-4 text-center py-8">
+                <Building2 className="mx-auto h-12 w-12 text-[#666] mb-3 opacity-50" />
+                <p className="text-[#666]">No active panchayats available at the moment</p>
+                <p className="mt-1 text-sm text-[#999]">Check back later or register your panchayat</p>
+              </div>
             ) : (
               activePanchayats.map((panchayat, index) => (
               <Card 
-                key={index} 
+                key={panchayat.subdomain || index} 
                 className="border border-[#E5E5E5] bg-white shadow-sm transition-all hover:shadow-md hover:scale-105 cursor-pointer"
                 onClick={() => navigate(`/panchayat/${panchayat.subdomain}`)}
               >
@@ -329,11 +362,13 @@ export function LandingPage() {
                   <div className="flex justify-between text-sm">
                     <div>
                       <p className="text-[#666]">Active Schemes</p>
-                      <p className="font-semibold text-[#138808]">{panchayat.schemes}</p>
+                      <p className="font-semibold text-[#138808]">{panchayat.schemes || 0}</p>
                     </div>
                     <div className="text-right">
                       <p className="text-[#666]">Population</p>
-                      <p className="font-semibold text-[#138808]">{panchayat.population.toLocaleString()}</p>
+                      <p className="font-semibold text-[#138808]">
+                        {panchayat.population > 0 ? panchayat.population.toLocaleString() : 'N/A'}
+                      </p>
                     </div>
                   </div>
                 </CardContent>

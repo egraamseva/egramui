@@ -57,6 +57,10 @@ export interface RegisterRequest {
   panchayatSlug: string;
   password: string;
   phone: string;
+  designation?: string;
+  panchayatName?: string;
+  district?: string;
+  state?: string;
 }
 
 // Panchayat Types

@@ -33,7 +33,7 @@ export function SettingsManagement({ panchayatId }: SettingsManagementProps) {
   const fetchSettings = async () => {
     setLoading(true);
     try {
-      const data = await settingsAPI.get(panchayatId);
+      const data = await settingsAPI.get();
       setSettings(data);
     } catch (error) {
       toast.error("Failed to load settings");
@@ -47,7 +47,7 @@ export function SettingsManagement({ panchayatId }: SettingsManagementProps) {
     if (!settings) return;
     setSaving(true);
     try {
-      const updated = await settingsAPI.update(panchayatId, settings.hero);
+      const updated = await settingsAPI.updateHero( settings.hero);
       setSettings(updated);
       toast.success("Hero section updated successfully");
     } catch (error: any) {
@@ -62,7 +62,7 @@ export function SettingsManagement({ panchayatId }: SettingsManagementProps) {
     if (!settings) return;
     setSaving(true);
     try {
-      const updated = await settingsAPI.update(panchayatId, settings.about);
+      const updated = await settingsAPI.updateAbout( settings.about);
       setSettings(updated);
       toast.success("About section updated successfully");
     } catch (error: any) {
@@ -77,7 +77,7 @@ export function SettingsManagement({ panchayatId }: SettingsManagementProps) {
     if (!settings) return;
     setSaving(true);
     try {
-      const updated = await settingsAPI.update(panchayatId, settings.contact);
+      const updated = await settingsAPI.updateContact( settings.contact);
       setSettings(updated);
       toast.success("Contact information updated successfully");
     } catch (error: any) {
@@ -91,7 +91,7 @@ export function SettingsManagement({ panchayatId }: SettingsManagementProps) {
     if (!file) return;
     setSaving(true);
     try {
-      const updated = await settingsAPI.update(panchayatId, file);
+      const updated = await settingsAPI.uploadLogo( file);
       setSettings(updated);
       toast.success("Logo uploaded successfully");
     } catch (error: any) {
@@ -105,7 +105,7 @@ export function SettingsManagement({ panchayatId }: SettingsManagementProps) {
     if (!file) return;
     setSaving(true);
     try {
-      const updated = await settingsAPI.update(panchayatId, file);
+      const updated = await settingsAPI.uploadHeroImage( file);
       setSettings(updated);
       toast.success("Hero image uploaded successfully");
     } catch (error: any) {
@@ -390,4 +390,3 @@ export function SettingsManagement({ panchayatId }: SettingsManagementProps) {
     </div>
   );
 }
-

@@ -902,7 +902,7 @@ export const superAdminAPI = {
   // Panchayat Management
   createPanchayat: async (data: {
     name: string;
-    subdomain: string;
+    slug: string;
     district: string;
     state: string;
     block: string;
@@ -913,8 +913,8 @@ export const superAdminAPI = {
     await delay(1500);
     const newPanchayat: SuperAdminPanchayat = {
       id: `panchayat-${Date.now()}`,
-      name: data.name,
-      subdomain: data.subdomain,
+      panchayatName: data.name,
+      slug: data.slug,
       district: data.district,
       state: data.state,
       status: 'active',
@@ -936,8 +936,8 @@ export const superAdminAPI = {
     await delay(800);
     let panchayats = mockData.panchayats.map((p) => ({
       id: p.id,
-      name: p.name,
-      subdomain: p.subdomain,
+      panchayatName: p.name,
+      slug: p.subdomain,
       district: p.district,
       state: p.state,
       status: 'active' as PanchayatStatus,
@@ -950,8 +950,8 @@ export const superAdminAPI = {
     if (filters?.search) {
       const search = filters.search.toLowerCase();
       panchayats = panchayats.filter((p) => 
-        p.name.toLowerCase().includes(search) || 
-        p.subdomain.toLowerCase().includes(search) ||
+        p.panchayatName.toLowerCase().includes(search) || 
+        p.slug.toLowerCase().includes(search) ||
         p.district.toLowerCase().includes(search)
       );
     }
@@ -964,8 +964,8 @@ export const superAdminAPI = {
     if (!panchayat) throw new Error('Panchayat not found');
     return {
       id: panchayat.id,
-      name: panchayat.name,
-      subdomain: panchayat.subdomain,
+      panchayatName: panchayat.name,
+      slug: panchayat.subdomain,
       district: panchayat.district,
       state: panchayat.state,
       status: 'active',
@@ -1457,4 +1457,3 @@ export const galleryAPIEnhanced = {
 };
 
 export default api;
-
