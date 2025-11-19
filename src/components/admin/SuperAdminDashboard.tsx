@@ -34,7 +34,6 @@ import {
   TableRow,
 } from "../ui/table";
 import { Badge } from "../ui/badge";
-// import { Tabs, TabsContent, TabsList, TabsTrigger } from "../ui/tabs";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -68,7 +67,7 @@ export function SuperAdminDashboard() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   useEffect(() => {
-    if (user?.role !== "super_admin") {
+    if (user?.role !== "SUPER_ADMIN") {
       navigate("/dashboard");
       return;
     }

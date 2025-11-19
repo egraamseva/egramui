@@ -36,8 +36,7 @@ import { CreatePost } from "./CreatePost";
 import { PostCard } from "./PostCard";
 import { toast } from "sonner";
 import { useAuth } from "../../contexts/AuthContext";
-import { postsAPI, schemesAPI, announcementsAPI, analyticsAPI } from "../../services/api";
-import type { Post, Scheme, Announcement } from "../../types";
+import type { Post, Scheme, Announcement, PostMedia } from "../../types";
 import { formatTimeAgo } from "../../utils/format";
 import { TeamManagement } from "../admin/TeamManagement";
 import { SettingsManagement } from "./SettingsManagement";
@@ -45,10 +44,12 @@ import { DocumentsManagement } from "./DocumentsManagement";
 import { CommentsManagement } from "./CommentsManagement";
 import { GalleryAlbums } from "./GalleryAlbums";
 import { EnhancedAnalytics } from "./EnhancedAnalytics";
+import { postApi, analyticsAdapter } from "@/routes/api";
 
 export function SachivDashboard() {
   const navigate = useNavigate();
   const { user, logout } = useAuth();
+  console.log(user);
   const [activeSection, setActiveSection] = useState("dashboard");
   const [posts, setPosts] = useState<Post[]>([]);
   const [schemes, setSchemes] = useState<Scheme[]>([]);
@@ -61,6 +62,7 @@ export function SachivDashboard() {
   });
   const [loading, setLoading] = useState(true);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [analyticsRefreshKey, setAnalyticsRefreshKey] = useState(0);
 
   useEffect(() => {
     if (user?.panchayatId) {
@@ -75,25 +77,20 @@ export function SachivDashboard() {
 
   const fetchDashboardData = async () => {
     if (!user?.panchayatId) return;
-    
+
     setLoading(true);
     try {
-      const [postsData, schemesData, announcementsData, statsData] = await Promise.all([
-        postsAPI.getAll(user.panchayatId),
-        schemesAPI.getAll(user.panchayatId),
-        announcementsAPI.getAll(user.panchayatId),
-        analyticsAPI.getStats(user.panchayatId),
-      ]);
-
-      setPosts(postsData);
-      setSchemes(schemesData);
-      setAnnouncements(announcementsData);
+      const postsResult = await postApi.list({ pageSize: 50 });
+      setPosts(postsResult.items);
+      setSchemes([]);
+      setAnnouncements([]);
       setStats({
-        totalVisitors: statsData.totalVisitors,
-        activeSchemes: statsData.activeSchemes,
-        announcements: statsData.announcements,
-        photoGallery: statsData.photoGallery,
+        totalVisitors: postsResult.items.reduce((sum, post) => sum + post.shares, 0),
+        activeSchemes: 0,
+        announcements: 0,
+        photoGallery: postsResult.items.filter((post) => post.media && post.media.length > 0).length,
       });
+      setAnalyticsRefreshKey((prev) => prev + 1);
     } catch (error) {
       console.error("Error fetching dashboard data:", error);
       toast.error("Failed to load dashboard data");
@@ -133,15 +130,23 @@ export function SachivDashboard() {
     content: string;
     media: { type: "image" | "video"; url: string; file?: File }[];
   }) => {
-    if (!user?.panchayatId) return;
-    
+    if (!user) {
+      toast.error("You need to be logged in to create posts.");
+      return;
+    }
+
     try {
-      const newPost = await postsAPI.create({
-        title: postData.content.substring(0, 100), // Use first 100 chars as title
-        bodyText: postData.content,
-        mediaUrl: postData.media?.[0]?.url,
+      const mediaUrl = await extractFirstMediaUrl(postData.media);
+      const newPost = await postApi.create({
+        title: postData.content.slice(0, 60) || "Panchayat update",
+        bodyText: postData.content || "Shared an update",
+        mediaUrl,
       });
-      setPosts([newPost, ...posts]);
+      setPosts((prev) => [newPost, ...prev]);
+      if (user.panchayatId) {
+        analyticsAdapter.invalidate(user.panchayatId);
+        setAnalyticsRefreshKey((prev) => prev + 1);
+      }
       toast.success("Post published successfully!");
     } catch (error) {
       const message = error instanceof Error ? error.message : "Failed to create post";
@@ -154,9 +159,12 @@ export function SachivDashboard() {
   };
 
   const handleDeletePost = async (id: string) => {
+    if (!user?.panchayatId) return;
     try {
-      await postsAPI.delete(id);
-      setPosts(posts.filter((post) => post.id !== id));
+      await postApi.delete(id);
+      setPosts((prev) => prev.filter((post) => post.id !== id));
+      analyticsAdapter.invalidate(user.panchayatId);
+      setAnalyticsRefreshKey((prev) => prev + 1);
       toast.success("Post deleted successfully!");
     } catch (error) {
       const message = error instanceof Error ? error.message : "Failed to delete post";
@@ -187,7 +195,7 @@ export function SachivDashboard() {
             </div>
           </div>
           <div>
-            <h3 className="text-sm font-semibold text-[#1B2B5E]">Ramnagar GP</h3>
+            <h3 className="text-sm font-semibold text-[#1B2B5E]">{user?.panchayatName || 'Panchayat'} GP</h3>
             <p className="text-xs text-[#666]">
               Sachiv Dashboard
             </p>
@@ -719,7 +727,7 @@ export function SachivDashboard() {
 
           {/* Enhanced Analytics View */}
           {activeSection === "analytics" && user?.panchayatId && (
-            <EnhancedAnalytics panchayatId={user.panchayatId} />
+            <EnhancedAnalytics panchayatId={user.panchayatId} refreshKey={analyticsRefreshKey} />
           )}
 
           {/* Settings View */}
@@ -730,4 +738,22 @@ export function SachivDashboard() {
       </div>
     </div>
   );
+}
+
+async function extractFirstMediaUrl(media: PostMedia[]): Promise<string | undefined> {
+  if (!media.length) return undefined;
+  const first = media[0];
+  if (first.file) {
+    return convertFileToDataUrl(first.file);
+  }
+  return first.url;
+}
+
+function convertFileToDataUrl(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result as string);
+    reader.onerror = () => reject(reader.error ?? new Error("Failed to read file"));
+    reader.readAsDataURL(file);
+  });
 }

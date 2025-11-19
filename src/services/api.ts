@@ -348,6 +348,7 @@ import type {
   Post as UIPost,
   Comment as UIComment,
   TeamMember as UITeamMember,
+  UserStatus,
 } from '../types';
 
 // Type conversion helpers

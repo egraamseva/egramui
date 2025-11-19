@@ -35,9 +35,9 @@ import {
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../ui/select";
 import { Alert, AlertDescription } from "../ui/alert";
 import { toast } from "sonner";
-import { teamAPI } from "../../services/api";
 import type { TeamMember, UserStatus } from "../../types";
 import { formatTimeAgo } from "../../utils/format";
+import { teamApi } from "@/routes/api";
 
 interface TeamManagementProps {
   panchayatId: string;
@@ -53,6 +53,8 @@ export function TeamManagement({ panchayatId }: TeamManagementProps) {
     phone: "",
     password: "",
     role: "",
+    phone: "",
+    password: "",
   });
 
   useEffect(() => {
@@ -62,8 +64,8 @@ export function TeamManagement({ panchayatId }: TeamManagementProps) {
   const fetchMembers = async () => {
     setLoading(true);
     try {
-      const data = await teamAPI.getAllMembers(panchayatId);
-      setMembers(data);
+      const data = await teamApi.list({ size: 20 });
+      setMembers(data.items);
     } catch (error) {
       toast.error("Failed to load team members");
     } finally {
@@ -73,13 +75,13 @@ export function TeamManagement({ panchayatId }: TeamManagementProps) {
 
   const handleAddMember = async (e?: React.FormEvent) => {
     e?.preventDefault();
-    if (!formData.name || !formData.email || !formData.phone || !formData.password) {
-      toast.error("Please fill all required fields");
+    if (!formData.name || !formData.email || !formData.role || !formData.phone || !formData.password) {
+      toast.error("Please fill all fields");
       return;
     }
 
     try {
-      await teamAPI.addMember(panchayatId, {
+      await teamApi.addMember({
         name: formData.name,
         email: formData.email,
         phone: formData.phone,
@@ -87,7 +89,7 @@ export function TeamManagement({ panchayatId }: TeamManagementProps) {
       });
       toast.success("Team member added successfully");
       setIsDialogOpen(false);
-      setFormData({ name: "", email: "", phone: "", password: "", role: "" });
+      setFormData({ name: "", email: "", role: "", phone: "", password: "" });
       fetchMembers();
     } catch (error: any) {
       toast.error(error.message || "Failed to add team member");
@@ -98,7 +100,7 @@ export function TeamManagement({ panchayatId }: TeamManagementProps) {
     if (!confirm("Are you sure you want to remove this team member?")) return;
 
     try {
-      await teamAPI.removeMember(userId);
+      await teamApi.removeMember(userId);
       toast.success("Team member removed successfully");
       fetchMembers();
     } catch (error) {
@@ -108,7 +110,7 @@ export function TeamManagement({ panchayatId }: TeamManagementProps) {
 
   const handleStatusChange = async (userId: string, status: UserStatus) => {
     try {
-      await teamAPI.updateMemberStatus(userId, status);
+      await teamApi.updateStatus(userId, status);
       toast.success(`Member ${status === "active" ? "activated" : "deactivated"} successfully`);
       fetchMembers();
     } catch (error) {
@@ -290,6 +292,25 @@ export function TeamManagement({ panchayatId }: TeamManagementProps) {
                 </SelectContent>
               </Select>
             </div>
+            <div className="space-y-2">
+              <Label htmlFor="phone">Phone</Label>
+              <Input
+                id="phone"
+                placeholder="Enter 10-digit phone number"
+                value={formData.phone}
+                onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="password">Temporary Password</Label>
+              <Input
+                id="password"
+                type="password"
+                placeholder="Enter password (min 8 characters)"
+                value={formData.password}
+                onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+              />
+            </div>
           </div>
           <DialogFooter>
             <Button
@@ -297,7 +318,7 @@ export function TeamManagement({ panchayatId }: TeamManagementProps) {
               type="button"
               onClick={() => {
                 setIsDialogOpen(false);
-                setFormData({ name: "", email: "", phone: "", password: "", role: "" });
+                setFormData({ name: "", email: "", role: "", phone: "", password: "" });
               }}
             >
               Cancel
@@ -315,4 +336,5 @@ export function TeamManagement({ panchayatId }: TeamManagementProps) {
     </div>
   );
 }
+
 

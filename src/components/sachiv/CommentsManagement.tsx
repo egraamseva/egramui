@@ -10,9 +10,9 @@ import { Button } from "../ui/button";
 import { Badge } from "../ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../ui/tabs";
 import { toast } from "sonner";
-import { commentsAPI, postsAPI } from "../../services/api";
 import type { Comment, Post } from "../../types";
 import { formatTimeAgo } from "../../utils/format";
+import { commentApi, postApi } from "@/routes/api";
 
 interface CommentsManagementProps {
   panchayatId: string;
@@ -38,10 +38,10 @@ export function CommentsManagement({ panchayatId }: CommentsManagementProps) {
   const fetchPosts = async () => {
     setLoading(true);
     try {
-      const data = await postsAPI.getAll(panchayatId);
-      setPosts(data);
-      if (data.length > 0 && !selectedPostId) {
-        setSelectedPostId(data[0].id);
+      const data = await postApi.list({ pageSize: 50 });
+      setPosts(data.items);
+      if (data.items.length > 0 && !selectedPostId) {
+        setSelectedPostId(data.items[0].id);
       }
     } catch (error) {
       toast.error("Failed to load posts");
@@ -52,8 +52,8 @@ export function CommentsManagement({ panchayatId }: CommentsManagementProps) {
 
   const fetchComments = async (postId: string) => {
     try {
-      const data = await commentsAPI.getByPost(postId);
-      setComments(data);
+      const data = await commentApi.list(postId, { pageSize: 100 });
+      setComments(data.items);
     } catch (error) {
       toast.error("Failed to load comments");
     }
@@ -61,7 +61,11 @@ export function CommentsManagement({ panchayatId }: CommentsManagementProps) {
 
   const handleApprove = async (postId: string, commentId: string) => {
     try {
+<<<<<<< Updated upstream
       await commentsAPI.approve(postId, parseInt(commentId));
+=======
+      await commentApi.approve(postId, commentId);
+>>>>>>> Stashed changes
       toast.success("Comment approved");
       fetchComments(postId);
       fetchPosts();
@@ -74,7 +78,11 @@ export function CommentsManagement({ panchayatId }: CommentsManagementProps) {
     if (!confirm("Are you sure you want to delete this comment?")) return;
 
     try {
+<<<<<<< Updated upstream
       await commentsAPI.delete(postId, parseInt(commentId));
+=======
+      await commentApi.delete(postId, commentId);
+>>>>>>> Stashed changes
       toast.success("Comment deleted");
       fetchComments(postId);
       fetchPosts();

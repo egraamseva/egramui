@@ -9,15 +9,16 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../ui
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../ui/tabs";
 import { Badge } from "../ui/badge";
 import { toast } from "sonner";
-import { analyticsAPI } from "../../services/api";
 import type { AnalyticsOverview, PageView, PopularPost, EngagementStats } from "../../types";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
+import { analyticsAdapter } from "@/routes/api";
 
 interface EnhancedAnalyticsProps {
   panchayatId: string;
+  refreshKey?: number;
 }
 
-export function EnhancedAnalytics({ panchayatId }: EnhancedAnalyticsProps) {
+export function EnhancedAnalytics({ panchayatId, refreshKey = 0 }: EnhancedAnalyticsProps) {
   const [overview, setOverview] = useState<AnalyticsOverview | null>(null);
   const [pageViews, setPageViews] = useState<PageView[]>([]);
   const [popularPosts, setPopularPosts] = useState<PopularPost[]>([]);
@@ -25,17 +26,19 @@ export function EnhancedAnalytics({ panchayatId }: EnhancedAnalyticsProps) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetchAnalytics();
-  }, [panchayatId]);
+    if (!panchayatId) return;
+    analyticsAdapter.invalidate(panchayatId);
+    fetchAnalytics(panchayatId);
+  }, [panchayatId, refreshKey]);
 
-  const fetchAnalytics = async () => {
+  const fetchAnalytics = async (id: string) => {
     setLoading(true);
     try {
       const [overviewData, pageViewsData, popularPostsData, engagementData] = await Promise.all([
-        analyticsAPI.getOverview(panchayatId),
-        analyticsAPI.getPageViews(panchayatId),
-        analyticsAPI.getPopularPosts(panchayatId),
-        analyticsAPI.getEngagement(panchayatId),
+        analyticsAdapter.getOverview(id),
+        analyticsAdapter.getPageViews(id),
+        analyticsAdapter.getPopularPosts(id),
+        analyticsAdapter.getEngagement(id),
       ]);
 
       setOverview(overviewData);

@@ -1,19 +1,19 @@
 /**
  * Authentication Context
- * Manages user authentication state using Redux
+ * Manages user authentication state using Redux only (no local state)
  */
 
-import { createContext, useContext, useEffect, ReactNode } from 'react';
+import { createContext, useContext, ReactNode } from 'react';
 import { useAppDispatch, useAppSelector } from '../store/hooks';
-import { login as loginAction, logout as logoutAction, getCurrentUser } from '../store/slices/authSlice';
+import { login as loginAction, logout as logoutAction } from '../store/slices/authSlice';
 import { toast } from 'sonner';
 import type { User as ApiUser } from '../types/api';
 
 interface User {
-  id: string;
+  userId: string;
   email: string;
   name: string;
-  role: "super_admin" | "panchayat_admin" | "user";
+  role: "SUPER_ADMIN" | "PANCHAYAT_ADMIN" | "PANCHAYAT_USER";
   panchayatId?: string;
   panchayatName?: string;
 }
@@ -28,24 +28,20 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-// Helper function to map API user to context user
-const mapApiUserToContextUser = (apiUser: ApiUser): User => {
-  const mappedRole =
-    apiUser.role === 'PANCHAYAT_ADMIN'
-      ? 'panchayat_admin'
-      : apiUser.role === 'SUPER_ADMIN'
-      ? 'super_admin'
-      : 'user';
-
-  return {
-    id: apiUser.userId.toString(),
-    email: apiUser.email,
-    name: apiUser.name,
-    role: mappedRole as "super_admin" | "panchayat_admin" | "user",
-    panchayatId: apiUser.panchayatId?.toString(),
-    panchayatName: apiUser.panchayatName,
-  };
-};
+// Helper function to map API user to context user (unified, consistent with interface)
+const mapApiUserToContextUser = (apiUser: ApiUser): User => ({
+  userId: String(apiUser.userId),
+  email: apiUser.email,
+  name: apiUser.name,
+  role:
+    apiUser.role === 'SUPER_ADMIN'
+      ? 'SUPER_ADMIN'
+      : apiUser.role === 'PANCHAYAT_ADMIN'
+      ? 'PANCHAYAT_ADMIN'
+      : 'PANCHAYAT_USER',
+  panchayatId: apiUser.panchayatId ? String(apiUser.panchayatId) : undefined,
+  panchayatName: apiUser.panchayatName,
+});
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const dispatch = useAppDispatch();
@@ -54,20 +50,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // Map Redux user to context user format
   const user = reduxUser ? mapApiUserToContextUser(reduxUser) : null;
 
-  useEffect(() => {
-    // Check for existing session and fetch current user
-    const token = localStorage.getItem('authToken');
-    if (token && !reduxUser) {
-      dispatch(getCurrentUser());
-    }
-  }, [dispatch, reduxUser]);
-
+  // Only deal with login/logout using Redux actions
   const login = async (email: string, password: string) => {
     try {
       await dispatch(loginAction({ email, password })).unwrap();
       toast.success('Login successful!');
     } catch (error) {
-      const message = typeof error === 'string' ? error : 'Login failed';
+      const message = error instanceof Error ? error.message : 'Login failed';
       toast.error(message);
       throw error;
     }
@@ -79,8 +68,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       toast.success('Logged out successfully');
     } catch (error) {
       console.error('Logout error:', error);
-      // Still clear local state even if API call fails
-      toast.success('Logged out successfully');
     }
   };
 
@@ -102,7 +89,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 export function useAuth() {
   const context = useContext(AuthContext);
   if (context === undefined) {
-    throw new Error('useAuth must be used within an AuthProvider');
+    throw new Error("useAuth must be used within an AuthProvider");
   }
   return context;
 }
