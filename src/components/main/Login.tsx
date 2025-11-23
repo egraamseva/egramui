@@ -12,8 +12,10 @@ import { Input } from '../ui/input';
 import { Label } from '../ui/label';
 import { useAuth } from '../../contexts/AuthContext';
 import { toast } from 'sonner';
+import { useTranslation } from 'react-i18next';
 
 export function Login() {
+  const { t } = useTranslation();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -26,9 +28,9 @@ export function Login() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!email || !password) {
-      toast.error('Please fill in all fields');
+      toast.error(t('validation.fillAllFields'));
       return;
     }
 
@@ -60,7 +62,7 @@ export function Login() {
             </div>
           </div>
           <h1 className="mb-2 text-3xl font-semibold text-[#1B2B5E] tracking-tight">e-GramSeva</h1>
-          <p className="text-sm text-[#666]">Sachiv Dashboard Login</p>
+          <p className="text-sm text-[#666]">{t('login.subtitle')}</p>
         </div>
 
         {/* Login Card */}
@@ -68,24 +70,24 @@ export function Login() {
           <CardHeader className="space-y-1 pb-4">
             <CardTitle className="flex items-center gap-2 text-2xl text-[#1B2B5E]">
               <LogIn className="h-5 w-5 text-[#E31E24]" />
-              Sign In
+              {t('login.title')}
             </CardTitle>
             <CardDescription className="text-[#666]">
-              Enter your credentials to access the dashboard
+              {t('login.description')}
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <form onSubmit={handleSubmit} className="space-y-5">
               <div className="space-y-2">
                 <Label htmlFor="email" className="text-sm font-medium">
-                  Email Address
+                  {t('login.email')}
                 </Label>
                 <div className="relative">
                   <Mail className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground pointer-events-none" />
                   <Input
                     id="email"
                     type="email"
-                    placeholder="sachiv@panchayat.egramseva.gov.in"
+                    placeholder={t('login.emailPlaceholder')}
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     className="pl-10 h-11"
@@ -98,14 +100,14 @@ export function Login() {
 
               <div className="space-y-2">
                 <Label htmlFor="password" className="text-sm font-medium">
-                  Password
+                  {t('login.password')}
                 </Label>
                 <div className="relative">
                   <Lock className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground pointer-events-none" />
                   <Input
                     id="password"
                     type={showPassword ? 'text' : 'password'}
-                    placeholder="Enter your password"
+                    placeholder={t('login.passwordPlaceholder')}
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     className="pl-10 pr-10 h-11"
@@ -118,7 +120,7 @@ export function Login() {
                     onClick={() => setShowPassword(!showPassword)}
                     className="absolute right-3 top-1/2 -translate-y-1/2 text-[#666] hover:text-[#1B2B5E] transition-colors focus:outline-none focus:ring-2 focus:ring-[#E31E24]/20 focus:ring-offset-0 rounded p-1 disabled:cursor-not-allowed disabled:opacity-50"
                     disabled={isLoading}
-                    aria-label={showPassword ? 'Hide password' : 'Show password'}
+                    aria-label={showPassword ? t('login.hidePassword') : t('login.showPassword')}
                   >
                     {showPassword ? (
                       <EyeOff className="h-4 w-4" />
@@ -137,7 +139,7 @@ export function Login() {
                     className="h-4 w-4 rounded border-[#E5E5E5] bg-white text-[#E31E24] focus:ring-2 focus:ring-[#E31E24]/20 focus:ring-offset-0 cursor-pointer disabled:cursor-not-allowed disabled:opacity-50"
                   />
                   <Label htmlFor="remember" className="text-sm cursor-pointer text-[#666]">
-                    Remember me
+                    {t('login.rememberMe')}
                   </Label>
                 </div>
                 <button
@@ -149,7 +151,7 @@ export function Login() {
                   }}
                   disabled={isLoading}
                 >
-                  Forgot password?
+                  {t('login.forgotPassword')}
                 </button>
               </div>
 
@@ -161,10 +163,10 @@ export function Login() {
                 {isLoading ? (
                   <span className="flex items-center gap-2">
                     <span className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
-                    Signing in...
+                    {t('login.loggingIn')}
                   </span>
                 ) : (
-                  'Sign In'
+                  t('login.loginButton')
                 )}
               </Button>
             </form>
@@ -173,13 +175,13 @@ export function Login() {
 
         {/* Footer */}
         <p className="mt-6 text-center text-sm text-[#666]">
-          Don't have an account?{' '}
+          {t('login.noAccount')}{' '}
           <button
             type="button"
             className="text-[#E31E24] hover:underline font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-[#E31E24]/20 focus:ring-offset-1 rounded px-1"
             onClick={() => navigate('/registration')}
           >
-            Register your Panchayat
+            {t('login.registerHere')}
           </button>
         </p>
       </div>

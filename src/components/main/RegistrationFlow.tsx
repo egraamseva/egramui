@@ -12,8 +12,10 @@ import { Badge } from "../ui/badge";
 import { panchayatAPI } from "../../services/api";
 import { toast } from "sonner";
 import type { RegistrationFormData } from "../../types";
+import { useTranslation } from "react-i18next";
 
 export function RegistrationFlow() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const [step, setStep] = useState(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -51,9 +53,9 @@ export function RegistrationFlow() {
   }, []);
 
   const steps = [
-    { number: 1, title: "Personal Details", icon: User },
-    { number: 2, title: "Panchayat Details", icon: MapPin },
-    { number: 3, title: "Review & Submit", icon: Check },
+    { number: 1, title: t('registration.step1Title'), icon: User },
+    { number: 2, title: t('registration.step2Title'), icon: MapPin },
+    { number: 3, title: t('registration.step3Title'), icon: Check },
   ];
 
   // Validation for each step
@@ -97,74 +99,74 @@ export function RegistrationFlow() {
   const handleSubmit = async () => {
     // Validate required fields
     if (!formData.sachivName.trim()) {
-      toast.error("Please enter your full name");
+      toast.error(t('validation.nameRequired'));
       return;
     }
 
     if (!formData.designation) {
-      toast.error("Please select your designation");
+      toast.error(t('validation.designationRequired'));
       return;
     }
 
     if (!formData.email.trim()) {
-      toast.error("Please enter your email address");
+      toast.error(t('validation.emailRequired'));
       return;
     }
 
     // Validate phone number (should be 10 digits)
     const phoneDigits = formData.phone?.replace(/\D/g, '') || '';
     if (!phoneDigits || phoneDigits.length !== 10) {
-      toast.error("Please enter a valid 10-digit phone number");
+      toast.error(t('validation.phoneInvalid'));
       return;
     }
 
     if (!formData.panchayatName.trim()) {
-      toast.error("Please enter panchayat name");
+      toast.error(t('validation.panchayatNameRequired'));
       return;
     }
 
     if (!formData.district.trim()) {
-      toast.error("Please enter district");
+      toast.error(t('validation.districtRequired'));
       return;
     }
 
     if (!formData.state) {
-      toast.error("Please select state");
+      toast.error(t('validation.stateRequired'));
       return;
     }
 
     if (!formData.subdomain.trim()) {
-      toast.error("Please enter subdomain");
+      toast.error(t('validation.subdomainRequired'));
       return;
     }
 
     // Validate subdomain format (lowercase, alphanumeric, hyphens only)
     const subdomainRegex = /^[a-z0-9-]+$/;
     if (!subdomainRegex.test(formData.subdomain.toLowerCase())) {
-      toast.error("Subdomain can only contain lowercase letters, numbers, and hyphens");
+      toast.error(t('validation.subdomainInvalid'));
       return;
     }
 
     if (!formData.acceptTerms) {
-      toast.error("Please accept the terms and conditions");
+      toast.error(t('validation.termsRequired'));
       return;
     }
 
     // Validate password
     if (!formData.password || formData.password.length < 8) {
-      toast.error("Password must be at least 8 characters long");
+      toast.error(t('validation.passwordMinLength'));
       return;
     }
 
     if (formData.password !== formData.confirmPassword) {
-      toast.error("Passwords do not match");
+      toast.error(t('validation.passwordMismatch'));
       return;
     }
 
     // Validate password strength
     const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]/;
     if (!passwordRegex.test(formData.password)) {
-      toast.error("Password must contain uppercase, lowercase, number, and special character");
+      toast.error(t('validation.passwordWeak'));
       return;
     }
 
@@ -177,10 +179,10 @@ export function RegistrationFlow() {
         subdomain: formData.subdomain.toLowerCase().trim(),
       };
       await panchayatAPI.register(cleanedFormData);
-      toast.success("Registration submitted successfully!");
+      toast.success(t('notifications.registrationSuccess'));
       navigate("/success");
     } catch (error) {
-      const message = error instanceof Error ? error.message : "Registration failed";
+      const message = error instanceof Error ? error.message : t('notifications.registrationError');
       toast.error(message);
     } finally {
       setIsSubmitting(false);
@@ -194,16 +196,16 @@ export function RegistrationFlow() {
         <div className="mb-8">
           <Button variant="ghost" onClick={() => navigate("/")} className="text-[#666] hover:text-[#1B2B5E]">
             <ArrowLeft className="mr-2 h-4 w-4" />
-            Back to Home
+            {t('common.backToHome')}
           </Button>
         </div>
 
         {/* Progress Bar */}
         <div className="mb-8">
           <div className="mb-4 flex items-center justify-between">
-            <h2 className="text-2xl font-bold text-[#1B2B5E]">Panchayat Registration</h2>
+            <h2 className="text-2xl font-bold text-[#1B2B5E]">{t('registration.title')}</h2>
             <Badge variant="secondary" className="bg-[#F5F5F5] text-[#666]">
-              Step {step} of {totalSteps}
+              {t('registration.stepProgress', { current: step, total: totalSteps })}
             </Badge>
           </div>
           <Progress value={progress} className="h-2" />
@@ -214,9 +216,9 @@ export function RegistrationFlow() {
           <CardHeader>
             <CardTitle>{steps[step - 1].title}</CardTitle>
             <CardDescription>
-              {step === 1 && "Please provide your personal information as Panchayat Sachiv"}
-              {step === 2 && "Enter details about your Gram Panchayat"}
-              {step === 3 && "Review your information before submitting"}
+              {step === 1 && t('registration.step1Description')}
+              {step === 2 && t('registration.step2Description')}
+              {step === 3 && t('registration.step3Description')}
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -225,10 +227,10 @@ export function RegistrationFlow() {
               <div className="space-y-6">
                 <div className="grid gap-6 md:grid-cols-2">
                   <div className="space-y-2">
-                    <Label htmlFor="sachivName">Full Name *</Label>
+                    <Label htmlFor="sachivName">{t('registration.fullName')} *</Label>
                     <Input
                       id="sachivName"
-                      placeholder="Enter your full name"
+                      placeholder={t('registration.fullNamePlaceholder')}
                       value={formData.sachivName}
                       onChange={(e) =>
                         setFormData({ ...formData, sachivName: e.target.value })
@@ -236,7 +238,7 @@ export function RegistrationFlow() {
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="designation">Designation *</Label>
+                    <Label htmlFor="designation">{t('registration.designation')} *</Label>
                     <Select
                       value={formData.designation}
                       onValueChange={(value) =>
@@ -244,34 +246,34 @@ export function RegistrationFlow() {
                       }
                     >
                       <SelectTrigger id="designation">
-                        <SelectValue placeholder="Select designation" />
+                        <SelectValue placeholder={t('registration.designationPlaceholder')} />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="sachiv">Panchayat Sachiv</SelectItem>
-                        <SelectItem value="sarpanch">Sarpanch</SelectItem>
-                        <SelectItem value="upsarpanch">Up-Sarpanch</SelectItem>
-                        <SelectItem value="ward-member">Ward Member</SelectItem>
+                        <SelectItem value="sachiv">{t('registration.sachiv')}</SelectItem>
+                        <SelectItem value="sarpanch">{t('registration.sarpanch')}</SelectItem>
+                        <SelectItem value="upsarpanch">{t('registration.upSarpanch')}</SelectItem>
+                        <SelectItem value="ward-member">{t('registration.wardMember')}</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
                 </div>
                 <div className="grid gap-6 md:grid-cols-2">
                   <div className="space-y-2">
-                    <Label htmlFor="email">Email Address *</Label>
+                    <Label htmlFor="email">{t('registration.email')} *</Label>
                     <Input
                       id="email"
                       type="email"
-                      placeholder="sachiv@example.com"
+                      placeholder={t('registration.emailPlaceholder')}
                       value={formData.email}
                       onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="phone">Mobile Number *</Label>
+                    <Label htmlFor="phone">{t('registration.phone')} *</Label>
                     <Input
                       id="phone"
                       type="tel"
-                      placeholder="+91 XXXXX XXXXX"
+                      placeholder={t('registration.phonePlaceholder')}
                       value={formData.phone}
                       onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
                     />
@@ -279,24 +281,24 @@ export function RegistrationFlow() {
                 </div>
                 <div className="grid gap-6 md:grid-cols-2">
                   <div className="space-y-2">
-                    <Label htmlFor="password">Password *</Label>
+                    <Label htmlFor="password">{t('registration.password')} *</Label>
                     <Input
                       id="password"
                       type="password"
-                      placeholder="Enter password"
+                      placeholder={t('registration.passwordPlaceholder')}
                       value={formData.password}
                       onChange={(e) => setFormData({ ...formData, password: e.target.value })}
                     />
                     <p className="text-xs text-gray-500">
-                      Must be 8+ characters with uppercase, lowercase, number & special character
+                      {t('registration.passwordHint')}
                     </p>
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="confirmPassword">Confirm Password *</Label>
+                    <Label htmlFor="confirmPassword">{t('registration.confirmPassword')} *</Label>
                     <Input
                       id="confirmPassword"
                       type="password"
-                      placeholder="Confirm password"
+                      placeholder={t('registration.confirmPasswordPlaceholder')}
                       value={formData.confirmPassword}
                       onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}
                     />
@@ -310,10 +312,10 @@ export function RegistrationFlow() {
               <div className="space-y-6">
                 <div className="grid gap-6 md:grid-cols-2">
                   <div className="space-y-2">
-                    <Label htmlFor="panchayatName">Gram Panchayat Name *</Label>
+                    <Label htmlFor="panchayatName">{t('registration.panchayatName')} *</Label>
                     <Input
                       id="panchayatName"
-                      placeholder="Enter panchayat name"
+                      placeholder={t('registration.panchayatNamePlaceholder')}
                       value={formData.panchayatName}
                       onChange={(e) =>
                         setFormData({ ...formData, panchayatName: e.target.value })
@@ -321,30 +323,30 @@ export function RegistrationFlow() {
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="state">State *</Label>
+                    <Label htmlFor="state">{t('registration.state')} *</Label>
                     <Select
                       value={formData.state}
                       onValueChange={(value) => setFormData({ ...formData, state: value })}
                     >
                       <SelectTrigger id="state">
-                        <SelectValue placeholder="Select state" />
+                        <SelectValue placeholder={t('registration.statePlaceholder')} />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="UP">Uttar Pradesh</SelectItem>
-                        <SelectItem value="MH">Maharashtra</SelectItem>
-                        <SelectItem value="RJ">Rajasthan</SelectItem>
-                        <SelectItem value="GJ">Gujarat</SelectItem>
-                        <SelectItem value="BR">Bihar</SelectItem>
+                        <SelectItem value="UP">{t('registration.uttarPradesh')}</SelectItem>
+                        <SelectItem value="MH">{t('registration.maharashtra')}</SelectItem>
+                        <SelectItem value="RJ">{t('registration.rajasthan')}</SelectItem>
+                        <SelectItem value="GJ">{t('registration.gujarat')}</SelectItem>
+                        <SelectItem value="BR">{t('registration.bihar')}</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
                 </div>
                 <div className="grid gap-6 md:grid-cols-2">
                   <div className="space-y-2">
-                    <Label htmlFor="district">District *</Label>
+                    <Label htmlFor="district">{t('registration.district')} *</Label>
                     <Input
                       id="district"
-                      placeholder="Enter district"
+                      placeholder={t('registration.districtPlaceholder')}
                       value={formData.district}
                       onChange={(e) =>
                         setFormData({ ...formData, district: e.target.value })
@@ -352,10 +354,10 @@ export function RegistrationFlow() {
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="block">Block/Tehsil *</Label>
+                    <Label htmlFor="block">{t('registration.block')} *</Label>
                     <Input
                       id="block"
-                      placeholder="Enter block/tehsil"
+                      placeholder={t('registration.blockPlaceholder')}
                       value={formData.block}
                       onChange={(e) => setFormData({ ...formData, block: e.target.value })}
                     />
@@ -363,11 +365,11 @@ export function RegistrationFlow() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="subdomain">Choose Your Subdomain *</Label>
+                  <Label htmlFor="subdomain">{t('registration.subdomain')} *</Label>
                   <div className="flex items-center gap-2">
                     <Input
                       id="subdomain"
-                      placeholder="yourpanchayat"
+                      placeholder={t('registration.subdomainPlaceholder')}
                       value={formData.subdomain}
                       onChange={(e) =>
                         setFormData({ ...formData, subdomain: e.target.value })
@@ -378,8 +380,7 @@ export function RegistrationFlow() {
                     </span>
                   </div>
                   <p className="text-sm text-muted-foreground">
-                    Your panchayat will be accessible at: {formData.subdomain || "yourpanchayat"}
-                    .egramseva.gov.in
+                    {t('registration.subdomainHint', { subdomain: formData.subdomain || t('registration.subdomainPlaceholder') })}
                   </p>
                 </div>
               </div>
@@ -389,50 +390,50 @@ export function RegistrationFlow() {
             {step === 3 && (
               <div className="space-y-6">
                 <div className="rounded-lg border bg-muted/50 p-6">
-                  <h4 className="mb-4">Personal Information</h4>
+                  <h4 className="mb-4">{t('registration.personalInfo')}</h4>
                   <div className="grid gap-4 md:grid-cols-2">
                     <div>
-                      <p className="text-sm text-muted-foreground">Name</p>
-                      <p>{formData.sachivName || "Not provided"}</p>
+                      <p className="text-sm text-muted-foreground">{t('common.name')}</p>
+                      <p>{formData.sachivName || t('registration.notProvided')}</p>
                     </div>
                     <div>
-                      <p className="text-sm text-muted-foreground">Designation</p>
-                      <p>{formData.designation || "Not provided"}</p>
+                      <p className="text-sm text-muted-foreground">{t('registration.designation')}</p>
+                      <p>{formData.designation || t('registration.notProvided')}</p>
                     </div>
                     <div>
-                      <p className="text-sm text-muted-foreground">Email</p>
-                      <p>{formData.email || "Not provided"}</p>
+                      <p className="text-sm text-muted-foreground">{t('registration.email')}</p>
+                      <p>{formData.email || t('registration.notProvided')}</p>
                     </div>
                     <div>
-                      <p className="text-sm text-muted-foreground">Phone</p>
-                      <p>{formData.phone || "Not provided"}</p>
+                      <p className="text-sm text-muted-foreground">{t('registration.phone')}</p>
+                      <p>{formData.phone || t('registration.notProvided')}</p>
                     </div>
                   </div>
                 </div>
 
                 <div className="rounded-lg border bg-muted/50 p-6">
-                  <h4 className="mb-4">Panchayat Information</h4>
+                  <h4 className="mb-4">{t('registration.panchayatInfo')}</h4>
                   <div className="grid gap-4 md:grid-cols-2">
                     <div>
-                      <p className="text-sm text-muted-foreground">Panchayat Name</p>
-                      <p>{formData.panchayatName || "Not provided"}</p>
+                      <p className="text-sm text-muted-foreground">{t('registration.panchayatName')}</p>
+                      <p>{formData.panchayatName || t('registration.notProvided')}</p>
                     </div>
                     <div>
-                      <p className="text-sm text-muted-foreground">State</p>
-                      <p>{formData.state || "Not provided"}</p>
+                      <p className="text-sm text-muted-foreground">{t('registration.state')}</p>
+                      <p>{formData.state || t('registration.notProvided')}</p>
                     </div>
                     <div>
-                      <p className="text-sm text-muted-foreground">District</p>
-                      <p>{formData.district || "Not provided"}</p>
+                      <p className="text-sm text-muted-foreground">{t('registration.district')}</p>
+                      <p>{formData.district || t('registration.notProvided')}</p>
                     </div>
                     <div>
-                      <p className="text-sm text-muted-foreground">Block</p>
-                      <p>{formData.block || "Not provided"}</p>
+                      <p className="text-sm text-muted-foreground">{t('registration.block')}</p>
+                      <p>{formData.block || t('registration.notProvided')}</p>
                     </div>
                     <div>
-                      <p className="text-sm text-muted-foreground">Subdomain</p>
+                      <p className="text-sm text-muted-foreground">{t('registration.subdomain')}</p>
                       <p className="text-[#FF9933]">
-                        {formData.subdomain || "yourpanchayat"}.egramseva.gov.in
+                        {formData.subdomain || t('registration.subdomainPlaceholder')}.egramseva.gov.in
                       </p>
                     </div>
                   </div>
@@ -451,11 +452,10 @@ export function RegistrationFlow() {
                       htmlFor="terms"
                       className="cursor-pointer peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
                     >
-                      I accept the terms and conditions *
+                      {t('registration.acceptTerms')} *
                     </label>
                     <p className="text-sm text-muted-foreground">
-                      I certify that all information provided is accurate and I have the authority
-                      to register this Gram Panchayat.
+                      {t('registration.certifyInfo')}
                     </p>
                   </div>
                 </div>
@@ -470,7 +470,7 @@ export function RegistrationFlow() {
                 disabled={step === 1}
               >
                 <ArrowLeft className="mr-2 h-4 w-4" />
-                Previous
+                {t('common.previous')}
               </Button>
               {step < totalSteps ? (
                 <Button
@@ -478,7 +478,7 @@ export function RegistrationFlow() {
                   disabled={!isCurrentStepValid()}
                   className="bg-[#FF9933] hover:bg-[#FF9933]/90"
                 >
-                  Next
+                  {t('common.next')}
                   <ArrowRight className="ml-2 h-4 w-4" />
                 </Button>
               ) : (
@@ -487,7 +487,7 @@ export function RegistrationFlow() {
                   disabled={!formData.acceptTerms || isSubmitting}
                   className="bg-[#138808] hover:bg-[#138808]/90"
                 >
-                  {isSubmitting ? "Submitting..." : "Submit Registration"}
+                  {isSubmitting ? t('registration.submitting') : t('registration.submitButton')}
                   <Check className="ml-2 h-4 w-4" />
                 </Button>
               )}

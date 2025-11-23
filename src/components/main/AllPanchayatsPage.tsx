@@ -8,8 +8,10 @@ import { Badge } from "../ui/badge";
 import { panchayatAPI } from "../../services/api";
 import { toast } from "sonner";
 import type { ActivePanchayat } from "../../types";
+import { useTranslation } from "react-i18next";
 
 export function AllPanchayatsPage() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const [panchayats, setPanchayats] = useState<ActivePanchayat[]>([]);
@@ -48,7 +50,7 @@ export function AllPanchayatsPage() {
         }
       } catch (error) {
         console.error("Error fetching panchayats:", error);
-        toast.error("Failed to load panchayats. Please try again later.");
+        toast.error(t('notifications.loadPanchayatsError'));
         setPanchayats([]);
         setFilteredPanchayats([]);
       } finally {
@@ -56,7 +58,7 @@ export function AllPanchayatsPage() {
       }
     };
     fetchPanchayats();
-  }, [searchParams]);
+  }, [searchParams, t]);
 
   useEffect(() => {
     if (!searchQuery.trim()) {
@@ -89,13 +91,13 @@ export function AllPanchayatsPage() {
             className="mb-4 text-[#666] hover:text-[#1B2B5E]"
           >
             <ArrowLeft className="mr-2 h-4 w-4" />
-            Back to Home
+            {t('common.backToHome')}
           </Button>
           <h1 className="mb-2 text-3xl font-bold text-[#1B2B5E] sm:text-4xl">
-            All Active Panchayats
+            {t('allPanchayats.title')}
           </h1>
           <p className="text-[#666]">
-            Explore and connect with Gram Panchayats across India
+            {t('allPanchayats.subtitle')}
           </p>
         </div>
       </section>
@@ -110,7 +112,7 @@ export function AllPanchayatsPage() {
                 <Search className="h-5 w-5 text-[#666]" />
                 <Input
                   type="search"
-                  placeholder="Search by name, district, or subdomain..."
+                  placeholder={t('allPanchayats.searchPlaceholder')}
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   className="border-0 bg-transparent text-[#333] focus-visible:ring-0"
@@ -124,12 +126,12 @@ export function AllPanchayatsPage() {
         <div className="mb-6 flex items-center justify-between">
           <p className="text-[#666]">
             {loading ? (
-              "Loading panchayats..."
+              t('allPanchayats.loading')
             ) : (
               <>
-                Showing <span className="font-semibold text-[#1B2B5E]">{filteredPanchayats.length}</span>{" "}
-                {filteredPanchayats.length === 1 ? "panchayat" : "panchayats"}
-                {searchQuery && ` matching "${searchQuery}"`}
+                {t('allPanchayats.showing')} <span className="font-semibold text-[#1B2B5E]">{filteredPanchayats.length}</span>{" "}
+                {filteredPanchayats.length === 1 ? t('allPanchayats.panchayat') : t('allPanchayats.panchayats')}
+                {searchQuery && ` ${t('allPanchayats.matching')} "${searchQuery}"`}
               </>
             )}
           </p>
@@ -139,18 +141,18 @@ export function AllPanchayatsPage() {
         {loading ? (
           <div className="text-center py-12">
             <Loader2 className="mx-auto h-8 w-8 animate-spin text-[#E31E24] mb-4" />
-            <p className="text-[#666]">Loading panchayats...</p>
+            <p className="text-[#666]">{t('allPanchayats.loading')}</p>
           </div>
         ) : filteredPanchayats.length === 0 ? (
           <div className="text-center py-12">
             <Building2 className="mx-auto h-16 w-16 text-[#666] mb-4 opacity-50" />
             <p className="text-lg font-semibold text-[#1B2B5E] mb-2">
-              {searchQuery ? "No panchayats found" : "No panchayats available"}
+              {searchQuery ? t('allPanchayats.noResults') : t('allPanchayats.noAvailable')}
             </p>
             <p className="text-[#666]">
               {searchQuery
-                ? "Try adjusting your search terms or clear the search"
-                : "Check back later for active panchayats"}
+                ? t('allPanchayats.tryAdjusting')
+                : t('allPanchayats.checkBack')}
             </p>
             {searchQuery && (
               <Button
@@ -161,7 +163,7 @@ export function AllPanchayatsPage() {
                   setFilteredPanchayats(panchayats);
                 }}
               >
-                Clear Search
+                {t('allPanchayats.clearSearch')}
               </Button>
             )}
           </div>
@@ -182,7 +184,7 @@ export function AllPanchayatsPage() {
                   </div>
                   <CardTitle className="text-[#1B2B5E]">{panchayat.name}</CardTitle>
                   <CardDescription className="text-[#666]">
-                    Gram Panchayat
+                    {t('allPanchayats.gramPanchayat')}
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
@@ -190,22 +192,22 @@ export function AllPanchayatsPage() {
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
                         <FileText className="h-4 w-4 text-[#138808]" />
-                        <span className="text-sm text-[#666]">Active Schemes</span>
+                        <span className="text-sm text-[#666]">{t('allPanchayats.activeSchemes')}</span>
                       </div>
                       <span className="font-semibold text-[#138808]">{panchayat.schemes || 0}</span>
                     </div>
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
                         <Users className="h-4 w-4 text-[#E31E24]" />
-                        <span className="text-sm text-[#666]">Population</span>
+                        <span className="text-sm text-[#666]">{t('allPanchayats.population')}</span>
                       </div>
                       <span className="font-semibold text-[#1B2B5E]">
-                        {panchayat.population > 0 ? panchayat.population.toLocaleString() : 'N/A'}
+                        {panchayat.population > 0 ? panchayat.population.toLocaleString() : t('common.notAvailable')}
                       </span>
                     </div>
                     <div className="pt-2 border-t border-[#E5E5E5]">
                       <p className="text-xs text-[#666]">
-                        Visit: <span className="font-medium text-[#1B2B5E]">{panchayat.subdomain}.egramseva.gov.in</span>
+                        {t('allPanchayats.visit')}: <span className="font-medium text-[#1B2B5E]">{panchayat.subdomain}.egramseva.gov.in</span>
                       </p>
                     </div>
                   </div>

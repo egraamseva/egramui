@@ -22,32 +22,34 @@ import {
 import { Button } from "../ui/button";
 import { Avatar, AvatarFallback } from "../ui/avatar";
 import { useAuth } from "../../contexts/AuthContext";
+import { useTranslation } from "react-i18next";
 
 interface SidebarItem {
   id: string;
-  label: string;
+  translationKey: string;
   icon: React.ComponentType<{ className?: string }>;
   path: string;
 }
 
 const sidebarItems: SidebarItem[] = [
-  { id: "dashboard", label: "Dashboard", icon: LayoutDashboard, path: "/panchayat/dashboard" },
-  { id: "posts", label: "Posts", icon: Megaphone, path: "/panchayat/dashboard/posts" },
-  { id: "announcements", label: "Announcements", icon: FileText, path: "/panchayat/dashboard/announcements" },
-  { id: "schemes", label: "Schemes", icon: Users, path: "/panchayat/dashboard/schemes" },
-  { id: "gallery", label: "Gallery", icon: ImageIcon, path: "/panchayat/dashboard/gallery" },
-  { id: "albums", label: "Albums", icon: ImageIcon, path: "/panchayat/dashboard/albums" },
-  { id: "documents", label: "Documents", icon: FileText, path: "/panchayat/dashboard/documents" },
-  { id: "comments", label: "Comments", icon: MessageSquare, path: "/panchayat/dashboard/comments" },
-  { id: "team", label: "Team", icon: Users, path: "/panchayat/dashboard/team" },
-  { id: "analytics", label: "Analytics", icon: BarChart3, path: "/panchayat/dashboard/analytics" },
-  { id: "settings", label: "Settings", icon: Settings, path: "/panchayat/dashboard/settings" },
+  { id: "dashboard", translationKey: "sidebar.dashboard", icon: LayoutDashboard, path: "/panchayat/dashboard" },
+  { id: "posts", translationKey: "sidebar.posts", icon: Megaphone, path: "/panchayat/dashboard/posts" },
+  { id: "announcements", translationKey: "sidebar.announcements", icon: FileText, path: "/panchayat/dashboard/announcements" },
+  { id: "schemes", translationKey: "sidebar.schemes", icon: Users, path: "/panchayat/dashboard/schemes" },
+  { id: "gallery", translationKey: "sidebar.gallery", icon: ImageIcon, path: "/panchayat/dashboard/gallery" },
+  { id: "albums", translationKey: "sidebar.albums", icon: ImageIcon, path: "/panchayat/dashboard/albums" },
+  { id: "documents", translationKey: "sidebar.documents", icon: FileText, path: "/panchayat/dashboard/documents" },
+  { id: "comments", translationKey: "sidebar.comments", icon: MessageSquare, path: "/panchayat/dashboard/comments" },
+  { id: "team", translationKey: "sidebar.team", icon: Users, path: "/panchayat/dashboard/team" },
+  { id: "analytics", translationKey: "sidebar.analytics", icon: BarChart3, path: "/panchayat/dashboard/analytics" },
+  { id: "settings", translationKey: "sidebar.settings", icon: Settings, path: "/panchayat/dashboard/settings" },
 ];
 
 export function SachivDashboardLayout() {
   const navigate = useNavigate();
   const location = useLocation();
   const { user, logout } = useAuth();
+  const { t } = useTranslation();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   // Close mobile menu when route changes
@@ -91,9 +93,9 @@ export function SachivDashboardLayout() {
           </div>
           <div>
             <h3 className="text-sm font-semibold text-[#1B2B5E]">
-              {user?.panchayatName || "Panchayat"} GP
+              {user?.panchayatName || "Panchayat"} {t('sidebar.panchayatGP')}
             </h3>
-            <p className="text-xs text-[#666]">Sachiv Dashboard</p>
+            <p className="text-xs text-[#666]">{t('sidebar.sachivDashboard')}</p>
           </div>
         </div>
         <nav className="space-y-1 p-4">
@@ -111,7 +113,7 @@ export function SachivDashboardLayout() {
                 }`}
               >
                 <Icon className="h-5 w-5" />
-                <span>{item.label}</span>
+                <span>{t(item.translationKey)}</span>
               </button>
             );
           })}
@@ -137,9 +139,9 @@ export function SachivDashboardLayout() {
             </div>
             <div>
               <h3 className="text-sm font-semibold text-[#1B2B5E]">
-                {user?.panchayatName || "Panchayat"} GP
+                {user?.panchayatName || "Panchayat"} {t('sidebar.panchayatGP')}
               </h3>
-              <p className="text-xs text-[#666]">Sachiv Dashboard</p>
+              <p className="text-xs text-[#666]">{t('sidebar.sachivDashboard')}</p>
             </div>
           </div>
           <Button
@@ -169,7 +171,7 @@ export function SachivDashboardLayout() {
                 }`}
               >
                 <Icon className="h-5 w-5" />
-                <span>{item.label}</span>
+                <span>{t(item.translationKey)}</span>
               </button>
             );
           })}
@@ -191,10 +193,10 @@ export function SachivDashboardLayout() {
             </Button>
             <div className="flex-1 min-w-0">
               <h2 className="text-base sm:text-lg font-semibold truncate">
-                Welcome back, {user?.name || "User"}
+                {t('sidebar.welcomeBack', { name: user?.name || 'User' })}
               </h2>
               <p className="text-xs sm:text-sm text-muted-foreground hidden sm:block">
-                Here's what's happening with your Panchayat today
+                {t('sidebar.todayOverview')}
               </p>
             </div>
           </div>
@@ -208,7 +210,7 @@ export function SachivDashboardLayout() {
               className="hidden sm:inline-flex"
             >
               <Eye className="mr-2 h-4 w-4" />
-              View Website
+              {t('sidebar.viewWebsite')}
             </Button>
             <Button
               variant="outline"
@@ -227,7 +229,7 @@ export function SachivDashboardLayout() {
               className="hidden sm:inline-flex"
             >
               <LogOut className="mr-2 h-4 w-4" />
-              Logout
+              {t('sidebar.logout')}
             </Button>
             <Button
               variant="outline"

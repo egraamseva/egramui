@@ -13,8 +13,10 @@ import { Label } from "../ui/label";
 import { Alert, AlertDescription } from "../ui/alert";
 import { toast } from "sonner";
 import { authAPIEnhanced } from "../../services/api";
+import { useTranslation } from "react-i18next";
 
 export function ForgotPassword() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const [email, setEmail] = useState("");
   const [loading, setLoading] = useState(false);
@@ -23,7 +25,7 @@ export function ForgotPassword() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!email) {
-      toast.error("Please enter your email address");
+      toast.error(t('validation.emailRequired'));
       return;
     }
 
@@ -31,9 +33,9 @@ export function ForgotPassword() {
     try {
       await authAPIEnhanced.forgotPassword({ email });
       setSuccess(true);
-      toast.success("Password reset link sent to your email");
+      toast.success(t('forgotPassword.resetLinkSent'));
     } catch (error) {
-      toast.error("Failed to send reset link");
+      toast.error(t('notifications.error'));
     } finally {
       setLoading(false);
     }
@@ -50,11 +52,11 @@ export function ForgotPassword() {
             className="mb-4"
           >
             <ArrowLeft className="h-4 w-4 mr-2" />
-            Back to Login
+            {t('forgotPassword.backToLogin')}
           </Button>
-          <CardTitle className="text-2xl">Forgot Password</CardTitle>
+          <CardTitle className="text-2xl">{t('forgotPassword.title')}</CardTitle>
           <CardDescription>
-            Enter your email address and we'll send you a link to reset your password
+            {t('forgotPassword.subtitle')}
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -62,24 +64,24 @@ export function ForgotPassword() {
             <Alert>
               <Mail className="h-4 w-4" />
               <AlertDescription>
-                If an account with that email exists, we've sent a password reset link. Please check your email.
+                {t('forgotPassword.checkEmail')}
               </AlertDescription>
             </Alert>
           ) : (
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="email">Email Address</Label>
+                <Label htmlFor="email">{t('forgotPassword.email')}</Label>
                 <Input
                   id="email"
                   type="email"
-                  placeholder="Enter your email"
+                  placeholder={t('forgotPassword.emailPlaceholder')}
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   required
                 />
               </div>
               <Button type="submit" className="w-full" disabled={loading}>
-                {loading ? "Sending..." : "Send Reset Link"}
+                {loading ? t('forgotPassword.sending') : t('forgotPassword.sendResetLink')}
               </Button>
             </form>
           )}

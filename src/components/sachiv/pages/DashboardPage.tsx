@@ -12,9 +12,11 @@ import { toast } from "sonner";
 import { useAuth } from "../../../contexts/AuthContext";
 import type { Post, Scheme, Announcement } from "../../../types";
 import { postApi, analyticsAdapter } from "@/routes/api";
+import { useTranslation } from "react-i18next";
 
 export function DashboardPage() {
   const { user } = useAuth();
+  const { t } = useTranslation();
   const [posts, setPosts] = useState<Post[]>([]);
 
   const [schemes, setSchemes] = useState<Scheme[]>([]);
@@ -54,7 +56,7 @@ export function DashboardPage() {
       });
     } catch (error) {
       console.error("Error fetching dashboard data:", error);
-      toast.error("Failed to load dashboard data");
+      toast.error(t('dashboard.failedToLoad'));
     } finally {
       setLoading(false);
     }
@@ -62,28 +64,28 @@ export function DashboardPage() {
 
   const dashboardStats = [
     {
-      label: "Total Visitors",
+      translationKey: "dashboard.totalVisitors",
       value: stats.totalVisitors.toLocaleString(),
       change: "+12.5%",
       icon: Users,
       color: "#FF9933",
     },
     {
-      label: "Active Schemes",
+      translationKey: "dashboard.activeSchemes",
       value: stats.activeSchemes.toString(),
       change: "+2",
       icon: FileText,
       color: "#138808",
     },
     {
-      label: "Announcements",
+      translationKey: "dashboard.announcements",
       value: stats.announcements.toString(),
       change: "+5",
       icon: TrendingUp,
       color: "#FF9933",
     },
     {
-      label: "Photo Gallery",
+      translationKey: "dashboard.photoGallery",
       value: stats.photoGallery.toString(),
       change: "+18",
       icon: ImageIcon,
@@ -95,7 +97,7 @@ export function DashboardPage() {
     <div className="space-y-4 sm:space-y-6">
       {/* Stats Grid */}
       {loading ? (
-        <div className="text-center text-muted-foreground py-8">Loading dashboard...</div>
+        <div className="text-center text-muted-foreground py-8">{t('dashboard.loadingDashboard')}</div>
       ) : (
         <div className="grid gap-4 sm:gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
           {dashboardStats.map((stat, index) => {
@@ -106,7 +108,7 @@ export function DashboardPage() {
                   <div className="flex items-center justify-between">
                     <div className="flex-1 min-w-0">
                       <p className="text-xs sm:text-sm text-muted-foreground truncate">
-                        {stat.label}
+                        {t(stat.translationKey)}
                       </p>
                       <p className="mt-1 text-xl sm:text-2xl lg:text-3xl font-semibold">
                         {stat.value}
@@ -133,16 +135,16 @@ export function DashboardPage() {
       <div className="grid gap-4 sm:gap-6 grid-cols-1 lg:grid-cols-2">
         <Card>
           <CardHeader>
-            <CardTitle className="text-base sm:text-lg">Recent Announcements</CardTitle>
+            <CardTitle className="text-base sm:text-lg">{t('dashboard.recentAnnouncements')}</CardTitle>
             <CardDescription className="text-xs sm:text-sm">
-              Latest updates posted to your website
+              {t('dashboard.latestUpdates')}
             </CardDescription>
           </CardHeader>
           <CardContent>
             <div className="space-y-3 sm:space-y-4">
               {announcements.length === 0 ? (
                 <div className="text-center text-muted-foreground py-4 text-sm">
-                  No announcements yet
+                  {t('dashboard.noAnnouncements')}
                 </div>
               ) : (
                 announcements.slice(0, 3).map((announcement) => (
@@ -163,10 +165,10 @@ export function DashboardPage() {
                           announcement.status === "Published" ? "bg-[#138808]" : ""
                         }`}
                       >
-                        {announcement.status}
+                        {announcement.status === "Published" ? t('dashboard.published') : t('dashboard.draft')}
                       </Badge>
                       <span className="text-xs sm:text-sm text-muted-foreground whitespace-nowrap">
-                        {announcement.views || 0} views
+                        {announcement.views || 0} {t('dashboard.views')}
                       </span>
                     </div>
                   </div>
@@ -178,16 +180,16 @@ export function DashboardPage() {
 
         <Card>
           <CardHeader>
-            <CardTitle className="text-base sm:text-lg">Scheme Progress</CardTitle>
+            <CardTitle className="text-base sm:text-lg">{t('dashboard.schemeProgress')}</CardTitle>
             <CardDescription className="text-xs sm:text-sm">
-              Track implementation of active schemes
+              {t('dashboard.trackImplementation')}
             </CardDescription>
           </CardHeader>
           <CardContent>
             <div className="space-y-3 sm:space-y-4">
               {schemes.length === 0 ? (
                 <div className="text-center text-muted-foreground py-4 text-sm">
-                  No schemes yet
+                  {t('dashboard.noSchemes')}
                 </div>
               ) : (
                 schemes.map((scheme) => (

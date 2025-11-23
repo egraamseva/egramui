@@ -12,8 +12,10 @@ import { Input } from "../ui/input";
 import { Label } from "../ui/label";
 import { toast } from "sonner";
 import { authAPIEnhanced } from "@/services/api";
+import { useTranslation } from "react-i18next";
 
 export function ResetPassword() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const token = searchParams.get("token");
@@ -24,30 +26,30 @@ export function ResetPassword() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!password || !confirmPassword) {
-      toast.error("Please fill all fields");
+      toast.error(t('validation.fillAllFields'));
       return;
     }
     if (password !== confirmPassword) {
-      toast.error("Passwords do not match");
+      toast.error(t('resetPassword.passwordsDoNotMatch'));
       return;
     }
     if (password.length < 8) {
-      toast.error("Password must be at least 8 characters");
+      toast.error(t('validation.passwordMinLength'));
       return;
     }
 
     if (!token) {
-      toast.error("Invalid reset token");
+      toast.error(t('resetPassword.invalidToken'));
       return;
     }
 
     setLoading(true);
     try {
       await authAPIEnhanced.resetPassword({ token, password });
-      toast.success("Password reset successfully");
+      toast.success(t('resetPassword.passwordResetSuccess'));
       navigate("/login");
     } catch (error) {
-      toast.error("Failed to reset password");
+      toast.error(t('notifications.error'));
     } finally {
       setLoading(false);
     }
@@ -64,19 +66,19 @@ export function ResetPassword() {
             className="mb-4"
           >
             <ArrowLeft className="h-4 w-4 mr-2" />
-            Back to Login
+            {t('forgotPassword.backToLogin')}
           </Button>
-          <CardTitle className="text-2xl">Reset Password</CardTitle>
-          <CardDescription>Enter your new password</CardDescription>
+          <CardTitle className="text-2xl">{t('resetPassword.title')}</CardTitle>
+          <CardDescription>{t('resetPassword.subtitle')}</CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="password">New Password</Label>
+              <Label htmlFor="password">{t('resetPassword.newPassword')}</Label>
               <Input
                 id="password"
                 type="password"
-                placeholder="Enter new password"
+                placeholder={t('resetPassword.newPassword')}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
@@ -84,11 +86,11 @@ export function ResetPassword() {
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="confirmPassword">Confirm Password</Label>
+              <Label htmlFor="confirmPassword">{t('resetPassword.confirmPassword')}</Label>
               <Input
                 id="confirmPassword"
                 type="password"
-                placeholder="Confirm new password"
+                placeholder={t('resetPassword.confirmPassword')}
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
                 required
@@ -97,7 +99,7 @@ export function ResetPassword() {
             </div>
             <Button type="submit" className="w-full" disabled={loading}>
               <Lock className="h-4 w-4 mr-2" />
-              {loading ? "Resetting..." : "Reset Password"}
+              {loading ? t('resetPassword.resetting') : t('resetPassword.resetButton')}
             </Button>
           </form>
         </CardContent>
