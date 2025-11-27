@@ -80,7 +80,7 @@ export function Header({ variant = "platform", panchayatName, onLanguageChange }
         { label: t('nav.home'), href: "#home" },
         { label: t('nav.features'), href: "#features" },
         { label: t('nav.panchayats'), href: "#panchayats" },
-        { label: t('nav.about'), href: "#about" },
+        { label: t('nav.news'), href: "#news" },
         { label: t('nav.contact'), href: "#contact" },
       ]
     : [

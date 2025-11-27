@@ -2,9 +2,8 @@ import { useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
 import {
   ArrowRight, Users, Zap, TrendingUp, MapPin,
-  Search, FileText, Building2, Globe, Award,
-  Calendar, Phone, BarChart3, Target,
-  Heart, Lightbulb, BookOpen, Users2, Briefcase
+  Search, FileText, Building2, Award,
+  Calendar
 } from "lucide-react";
 import { Button } from "../ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../ui/card";
@@ -170,7 +169,7 @@ export function LandingPage() {
             ].map((stat, index) => (
               <Card key={index} className="border border-[#E5E5E5] bg-white shadow-sm transition-all hover:shadow-md">
                 <CardContent className="flex items-center gap-4 p-6">
-                  <div 
+                  <div
                     className="flex h-12 w-12 items-center justify-center rounded-lg"
                     style={{ backgroundColor: `${stat.color}15` }}
                   >
@@ -217,7 +216,7 @@ export function LandingPage() {
       </section>
 
       {/* Government Schemes Section - Red Background */}
-      <section className="bg-[#DC143C] py-16 text-white lg:py-24" style={{ backgroundColor: '#DC143C' }}>
+      {/* <section className="bg-[#DC143C] py-16 text-white lg:py-24" style={{ backgroundColor: '#DC143C' }}>
         <div className="container mx-auto px-4 lg:px-8">
           <div className="mb-8 text-center">
             <h2 className="mb-4 text-3xl font-bold text-white">{t('schemes.title')}</h2>
@@ -256,10 +255,116 @@ export function LandingPage() {
             ))}
           </div>
         </div>
-      </section>
+      </section> */}
 
       {/* News & Updates Section */}
-      <section className="bg-white py-16 lg:py-24">
+
+
+      {/* Directories Section */}
+      {/* <section className="bg-white py-16 lg:py-24" id="panchayats">
+        <div className="container mx-auto px-4 lg:px-8">
+          <div className="mb-12">
+            <h2 className="section-title inline-block">{t('directories.title')}</h2>
+            <p className="text-[#666]">{t('directories.subtitle')}</p>
+          </div>
+          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
+            {[
+              { icon: Users2, title: t('directories.whosWho.title'), description: t('directories.whosWho.description'), color: "#E31E24" },
+              { icon: Phone, title: t('directories.contact.title'), description: t('directories.contact.description'), color: "#FF9933" },
+              { icon: Globe, title: t('directories.web.title'), description: t('directories.web.description'), color: "#138808" },
+              { icon: BookOpen, title: t('directories.resources.title'), description: t('directories.resources.description'), color: "#6C5CE7" },
+            ].map((dir, index) => (
+              <Card key={index} className="border border-[#E5E5E5] bg-white shadow-sm transition-all hover:shadow-md hover:scale-105 cursor-pointer">
+                <CardContent className="flex flex-col items-center p-6 text-center">
+                  <div
+                    className="mb-4 flex h-16 w-16 items-center justify-center rounded-lg"
+                    style={{ backgroundColor: `${dir.color}15` }}
+                  >
+                    <dir.icon className="h-8 w-8" style={{ color: dir.color }} />
+                  </div>
+                  <h3 className="mb-2 font-semibold text-[#1B2B5E]">{dir.title}</h3>
+                  <p className="text-sm text-[#666]">{dir.description}</p>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </div>
+      </section> */}
+
+      {/* Active Panchayats */}
+      <section className="bg-[#F5F5F5] py-16 lg:py-24" >
+        <div className="container mx-auto px-4 lg:px-8">
+          <div className="mb-12 text-center">
+            <h2 className="section-title inline-block">
+              {t('activePanchayats.title')} <span className="text-[#FF9933]">{t('activePanchayats.titleHighlight')}</span>
+            </h2>
+            <p className="mx-auto max-w-2xl text-[#666]">
+              {t('activePanchayats.subtitle')}
+            </p>
+          </div>
+          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
+            {loading ? (
+              <div className="col-span-4 text-center py-8">
+                <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-[#E31E24] border-r-transparent"></div>
+                <p className="mt-2 text-[#666]">{t('activePanchayats.loading')}</p>
+              </div>
+            ) : activePanchayats.length === 0 ? (
+              <div className="col-span-4 text-center py-8">
+                <Building2 className="mx-auto h-12 w-12 text-[#666] mb-3 opacity-50" />
+                <p className="text-[#666]">{t('activePanchayats.noData')}</p>
+                <p className="mt-1 text-sm text-[#999]">{t('activePanchayats.checkBack')}</p>
+              </div>
+            ) : (
+              activePanchayats.map((panchayat, index) => (
+                <Card
+                  key={panchayat.subdomain || index}
+                  className="border border-[#E5E5E5] bg-white shadow-sm transition-all hover:shadow-md hover:scale-105 cursor-pointer"
+                  onClick={() => navigate(`/panchayat/${panchayat.subdomain}`)}
+                >
+                  <CardHeader>
+                    <div className="mb-2 flex items-center gap-2">
+                      <MapPin className="h-4 w-4 text-[#FF9933]" />
+                      <Badge variant="secondary" className="bg-[#F5F5F5] text-[#666]">{panchayat.district}</Badge>
+                    </div>
+                    <CardTitle className="text-[#1B2B5E]">{panchayat.name}</CardTitle>
+                    <CardDescription className="text-[#666]">{t('activePanchayats.gramPanchayat')}</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="flex justify-between text-sm">
+                      <div>
+                        <p className="text-[#666]">{t('activePanchayats.activeSchemes')}</p>
+                        <p className="font-semibold text-[#138808]">{panchayat.schemes || 0}</p>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-[#666]">{t('activePanchayats.population')}</p>
+                        <p className="font-semibold text-[#138808]">
+                          {panchayat.population > 0 ? panchayat.population.toLocaleString() : 'N/A'}
+                        </p>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))
+            )}
+          </div>
+          <div className="mt-12 text-center">
+            <Button
+              variant="outline"
+              size="lg"
+              className="border-[#E5E5E5] text-[#1B2B5E] hover:bg-[#F5F5F5]"
+              onClick={() => {
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+                navigate("/panchayats");
+              }}
+            >
+              {t('activePanchayats.viewAll')}
+            </Button>
+          </div>
+        </div>
+      </section>
+
+
+      <section className="bg-white py-16 lg:py-24" id="news">
         <div className="container mx-auto px-4 lg:px-8">
           <div className="mb-12">
             <h2 className="section-title inline-block">{t('news.title')}</h2>
@@ -293,112 +398,8 @@ export function LandingPage() {
           </div>
         </div>
       </section>
-
-      {/* Directories Section */}
-      <section className="bg-white py-16 lg:py-24" id="panchayats">
-        <div className="container mx-auto px-4 lg:px-8">
-          <div className="mb-12">
-            <h2 className="section-title inline-block">{t('directories.title')}</h2>
-            <p className="text-[#666]">{t('directories.subtitle')}</p>
-          </div>
-          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
-            {[
-              { icon: Users2, title: t('directories.whosWho.title'), description: t('directories.whosWho.description'), color: "#E31E24" },
-              { icon: Phone, title: t('directories.contact.title'), description: t('directories.contact.description'), color: "#FF9933" },
-              { icon: Globe, title: t('directories.web.title'), description: t('directories.web.description'), color: "#138808" },
-              { icon: BookOpen, title: t('directories.resources.title'), description: t('directories.resources.description'), color: "#6C5CE7" },
-            ].map((dir, index) => (
-              <Card key={index} className="border border-[#E5E5E5] bg-white shadow-sm transition-all hover:shadow-md hover:scale-105 cursor-pointer">
-                <CardContent className="flex flex-col items-center p-6 text-center">
-                  <div
-                    className="mb-4 flex h-16 w-16 items-center justify-center rounded-lg"
-                    style={{ backgroundColor: `${dir.color}15` }}
-                  >
-                    <dir.icon className="h-8 w-8" style={{ color: dir.color }} />
-                  </div>
-                  <h3 className="mb-2 font-semibold text-[#1B2B5E]">{dir.title}</h3>
-                  <p className="text-sm text-[#666]">{dir.description}</p>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* Active Panchayats */}
-      <section className="bg-[#F5F5F5] py-16 lg:py-24">
-        <div className="container mx-auto px-4 lg:px-8">
-          <div className="mb-12 text-center">
-            <h2 className="section-title inline-block">
-              {t('activePanchayats.title')} <span className="text-[#FF9933]">{t('activePanchayats.titleHighlight')}</span>
-            </h2>
-            <p className="mx-auto max-w-2xl text-[#666]">
-              {t('activePanchayats.subtitle')}
-            </p>
-          </div>
-          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
-            {loading ? (
-              <div className="col-span-4 text-center py-8">
-                <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-[#E31E24] border-r-transparent"></div>
-                <p className="mt-2 text-[#666]">{t('activePanchayats.loading')}</p>
-              </div>
-            ) : activePanchayats.length === 0 ? (
-              <div className="col-span-4 text-center py-8">
-                <Building2 className="mx-auto h-12 w-12 text-[#666] mb-3 opacity-50" />
-                <p className="text-[#666]">{t('activePanchayats.noData')}</p>
-                <p className="mt-1 text-sm text-[#999]">{t('activePanchayats.checkBack')}</p>
-              </div>
-            ) : (
-              activePanchayats.map((panchayat, index) => (
-              <Card
-                key={panchayat.subdomain || index}
-                className="border border-[#E5E5E5] bg-white shadow-sm transition-all hover:shadow-md hover:scale-105 cursor-pointer"
-                onClick={() => navigate(`/panchayat/${panchayat.subdomain}`)}
-              >
-                <CardHeader>
-                  <div className="mb-2 flex items-center gap-2">
-                    <MapPin className="h-4 w-4 text-[#FF9933]" />
-                    <Badge variant="secondary" className="bg-[#F5F5F5] text-[#666]">{panchayat.district}</Badge>
-                  </div>
-                  <CardTitle className="text-[#1B2B5E]">{panchayat.name}</CardTitle>
-                  <CardDescription className="text-[#666]">{t('activePanchayats.gramPanchayat')}</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="flex justify-between text-sm">
-                    <div>
-                      <p className="text-[#666]">{t('activePanchayats.activeSchemes')}</p>
-                      <p className="font-semibold text-[#138808]">{panchayat.schemes || 0}</p>
-                    </div>
-                    <div className="text-right">
-                      <p className="text-[#666]">{t('activePanchayats.population')}</p>
-                      <p className="font-semibold text-[#138808]">
-                        {panchayat.population > 0 ? panchayat.population.toLocaleString() : 'N/A'}
-                      </p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-              ))
-            )}
-          </div>
-          <div className="mt-12 text-center">
-            <Button
-              variant="outline"
-              size="lg"
-              className="border-[#E5E5E5] text-[#1B2B5E] hover:bg-[#F5F5F5]"
-              onClick={() => {
-                window.scrollTo({ top: 0, behavior: 'smooth' });
-                navigate("/panchayats");
-              }}
-            >
-              {t('activePanchayats.viewAll')}
-            </Button>
-          </div>
-        </div>
-      </section>
-
       {/* Explore India Section - Purple Gradient */}
-      <section className="bg-gradient-to-br from-[#6C5CE7] to-[#5B4B9D] py-16 text-white lg:py-24">
+      {/* <section className="bg-gradient-to-br from-[#6C5CE7] to-[#5B4B9D] py-16 text-white lg:py-24">
         <div className="container mx-auto px-4 lg:px-8">
           <div className="mb-12 text-center">
             <h2 className="mb-4 text-3xl font-bold text-white">{t('exploreIndia.title')}</h2>
@@ -424,10 +425,10 @@ export function LandingPage() {
             ))}
           </div>
         </div>
-      </section>
+      </section> */}
 
       {/* MyGov Connect Section - Red/Gradient */}
-      <section id="about" className="bg-gradient-to-r from-[#E31E24] to-[#DC143C] py-16 text-white lg:py-24">
+      {/* <section id="about" className="bg-gradient-to-r from-[#E31E24] to-[#DC143C] py-16 text-white lg:py-24">
         <div className="container mx-auto px-4 lg:px-8">
           <div className="mb-12 text-center">
             <h2 className="mb-4 text-3xl font-bold text-white">{t('myGov.title')}</h2>
@@ -451,10 +452,10 @@ export function LandingPage() {
             ))}
           </div>
         </div>
-      </section>
+      </section> */}
 
       {/* CTA Section */}
-      <section id="contact" className="bg-white py-16">
+      <section id="contact" className="bg-[#F5F5F5] py-16">
         <div className="container mx-auto px-4 text-center lg:px-8">
           <h2 className="mb-4 text-3xl font-bold text-[#1B2B5E]">
             {t('cta.title')}
