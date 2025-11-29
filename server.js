@@ -9,11 +9,9 @@ const app = express();
 
 app.use(express.static(path.join(__dirname, "dist")));
 
-app.use((req, res) => {
+app.get("*", (req, res) => {
   res.sendFile(path.join(__dirname, "dist", "index.html"));
 });
 
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
-  console.log(`Server running on PORT ${PORT}`);
-});
+app.listen(PORT, () => console.log(`Frontend running on port ${PORT}`));
