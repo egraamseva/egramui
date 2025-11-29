@@ -38,6 +38,7 @@ const sidebarItems: SidebarItem[] = [
   { id: "schemes", translationKey: "sidebar.schemes", icon: Users, path: "/panchayat/dashboard/schemes" },
   { id: "gallery", translationKey: "sidebar.gallery", icon: ImageIcon, path: "/panchayat/dashboard/gallery" },
   { id: "albums", translationKey: "sidebar.albums", icon: ImageIcon, path: "/panchayat/dashboard/albums" },
+  { id: "newsletters", translationKey: "sidebar.newsletters", icon: FileText, path: "/panchayat/dashboard/newsletters" },
   { id: "documents", translationKey: "sidebar.documents", icon: FileText, path: "/panchayat/dashboard/documents" },
   { id: "comments", translationKey: "sidebar.comments", icon: MessageSquare, path: "/panchayat/dashboard/comments" },
   { id: "team", translationKey: "sidebar.team", icon: Users, path: "/panchayat/dashboard/team" },

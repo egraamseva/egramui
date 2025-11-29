@@ -34,6 +34,7 @@ const AnnouncementsPage = lazy(() => import('@/components/sachiv/pages/Announcem
 const SchemesPage = lazy(() => import('@/components/sachiv/pages/SchemesPage').then(m => ({ default: m.SchemesPage })));
 const GalleryPage = lazy(() => import('@/components/sachiv/pages/GalleryPage').then(m => ({ default: m.GalleryPage })));
 const AlbumsPage = lazy(() => import('@/components/sachiv/pages/AlbumsPage').then(m => ({ default: m.AlbumsPage })));
+const NewsletterPage = lazy(() => import('@/components/sachiv/pages/NewsletterPage').then(m => ({ default: m.NewsletterPage })));
 const DocumentsPage = lazy(() => import('@/components/sachiv/pages/DocumentsPage').then(m => ({ default: m.DocumentsPage })));
 const CommentsPage = lazy(() => import('@/components/sachiv/pages/CommentsPage').then(m => ({ default: m.CommentsPage })));
 const TeamPage = lazy(() => import('@/components/sachiv/pages/TeamPage').then(m => ({ default: m.TeamPage })));
@@ -72,6 +73,7 @@ export function AppRoutes() {
           <Route path="schemes" element={<SchemesPage />} />
           <Route path="gallery" element={<GalleryPage />} />
           <Route path="albums" element={<AlbumsPage />} />
+          <Route path="newsletters" element={<NewsletterPage />} />
           <Route path="documents" element={<DocumentsPage />} />
           <Route path="comments" element={<CommentsPage />} />
           <Route path="team" element={<TeamPage />} />

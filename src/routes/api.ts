@@ -50,6 +50,39 @@ export type PaginatedResult<T> = {
 const ensureBearer = (token: string) =>
   token.startsWith("Bearer ") ? token : `Bearer ${token}`;
 
+// Global loading state manager
+class GlobalLoadingManager {
+  private loadingCount = 0;
+  private listeners: Set<(loading: boolean) => void> = new Set();
+
+  increment() {
+    this.loadingCount++;
+    if (this.loadingCount === 1) {
+      this.notify(true);
+    }
+  }
+
+  decrement() {
+    this.loadingCount = Math.max(0, this.loadingCount - 1);
+    if (this.loadingCount === 0) {
+      this.notify(false);
+    }
+  }
+
+  subscribe(callback: (loading: boolean) => void) {
+    this.listeners.add(callback);
+    return () => {
+      this.listeners.delete(callback);
+    };
+  }
+
+  private notify(loading: boolean) {
+    this.listeners.forEach((callback) => callback(loading));
+  }
+}
+
+const globalLoadingManager = new GlobalLoadingManager();
+
 class HttpClient {
   private client: AxiosInstance;
 
@@ -69,8 +102,25 @@ class HttpClient {
         config.headers = config.headers ?? {};
         config.headers.Authorization = ensureBearer(token);
       }
+      
+      // Increment loading count
+      globalLoadingManager.increment();
+      
       return config;
     });
+
+    this.client.interceptors.response.use(
+      (response) => {
+        // Decrement loading count on success
+        globalLoadingManager.decrement();
+        return response;
+      },
+      (error) => {
+        // Decrement loading count on error
+        globalLoadingManager.decrement();
+        return Promise.reject(error);
+      }
+    );
   }
 
   async request<T>(config: AxiosRequestConfig): Promise<T> {
@@ -144,6 +194,11 @@ class HttpClient {
 }
 
 const httpClient = new HttpClient(API_BASE_URL);
+
+// Export loading manager for LoadingContext to subscribe
+export function getLoadingManager() {
+  return globalLoadingManager;
+}
 
 /**
  * Auth API
@@ -1240,6 +1295,231 @@ class AdminAuditLogApi {
   }
 }
 
+/**
+ * Newsletter API
+ */
+type ServerNewsletter = {
+  newsletterId: number;
+  title: string;
+  subtitle?: string;
+  coverImageFileKey?: string;
+  coverImageUrl?: string;
+  content?: string;
+  bulletPoints?: string[];
+  publishedOn?: string;
+  authorName?: string;
+  attachments?: string[];
+  isPublished: boolean;
+  panchayatId?: number;
+  panchayatName?: string;
+  createdByUserId?: number;
+  createdByName?: string;
+  createdAt?: string;
+  updatedAt?: string;
+};
+
+class PanchayatNewsletterApi {
+  constructor(private http: HttpClient) {}
+
+  async list(options?: { page?: number; size?: number }): Promise<PaginatedResult<Newsletter>> {
+    const data = await this.http.get<PagedResponse<ServerNewsletter>>("/panchayat/newsletters", {
+      params: {
+        page: options?.page ?? 0,
+        size: options?.size ?? 20,
+      },
+    });
+    return {
+      items: data.content.map(mapNewsletterResponse),
+      page: data.page,
+      size: data.size,
+      totalItems: data.totalElements,
+      totalPages: data.totalPages,
+      isFirst: data.first,
+      isLast: data.last,
+    };
+  }
+
+  async getById(id: string | number): Promise<Newsletter> {
+    const data = await this.http.get<ServerNewsletter>(`/panchayat/newsletters/${id}`);
+    return mapNewsletterResponse(data);
+  }
+
+  async create(payload: {
+    title: string;
+    subtitle?: string;
+    content?: string;
+    bulletPoints?: string[];
+    publishedOn?: string;
+    authorName?: string;
+    attachments?: string[];
+    isPublished?: boolean;
+    coverImageFile?: File;
+    coverImageFileKey?: string;
+  }) {
+    const anyPayload: any = payload as any;
+    // If caller provided a File, send multipart/form-data
+    if (anyPayload.coverImageFile instanceof File) {
+      const formData = new FormData();
+      formData.append('title', payload.title);
+      if (payload.subtitle) formData.append('subtitle', payload.subtitle);
+      if (payload.content) formData.append('content', payload.content);
+      if (payload.bulletPoints) formData.append('bulletPoints', JSON.stringify(payload.bulletPoints));
+      if (payload.publishedOn) formData.append('publishedOn', payload.publishedOn);
+      if (payload.authorName) formData.append('authorName', payload.authorName);
+      if (payload.attachments) formData.append('attachments', JSON.stringify(payload.attachments));
+      if (payload.isPublished !== undefined) formData.append('isPublished', String(payload.isPublished));
+      formData.append('coverImageFile', anyPayload.coverImageFile);
+      
+      const data = await this.http.post<ServerNewsletter>("/panchayat/newsletters", formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      });
+      return mapNewsletterResponse(data);
+    }
+
+    // Otherwise use JSON
+    const jsonPayload: any = {
+      title: payload.title,
+      subtitle: payload.subtitle,
+      content: payload.content,
+      bulletPoints: payload.bulletPoints,
+      publishedOn: payload.publishedOn,
+      authorName: payload.authorName,
+      attachments: payload.attachments,
+      isPublished: payload.isPublished,
+      coverImageFileKey: payload.coverImageFileKey,
+    };
+    const data = await this.http.post<ServerNewsletter>("/panchayat/newsletters", jsonPayload);
+    return mapNewsletterResponse(data);
+  }
+
+  async update(
+    id: string | number,
+    payload: Partial<{
+      title: string;
+      subtitle?: string;
+      content?: string;
+      bulletPoints?: string[];
+      publishedOn?: string;
+      authorName?: string;
+      attachments?: string[];
+      isPublished?: boolean;
+      coverImageFile?: File;
+      coverImageFileKey?: string;
+    }>
+  ) {
+    const anyPayload: any = payload as any;
+    if (anyPayload.coverImageFile instanceof File) {
+      const formData = new FormData();
+      if (anyPayload.title !== undefined) formData.append('title', anyPayload.title);
+      if (anyPayload.subtitle !== undefined) formData.append('subtitle', anyPayload.subtitle);
+      if (anyPayload.content !== undefined) formData.append('content', anyPayload.content);
+      if (anyPayload.bulletPoints !== undefined) formData.append('bulletPoints', JSON.stringify(anyPayload.bulletPoints));
+      if (anyPayload.publishedOn !== undefined) formData.append('publishedOn', anyPayload.publishedOn);
+      if (anyPayload.authorName !== undefined) formData.append('authorName', anyPayload.authorName);
+      if (anyPayload.attachments !== undefined) formData.append('attachments', JSON.stringify(anyPayload.attachments));
+      if (anyPayload.isPublished !== undefined) formData.append('isPublished', String(anyPayload.isPublished));
+      formData.append('coverImageFile', anyPayload.coverImageFile);
+      
+      const data = await this.http.put<ServerNewsletter>(`/panchayat/newsletters/${id}`, formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      });
+      return mapNewsletterResponse(data);
+    }
+
+    const updatePayload: any = {};
+    if (payload.title !== undefined) updatePayload.title = payload.title;
+    if (payload.subtitle !== undefined) updatePayload.subtitle = payload.subtitle;
+    if (payload.content !== undefined) updatePayload.content = payload.content;
+    if (payload.bulletPoints !== undefined) updatePayload.bulletPoints = payload.bulletPoints;
+    if (payload.publishedOn !== undefined) updatePayload.publishedOn = payload.publishedOn;
+    if (payload.authorName !== undefined) updatePayload.authorName = payload.authorName;
+    if (payload.attachments !== undefined) updatePayload.attachments = payload.attachments;
+    if (payload.isPublished !== undefined) updatePayload.isPublished = payload.isPublished;
+    if (payload.coverImageFileKey !== undefined) updatePayload.coverImageFileKey = payload.coverImageFileKey;
+
+    const data = await this.http.put<ServerNewsletter>(`/panchayat/newsletters/${id}`, updatePayload);
+    return mapNewsletterResponse(data);
+  }
+
+  async togglePublish(id: string | number) {
+    return this.http.patch(`/panchayat/newsletters/${id}/publish`);
+  }
+
+  async delete(id: string | number) {
+    return this.http.delete(`/panchayat/newsletters/${id}`);
+  }
+}
+
+/**
+ * Public Newsletter API
+ */
+class PublicNewsletterApi {
+  constructor(private http: HttpClient) {}
+
+  async list(slug: string, options?: { search?: string; page?: number; size?: number }): Promise<PaginatedResult<Newsletter>> {
+    const params: any = {
+      page: options?.page ?? 0,
+      size: options?.size ?? 20,
+    };
+    if (options?.search) params.search = options.search;
+    
+    const data = await this.http.get<PagedResponse<ServerNewsletter>>(`/public/${slug}/newsletters`, {
+      params,
+    });
+    return {
+      items: data.content.map(mapNewsletterResponse),
+      page: data.page,
+      size: data.size,
+      totalItems: data.totalElements,
+      totalPages: data.totalPages,
+      isFirst: data.first,
+      isLast: data.last,
+    };
+  }
+
+  async getById(slug: string, id: string | number): Promise<Newsletter> {
+    const data = await this.http.get<ServerNewsletter>(`/public/${slug}/newsletters/${id}`);
+    return mapNewsletterResponse(data);
+  }
+}
+
+// Newsletter type (add to types if not exists)
+type Newsletter = {
+  id: string;
+  title: string;
+  subtitle?: string;
+  coverImageFileKey?: string;
+  coverImageUrl?: string;
+  content?: string;
+  bulletPoints?: string[];
+  publishedOn?: string;
+  authorName?: string;
+  attachments?: string[];
+  isPublished: boolean;
+  panchayatId?: string;
+  panchayatName?: string;
+  createdAt?: string;
+  updatedAt?: string;
+};
+
+const mapNewsletterResponse = (newsletter: ServerNewsletter): Newsletter => ({
+  id: String(newsletter.newsletterId),
+  title: newsletter.title,
+  subtitle: newsletter.subtitle,
+  coverImageFileKey: newsletter.coverImageFileKey,
+  coverImageUrl: newsletter.coverImageUrl,
+  content: newsletter.content,
+  bulletPoints: newsletter.bulletPoints || [],
+  publishedOn: newsletter.publishedOn,
+  authorName: newsletter.authorName,
+  attachments: newsletter.attachments || [],
+  isPublished: newsletter.isPublished,
+  panchayatId: newsletter.panchayatId ? String(newsletter.panchayatId) : undefined,
+  panchayatName: newsletter.panchayatName,
+  createdAt: newsletter.createdAt || new Date().toISOString(),
+  updatedAt: newsletter.updatedAt || new Date().toISOString(),
+});
+
 export const authApi = new AuthApi(httpClient);
 export const postApi = new PanchayatPostApi(httpClient);
 export const commentApi = new PanchayatCommentApi(httpClient);
@@ -1249,6 +1529,8 @@ export const announcementApi = new PanchayatAnnouncementApi(httpClient);
 export const albumApi = new PanchayatAlbumApi(httpClient);
 export const galleryApi = new PanchayatGalleryApi(httpClient);
 export const settingsApi = new PanchayatSettingsApi(httpClient);
+export const newsletterApi = new PanchayatNewsletterApi(httpClient);
+export const publicNewsletterApi = new PublicNewsletterApi(httpClient);
 export const analyticsAdapter = new AnalyticsAdapter(postApi);
 export const adminPanchayatApi = new AdminPanchayatApi(httpClient);
 export const adminUserApi = new AdminUserApi(httpClient);

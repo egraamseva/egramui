@@ -13,8 +13,11 @@ import { Label } from "../ui/label";
 import { ImageWithFallback } from "../figma/ImageWithFallback";
 import { PostCard } from "../sachiv/PostCard";
 import { panchayatAPI, publicAPI } from "../../services/api";
-import type { Post, Scheme, Announcement, PanchayatMember, GalleryItem, Project, PanchayatDetails } from "../../types";
+import { publicNewsletterApi, albumApi } from "../../routes/api";
+import type { Post, Scheme, Announcement, PanchayatMember, GalleryItem, PanchayatDetails, Album } from "../../types";
 import { formatTimeAgo } from "../../utils/format";
+import { usePresignedUrlRefresh } from "../../hooks/usePresignedUrlRefresh";
+import { useNavigate } from "react-router-dom";
 
 
 export function PanchayatWebsite() {
@@ -26,8 +29,13 @@ export function PanchayatWebsite() {
   const [announcements, setAnnouncements] = useState<Announcement[]>([]);
   const [members, setMembers] = useState<PanchayatMember[]>([]);
   const [gallery, setGallery] = useState<GalleryItem[]>([]);
-  const [projects, setProjects] = useState<Project[]>([]);
+  const [albums, setAlbums] = useState<Album[]>([]);
+  const [newsletters, setNewsletters] = useState<any[]>([]);
+  const [selectedNewsletter, setSelectedNewsletter] = useState<any | null>(null);
+  const [selectedAlbum, setSelectedAlbum] = useState<Album | null>(null);
+
   const [loading, setLoading] = useState(true);
+  const navigate = useNavigate();
   const [contactForm, setContactForm] = useState({
     name: "",
     email: "",
@@ -55,12 +63,14 @@ export function PanchayatWebsite() {
       setPanchayat(panchayatData);
       
       // Fetch all data using public APIs with slug
-      const [postsResult, schemesResult, announcementsResult, membersResult, galleryResult] = await Promise.all([
+      const [postsResult, schemesResult, announcementsResult, membersResult, galleryResult, newslettersResult, albumsResult] = await Promise.all([
         publicAPI.getPublicPosts(subdomainToUse, { page: 0, size: 50 }),
         publicAPI.getPublicSchemes(subdomainToUse, { page: 0, size: 50 }),
         publicAPI.getPublicAnnouncements(subdomainToUse, { page: 0, size: 50 }),
         publicAPI.getPublicMembers(subdomainToUse, { page: 0, size: 50 }),
         publicAPI.getPublicGallery(subdomainToUse, { page: 0, size: 50 }),
+        publicNewsletterApi.list(subdomainToUse, { page: 0, size: 50 }).catch(() => ({ items: [], page: 0, size: 0, totalItems: 0, totalPages: 0, isFirst: true, isLast: true })),
+        albumApi.list().catch(() => ({ items: [], page: 0, size: 0, totalItems: 0, totalPages: 0, isFirst: true, isLast: true })),
       ]);
       
       // Map posts
@@ -188,7 +198,8 @@ export function PanchayatWebsite() {
       setAnnouncements(mappedAnnouncements);
       setMembers(mappedMembers);
       setGallery(mappedGallery);
-      setProjects([]); // Projects not implemented in backend yet
+      setNewsletters(newslettersResult.items || []);
+      setAlbums(albumsResult.items || []);
     } catch (error) {
       console.error("Error fetching panchayat data:", error);
       // Use default data if API fails
@@ -218,7 +229,6 @@ export function PanchayatWebsite() {
       setAnnouncements([]);
       setMembers([]);
       setGallery([]);
-      setProjects([]);
     } finally {
       setLoading(false);
     }
@@ -433,16 +443,6 @@ export function PanchayatWebsite() {
               Schemes
             </button>
             <button
-              onClick={() => setActiveTab("projects")}
-              className={`text-sm px-6 h-full rounded-t-lg transition-colors flex-shrink-0 flex items-center justify-center ${
-                activeTab === "projects"
-                  ? "bg-[#E31E24] text-white font-semibold"
-                  : "text-[#666] hover:text-[#1B2B5E]"
-              }`}
-            >
-              Projects
-            </button>
-            <button
               onClick={() => setActiveTab("gallery")}
               className={`text-sm px-6 h-full rounded-t-lg transition-colors flex-shrink-0 flex items-center justify-center ${
                 activeTab === "gallery"
@@ -451,6 +451,16 @@ export function PanchayatWebsite() {
               }`}
             >
               Gallery
+            </button>
+            <button
+              onClick={() => setActiveTab("newsletters")}
+              className={`text-sm px-6 h-full rounded-t-lg transition-colors flex-shrink-0 flex items-center justify-center ${
+                activeTab === "newsletters"
+                  ? "bg-[#E31E24] text-white font-semibold"
+                  : "text-[#666] hover:text-[#1B2B5E]"
+              }`}
+            >
+              Newsletter
             </button>
             <button
               onClick={() => setActiveTab("contact")}
@@ -708,92 +718,132 @@ export function PanchayatWebsite() {
             </TabsContent>
 
 
-            {/* Projects Tab */}
-            <TabsContent value="projects" className="space-y-6 sm:space-y-8">
-              <section>
-                <h2 className="mb-4 sm:mb-6 text-xl sm:text-2xl font-bold">Development Projects</h2>
-                {loading ? (
-                  <div className="text-center text-muted-foreground py-8 text-sm sm:text-base">Loading projects...</div>
-                ) : projects.length === 0 ? (
-                  <div className="text-center text-muted-foreground py-8 text-sm sm:text-base">No projects available</div>
-                ) : (
-                  <div className="space-y-4 sm:space-y-6">
-                    {projects.map((project) => (
-                      <Card key={project.id} className="transition-shadow hover:shadow-lg">
-                        <CardHeader className="p-4 sm:p-6">
-                          <CardTitle className="text-base sm:text-lg">{project.title}</CardTitle>
-                          <CardDescription className="text-xs sm:text-sm">{project.wards}</CardDescription>
-                        </CardHeader>
-                        <CardContent className="p-4 sm:p-6 pt-0">
-                          <p className="mb-4 text-xs sm:text-sm text-muted-foreground">{project.description}</p>
-                          <div className="grid gap-3 sm:gap-4 grid-cols-1 sm:grid-cols-3">
-                            <div className="rounded-lg border p-3">
-                              <p className="text-xs sm:text-sm text-muted-foreground">Budget</p>
-                              <p className="text-sm sm:text-base text-[#138808] font-medium">{project.budget}</p>
-                            </div>
-                            <div className="rounded-lg border p-3">
-                              <p className="text-xs sm:text-sm text-muted-foreground">Timeline</p>
-                              <p className="text-sm sm:text-base text-[#138808] font-medium">{project.timeline}</p>
-                            </div>
-                            <div className="rounded-lg border p-3">
-                              <p className="text-xs sm:text-sm text-muted-foreground">Status</p>
-                              <Badge 
-                                className={
-                                  project.status === 'Completed' 
-                                    ? 'bg-[#138808] text-white'
-                                    : project.status === 'In Progress'
-                                    ? 'bg-[#FF9933] text-white'
-                                    : 'bg-[#666] text-white'
-                                }
-                              >
-                                {project.status}
-                              </Badge>
-                            </div>
-                          </div>
-                          <div className="mt-4">
-                            <Progress value={project.progress} />
-                            <p className="mt-2 text-xs sm:text-sm text-muted-foreground">{project.progress}% Completed</p>
-                          </div>
-                        </CardContent>
-                      </Card>
-                    ))}
-                  </div>
-                )}
-              </section>
-            </TabsContent>
-
+           
 
             {/* Gallery Tab */}
             <TabsContent value="gallery" className="space-y-6 sm:space-y-8">
-              <section>
-                <h2 className="mb-4 sm:mb-6 text-xl sm:text-2xl font-bold">Photo Gallery</h2>
-                {loading ? (
-                  <div className="text-center text-muted-foreground py-8 text-sm sm:text-base">Loading gallery...</div>
-                ) : gallery.length === 0 ? (
-                  <div className="text-center text-muted-foreground py-8 text-sm sm:text-base">No gallery items available</div>
-                ) : (
-                  <div className="grid gap-4 sm:gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
-                    {gallery.map((item) => (
-                      <Card key={item.id} className="overflow-hidden transition-transform hover:scale-105">
-                        <ImageWithFallback
-                          src={item.image}
-                          alt={item.title}
-                          className="h-40 sm:h-48 w-full object-cover"
-                        />
-                        <CardContent className="p-3 sm:p-4">
-                          <p className="font-medium text-sm sm:text-base">{item.title}</p>
-                          {item.description && (
-                            <p className="mt-1 text-xs sm:text-sm text-muted-foreground">{item.description}</p>
-                          )}
-                          {item.date && (
-                            <p className="mt-1 text-xs text-muted-foreground">{item.date}</p>
-                          )}
-                        </CardContent>
-                      </Card>
-                    ))}
+              {selectedAlbum ? (
+                <section>
+                  <div className="mb-4 sm:mb-6 flex items-center gap-4">
+                    <Button variant="ghost" onClick={() => setSelectedAlbum(null)}>
+                      ← Back to Albums
+                    </Button>
+                    <h2 className="text-xl sm:text-2xl font-bold">{selectedAlbum.title}</h2>
                   </div>
-                )}
-              </section>
+                  {loading ? (
+                    <div className="text-center text-muted-foreground py-8 text-sm sm:text-base">Loading images...</div>
+                  ) : (
+                    <div className="grid gap-4 sm:gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
+                      {gallery.filter((item: any) => item.albumId === selectedAlbum.id).map((item) => (
+                        <Card key={item.id} className="overflow-hidden transition-transform hover:scale-105">
+                          <AlbumImageWithRefresh src={item.image} alt={item.title} />
+                          <CardContent className="p-3 sm:p-4">
+                            <p className="font-medium text-sm sm:text-base">{item.title}</p>
+                            {item.description && (
+                              <p className="mt-1 text-xs sm:text-sm text-muted-foreground">{item.description}</p>
+                            )}
+                          </CardContent>
+                        </Card>
+                      ))}
+                    </div>
+                  )}
+                </section>
+              ) : (
+                <section>
+                  <h2 className="mb-4 sm:mb-6 text-xl sm:text-2xl font-bold">Photo Gallery</h2>
+                  {albums.length > 0 ? (
+                    <>
+                      <h3 className="mb-3 sm:mb-4 text-lg sm:text-xl font-semibold">Albums</h3>
+                      <div className="grid gap-4 sm:gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 mb-6 sm:mb-8">
+                        {albums.map((album) => (
+                          <Card
+                            key={album.id}
+                            className="overflow-hidden transition-transform hover:scale-105 cursor-pointer"
+                            onClick={() => setSelectedAlbum(album)}
+                          >
+                            {album.coverImage && (
+                              <AlbumImageWithRefresh src={album.coverImage} alt={album.title} />
+                            )}
+                            <CardContent className="p-3 sm:p-4">
+                              <p className="font-medium text-sm sm:text-base">{album.title}</p>
+                              {album.description && (
+                                <p className="mt-1 text-xs sm:text-sm text-muted-foreground line-clamp-2">{album.description}</p>
+                              )}
+                              <p className="mt-2 text-xs text-muted-foreground">{album.imageCount || 0} images</p>
+                            </CardContent>
+                          </Card>
+                        ))}
+                      </div>
+                    </>
+                  ) : null}
+                  {gallery.length > 0 && (
+                    <>
+                      <h3 className="mb-3 sm:mb-4 text-lg sm:text-xl font-semibold">All Images</h3>
+                      <div className="grid gap-4 sm:gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
+                        {gallery.map((item) => (
+                          <Card key={item.id} className="overflow-hidden transition-transform hover:scale-105">
+                            <AlbumImageWithRefresh src={item.image} alt={item.title} />
+                            <CardContent className="p-3 sm:p-4">
+                              <p className="font-medium text-sm sm:text-base">{item.title}</p>
+                              {item.description && (
+                                <p className="mt-1 text-xs sm:text-sm text-muted-foreground">{item.description}</p>
+                              )}
+                              {item.date && (
+                                <p className="mt-1 text-xs text-muted-foreground">{item.date}</p>
+                              )}
+                            </CardContent>
+                          </Card>
+                        ))}
+                      </div>
+                    </>
+                  )}
+                  {albums.length === 0 && gallery.length === 0 && (
+                    <div className="text-center text-muted-foreground py-8 text-sm sm:text-base">No gallery items available</div>
+                  )}
+                </section>
+              )}
+            </TabsContent>
+
+            {/* Newsletter Tab */}
+            <TabsContent value="newsletters" className="space-y-6 sm:space-y-8">
+              {selectedNewsletter ? (
+                <NewsletterDetailView newsletter={selectedNewsletter} onBack={() => setSelectedNewsletter(null)} />
+              ) : (
+                <section>
+                  <h2 className="mb-4 sm:mb-6 text-xl sm:text-2xl font-bold">Newsletters</h2>
+                  {loading ? (
+                    <div className="text-center text-muted-foreground py-8 text-sm sm:text-base">Loading newsletters...</div>
+                  ) : newsletters.length === 0 ? (
+                    <div className="text-center text-muted-foreground py-8 text-sm sm:text-base">No newsletters available</div>
+                  ) : (
+                    <div className="grid gap-4 sm:gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
+                      {newsletters.map((newsletter) => (
+                        <Card
+                          key={newsletter.id}
+                          className="overflow-hidden transition-transform hover:scale-105 cursor-pointer"
+                          onClick={() => setSelectedNewsletter(newsletter)}
+                        >
+                          {newsletter.coverImageUrl && (
+                            <div className="h-48 w-full overflow-hidden">
+                              <NewsletterCoverImage fileKey={newsletter.coverImageFileKey} url={newsletter.coverImageUrl} />
+                            </div>
+                          )}
+                          <CardContent className="p-4 sm:p-6">
+                            <h3 className="font-semibold text-base sm:text-lg mb-2">{newsletter.title}</h3>
+                            {newsletter.subtitle && (
+                              <p className="text-sm text-muted-foreground mb-3 line-clamp-2">{newsletter.subtitle}</p>
+                            )}
+                            <div className="flex items-center justify-between text-xs text-muted-foreground">
+                              <span>{newsletter.publishedOn ? new Date(newsletter.publishedOn).toLocaleDateString() : "Draft"}</span>
+                              {newsletter.authorName && <span>By {newsletter.authorName}</span>}
+                            </div>
+                          </CardContent>
+                        </Card>
+                      ))}
+                    </div>
+                  )}
+                </section>
+              )}
             </TabsContent>
 
 
@@ -1019,5 +1069,119 @@ export function PanchayatWebsite() {
         </Tabs>
       </main>
     </div>
+  );
+}
+
+// Helper component for newsletter cover image with presigned URL refresh
+function NewsletterCoverImage({ fileKey, url }: { fileKey?: string; url?: string }) {
+  const { presignedUrl } = usePresignedUrlRefresh({
+    fileKey: fileKey || undefined,
+    initialPresignedUrl: url || undefined,
+  });
+
+  if (!presignedUrl) {
+    return (
+      <div className="w-full h-full bg-muted flex items-center justify-center">
+        <span className="text-muted-foreground text-sm">No image</span>
+      </div>
+    );
+  }
+
+  return (
+    <ImageWithFallback
+      src={presignedUrl}
+      alt="Newsletter cover"
+      className="w-full h-full object-cover"
+    />
+  );
+}
+
+// Helper component for album images with presigned URL refresh
+function AlbumImageWithRefresh({ src, alt }: { src?: string; alt: string }) {
+  const { presignedUrl } = usePresignedUrlRefresh({
+    fileKey: src || undefined,
+    initialPresignedUrl: src || undefined,
+  });
+
+  if (!presignedUrl) {
+    return (
+      <div className="h-40 sm:h-48 w-full bg-muted flex items-center justify-center">
+        <span className="text-muted-foreground text-sm">No image</span>
+      </div>
+    );
+  }
+
+  return (
+    <ImageWithFallback
+      src={presignedUrl}
+      alt={alt}
+      className="h-40 sm:h-48 w-full object-cover"
+    />
+  );
+}
+
+// Newsletter Detail View Component
+function NewsletterDetailView({ newsletter, onBack }: { newsletter: any; onBack: () => void }) {
+  return (
+    <article className="max-w-4xl mx-auto space-y-6 sm:space-y-8">
+      <Button variant="ghost" onClick={onBack} className="mb-4">
+        ← Back to Newsletters
+      </Button>
+
+      {newsletter.coverImageUrl && (
+        <div className="w-full h-64 sm:h-96 rounded-lg overflow-hidden">
+          <NewsletterCoverImage fileKey={newsletter.coverImageFileKey} url={newsletter.coverImageUrl} />
+        </div>
+      )}
+
+      <div className="space-y-4">
+        <div>
+          <h1 className="text-2xl sm:text-3xl font-bold mb-2">{newsletter.title}</h1>
+          {newsletter.subtitle && (
+            <p className="text-lg text-muted-foreground mb-4">{newsletter.subtitle}</p>
+          )}
+          <div className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground">
+            {newsletter.authorName && <span>By {newsletter.authorName}</span>}
+            {newsletter.publishedOn && (
+              <span>{new Date(newsletter.publishedOn).toLocaleDateString('en-IN', { year: 'numeric', month: 'long', day: 'numeric' })}</span>
+            )}
+          </div>
+        </div>
+
+        {newsletter.content && (
+          <div
+            className="prose prose-sm sm:prose-base max-w-none"
+            dangerouslySetInnerHTML={{ __html: newsletter.content }}
+          />
+        )}
+
+        {newsletter.bulletPoints && newsletter.bulletPoints.length > 0 && (
+          <div>
+            <h2 className="text-xl font-semibold mb-3">Key Points</h2>
+            <ul className="list-disc list-inside space-y-2">
+              {newsletter.bulletPoints.map((point: string, index: number) => (
+                <li key={index} className="text-sm sm:text-base">{point}</li>
+              ))}
+            </ul>
+          </div>
+        )}
+
+        {newsletter.attachments && newsletter.attachments.length > 0 && (
+          <div>
+            <h2 className="text-xl font-semibold mb-3">Attachments</h2>
+            <div className="space-y-2">
+              {newsletter.attachments.map((attachment: string, index: number) => (
+                <Button key={index} variant="outline" asChild>
+                  <a href={attachment} target="_blank" rel="noopener noreferrer">
+                    <Download className="mr-2 h-4 w-4" />
+                    Download Attachment {index + 1}
+                  </a>
+                </Button>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+    </article>
   );
 }

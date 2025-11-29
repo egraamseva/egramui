@@ -3,6 +3,8 @@ import { Footer } from "./components/main/Footer";
 import { Toaster } from "./components/ui/sonner";
 import { ErrorBoundary } from "./components/ErrorBoundary";
 import { AuthProvider } from "./contexts/AuthContext";
+import { LoadingProvider } from "./contexts/LoadingContext";
+import { GlobalLoader } from "./components/main/GlobalLoader";
 import { AppRoutes } from "./routes";
 import type { Language } from "./types";
 import { Header } from "./components/main/Header";
@@ -56,6 +58,9 @@ function AppContent() {
 
         {/* Toast notifications */}
         <Toaster />
+        
+        {/* Global Loader */}
+        <GlobalLoader />
       </div>
     </ErrorBoundary>
   );
@@ -64,9 +69,11 @@ function AppContent() {
 export default function App() {
   return (
     <BrowserRouter>
-      <AuthProvider>
-        <AppContent />
-      </AuthProvider>
+      <LoadingProvider>
+        <AuthProvider>
+          <AppContent />
+        </AuthProvider>
+      </LoadingProvider>
     </BrowserRouter>
   );
 }
