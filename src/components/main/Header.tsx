@@ -22,26 +22,21 @@ interface HeaderProps {
 }
 
 export function Header({ variant = "platform", panchayatName, onLanguageChange }: HeaderProps) {
-
-  const {user} = useAuth();
+  const { user } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const { t } = useTranslation();
 
-  // Don't show header on dashboard/admin routes (handled by App.tsx, but double-check here)
   if (location.pathname.startsWith('/admin') || location.pathname.startsWith('/panchayat/dashboard')) {
     return null;
   }
 
   const handleLogoClick = (e: React.MouseEvent) => {
-    // If already on home page, prevent navigation and just scroll to top
     if (location.pathname === '/') {
       e.preventDefault();
       window.scrollTo({ top: 0, behavior: 'smooth' });
     } else {
-      // Let React Router handle navigation, then scroll to top after navigation
-      // The Link component will handle the navigation
       setTimeout(() => {
         window.scrollTo({ top: 0, behavior: 'smooth' });
       }, 100);
@@ -49,23 +44,18 @@ export function Header({ variant = "platform", panchayatName, onLanguageChange }
   };
 
   const handleNavClick = (href: string, closeMenu = false) => {
-    // Close mobile menu if needed
     if (closeMenu) {
       setMobileMenuOpen(false);
     }
-    
-    // For hash links, navigate to home page first if not already there
+
     if (href.startsWith('#')) {
-      // If we're on the landing page, just scroll
       if (location.pathname === '/') {
         const element = document.querySelector(href);
         if (element) {
           element.scrollIntoView({ behavior: 'smooth' });
         }
       } else {
-        // Navigate to home page with hash
         navigate(`/${href}`);
-        // After navigation, scroll to the section
         setTimeout(() => {
           const element = document.querySelector(href);
           if (element) {
@@ -94,57 +84,38 @@ export function Header({ variant = "platform", panchayatName, onLanguageChange }
       ];
 
   return (
-    <header className="sticky top-0 z-50 w-full border-b border-[#E5E5E5] bg-white shadow-sm">
-      <div className="container mx-auto px-3 sm:px-4 lg:px-8">
-        <div className="flex h-14 sm:h-16 items-center justify-between gap-2">
-          {/* Logo and Brand */}
-          <Link 
-            to="/" 
+    <header className="sticky top-0 z-50 w-full border-b border-gray-200 bg-white shadow-sm">
+      <div className="container mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="flex h-16 items-center justify-between gap-4">
+          {/* Logo */}
+          <Link
+            to="/"
             onClick={handleLogoClick}
-            className="flex items-center gap-2 sm:gap-3 hover:opacity-80 transition-opacity flex-shrink-0 min-w-0 cursor-pointer"
+            className="flex items-center gap-2 flex-shrink-0 hover:opacity-80 transition-opacity"
           >
             <Logo size="small" />
-            {/* <div className="flex h-8 w-8 sm:h-10 sm:w-10 items-center justify-center rounded-lg bg-gradient-to-br from-[#FF9933] via-white to-[#138808] p-[2px] flex-shrink-0">
-              <div className="flex h-full w-full items-center justify-center rounded-md bg-white">
-                <svg width="20" height="20" className="sm:w-6 sm:h-6" viewBox="0 0 24 24" fill="none">
-                  <circle cx="12" cy="12" r="10" fill="#138808" />
-                  <path d="M12 4 L12 20 M4 12 L20 12" stroke="white" strokeWidth="2" />
-                  <circle cx="12" cy="12" r="3" fill="#FF9933" />
-                </svg>
-              </div>
-            </div> */}
-            {/* <div className="min-w-0 flex-1">
-              <h1 className="text-sm sm:text-lg font-semibold text-[#1B2B5E] truncate">
-                {variant === "platform" ? "e-GramSeva" : (panchayatName || "Panchayat")}
-              </h1>
-              {variant === "platform" && (
-                <p className="hidden sm:block text-xs text-[#666666]">
-                  Digital Platform for Gram Panchayats
-                </p>
-              )}
-            </div> */}
           </Link>
 
           {/* Desktop Navigation */}
-          <nav className="hidden items-center gap-6 md:flex">
+          <nav className="hidden md:flex items-center gap-8">
             {navigationItems.map((item) => (
               <button
                 key={item.label}
                 onClick={() => handleNavClick(item.href)}
-                className="text-sm font-medium text-[#333] transition-colors hover:text-[#E31E24] cursor-pointer bg-transparent border-none"
+                className="text-sm font-medium text-gray-700 hover:text-red-600 transition-colors"
               >
                 {item.label}
               </button>
             ))}
           </nav>
 
-        
-            
-            {/* Language Selector - Show on all screens */}
+          {/* Right Actions */}
+          <div className="flex items-center gap-2 sm:gap-4">
+            {/* Language Selector */}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="icon" className="h-8 w-8 sm:h-9 sm:w-9">
-                  <Globe className="h-4 w-4 sm:h-5 sm:w-5 text-[#666]" />
+                <Button variant="ghost" size="icon" className="h-9 w-9">
+                  <Globe className="h-5 w-5 text-gray-600" />
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
@@ -163,137 +134,92 @@ export function Header({ variant = "platform", panchayatName, onLanguageChange }
               </DropdownMenuContent>
             </DropdownMenu>
 
-            {/* Login/Dashboard Button - Desktop only */}
+            {/* Dashboard/Login Button - Desktop */}
             {variant === "platform" && (
-              user ? (
-                <Button
-                  onClick={() => {
-                    // Redirect to appropriate dashboard based on user role
-                    if (user.role === 'SUPER_ADMIN') {
-                      navigate('/admin');
-                    } else {
-                      navigate('/panchayat/dashboard');
-                    }
-                  }}
-                  className="hidden bg-[#E31E24] text-white hover:bg-[#C91A20] md:inline-flex h-9"
-                >
-                  <User className="mr-2 h-4 w-4" />
-                  <span className="hidden lg:inline">{t('nav.dashboard')}</span>
-                  <span className="lg:hidden">Dashboard</span>
-                </Button>
-              ) : (
-                <Button
-                  asChild
-                  className="hidden bg-[#E31E24] text-white hover:bg-[#C91A20] md:inline-flex h-9"
-                >
-                  <Link to="/login">
+              <div className="hidden md:block">
+                {user ? (
+                  <Button
+                    onClick={() => {
+                      navigate(user.role === 'SUPER_ADMIN' ? '/admin' : '/panchayat/dashboard');
+                    }}
+                    className="bg-red-600 text-white hover:bg-red-700 h-9"
+                  >
                     <User className="mr-2 h-4 w-4" />
-                    <span className="hidden lg:inline">{t('nav.login')}</span>
-                    <span className="lg:hidden">Login</span>
-                  </Link>
-                </Button>
-              )
+                    <span className="hidden lg:inline">{t('nav.dashboard')}</span>
+                    <span className="lg:hidden">Dashboard</span>
+                  </Button>
+                ) : (
+                  <Button
+                    asChild
+                    className="bg-red-600 text-white hover:bg-red-700 h-9"
+                  >
+                    <Link to="/login">
+                      <User className="mr-2 h-4 w-4" />
+                      <span className="hidden lg:inline">{t('nav.login')}</span>
+                      <span className="lg:hidden">Login</span>
+                    </Link>
+                  </Button>
+                )}
+              </div>
             )}
 
-            {/* Mobile Menu */}
+            {/* Mobile Menu Trigger */}
             <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
               <SheetTrigger asChild>
-                <Button variant="ghost" size="icon" className="md:hidden h-8 w-8 sm:h-9 sm:w-9">
-                  <Menu className="h-5 w-5 sm:h-6 sm:w-6" />
+                <Button variant="ghost" size="icon" className="md:hidden h-9 w-9">
+                  <Menu className="h-5 w-5" />
                 </Button>
               </SheetTrigger>
-              <SheetContent side="right" className="w-[280px] sm:w-[350px] flex flex-col p-0 overflow-hidden">
+              <SheetContent side="right" className="w-72 p-0">
                 <div className="flex flex-col h-full">
-                  {/* Mobile Menu Header */}
-                  <div className="px-4 pt-6 pb-4 border-b border-[#E5E5E5] flex-shrink-0">
-                    <div className="flex items-center gap-3">
-                      <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-gradient-to-br from-[#FF9933] via-white to-[#138808] p-[2px] flex-shrink-0">
-                        <div className="flex h-full w-full items-center justify-center rounded-md bg-white">
-                          <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-                            <circle cx="12" cy="12" r="10" fill="#138808" />
-                            <path d="M12 4 L12 20 M4 12 L20 12" stroke="white" strokeWidth="2" />
-                            <circle cx="12" cy="12" r="3" fill="#FF9933" />
-                          </svg>
-                        </div>
-                      </div>
-                      <div className="min-w-0 flex-1">
-                        <h2 className="text-base font-semibold text-[#1B2B5E] truncate">
-                          {variant === "platform" ? "e-GramSeva" : (panchayatName || "Panchayat")}
-                        </h2>
-                        {variant === "platform" && (
-                          <p className="text-xs text-[#666666]">
-                            Digital Platform
-                          </p>
-                        )}
-                      </div>
-                    </div>
+                  {/* Mobile Header */}
+                  <div className="px-6 py-4 border-b border-gray-200">
+                    <h2 className="text-lg font-semibold text-gray-900">
+                      {variant === "platform" ? "e-GramSeva" : (panchayatName || "Panchayat")}
+                    </h2>
+                    {variant === "platform" && (
+                      <p className="text-sm text-gray-600">Digital Platform</p>
+                    )}
                   </div>
 
-                  {/* Navigation Items */}
-                  <nav className="flex flex-col gap-1 flex-1 overflow-y-auto px-4 py-4">
+                  {/* Mobile Navigation */}
+                  <nav className="flex-1 overflow-y-auto px-4 py-4">
                     {navigationItems.map((item) => (
                       <button
                         key={item.label}
-                        onClick={() => {
-                          handleNavClick(item.href, true);
-                        }}
-                        className="flex items-center justify-between px-4 py-3 text-base font-medium text-[#333] transition-colors hover:bg-[#F5F5F5] hover:text-[#E31E24] rounded-lg text-left w-full active:bg-[#F5F5F5]"
+                        onClick={() => handleNavClick(item.href, true)}
+                        className="w-full text-left px-4 py-3 text-base font-medium text-gray-700 hover:bg-gray-100 hover:text-red-600 rounded-lg transition-colors"
                       >
-                        <span>{item.label}</span>
+                        {item.label}
                       </button>
                     ))}
                   </nav>
 
-                  {/* Mobile Menu Footer Actions */}
-                  <div className="mt-auto pt-4 pb-4 border-t border-[#E5E5E5] space-y-3 px-4 flex-shrink-0 bg-white">
-                    {/* Language Selector in Mobile Menu */}
+                  {/* Mobile Footer */}
+                  <div className="border-t border-gray-200 p-4 space-y-4">
+                    {/* Language Selector */}
                     <div>
-                      <p className="text-xs font-medium text-[#666] mb-2">{t('nav.language')}</p>
+                      <p className="text-xs font-semibold text-gray-600 mb-2">{t('nav.language')}</p>
                       <div className="grid grid-cols-2 gap-2">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => {
-                            onLanguageChange?.("en");
-                            setMobileMenuOpen(false);
-                          }}
-                          className="text-xs h-8"
-                        >
-                          English
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => {
-                            onLanguageChange?.("mr");
-                            setMobileMenuOpen(false);
-                          }}
-                          className="text-xs h-8"
-                        >
-                          मराठी
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => {
-                            onLanguageChange?.("hi");
-                            setMobileMenuOpen(false);
-                          }}
-                          className="text-xs h-8"
-                        >
-                          हिंदी
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => {
-                            onLanguageChange?.("regional");
-                            setMobileMenuOpen(false);
-                          }}
-                          className="text-xs h-8"
-                        >
-                          Regional
-                        </Button>
+                        {[
+                          { label: "English", lang: "en" },
+                          { label: "मराठी", lang: "mr" },
+                          { label: "हिंदी", lang: "hi" },
+                          { label: "Regional", lang: "regional" },
+                        ].map(({ label, lang }) => (
+                          <Button
+                            key={lang}
+                            variant="outline"
+                            size="sm"
+                            onClick={() => {
+                              onLanguageChange?.(lang as Language);
+                              setMobileMenuOpen(false);
+                            }}
+                            className="text-xs"
+                          >
+                            {label}
+                          </Button>
+                        ))}
                       </div>
                     </div>
 
@@ -302,15 +228,10 @@ export function Header({ variant = "platform", panchayatName, onLanguageChange }
                       user ? (
                         <Button
                           onClick={() => {
-                            // Redirect to appropriate dashboard based on user role
-                            if (user.role === 'SUPER_ADMIN') {
-                              navigate('/admin');
-                            } else {
-                              navigate('/panchayat/dashboard');
-                            }
+                            navigate(user.role === 'SUPER_ADMIN' ? '/admin' : '/panchayat/dashboard');
                             setMobileMenuOpen(false);
                           }}
-                          className="w-full bg-[#E31E24] text-white hover:bg-[#C91A20] h-10"
+                          className="w-full bg-red-600 text-white hover:bg-red-700"
                         >
                           <User className="mr-2 h-4 w-4" />
                           {t('nav.dashboard')}
@@ -321,7 +242,7 @@ export function Header({ variant = "platform", panchayatName, onLanguageChange }
                             navigate('/login');
                             setMobileMenuOpen(false);
                           }}
-                          className="w-full bg-[#E31E24] text-white hover:bg-[#C91A20] h-10"
+                          className="w-full bg-red-600 text-white hover:bg-red-700"
                         >
                           <User className="mr-2 h-4 w-4" />
                           {t('nav.login')}
@@ -334,6 +255,7 @@ export function Header({ variant = "platform", panchayatName, onLanguageChange }
             </Sheet>
           </div>
         </div>
+      </div>
     </header>
   );
 }

@@ -153,12 +153,12 @@ export function SettingsManagement({ panchayatId }: SettingsManagementProps) {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid w-full grid-cols-5">
-          <TabsTrigger value="basic">Basic Info</TabsTrigger>
-          <TabsTrigger value="hero">Hero Section</TabsTrigger>
-          <TabsTrigger value="about">About</TabsTrigger>
-          <TabsTrigger value="contact">Contact</TabsTrigger>
-          <TabsTrigger value="branding">Branding</TabsTrigger>
+        <TabsList className="w-full! h-auto! justify-start! overflow-x-auto overflow-y-hidden scrollbar-hide md:flex-wrap! md:justify-start!">
+          <TabsTrigger value="basic" className="whitespace-nowrap">Basic Info</TabsTrigger>
+          <TabsTrigger value="hero" className="whitespace-nowrap">Hero</TabsTrigger>
+          <TabsTrigger value="about" className="whitespace-nowrap">About</TabsTrigger>
+          <TabsTrigger value="contact" className="whitespace-nowrap">Contact</TabsTrigger>
+          <TabsTrigger value="branding" className="whitespace-nowrap">Branding</TabsTrigger>
         </TabsList>
 
         <TabsContent value="basic" className="space-y-4">
