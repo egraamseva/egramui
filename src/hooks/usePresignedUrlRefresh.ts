@@ -84,13 +84,19 @@ export function usePresignedUrlRefresh({
         throw new Error('Could not extract file key');
       }
 
+      const token = localStorage.getItem('authToken');
+      const headers: HeadersInit = {
+        'Content-Type': 'application/json',
+      };
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+
       const response = await fetch(
-        `${import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080/api/v1'}/files/refresh-url?fileKey=${encodeURIComponent(actualFileKey)}`,
+        `${import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080'}/api/v1/files/refresh-url?fileKey=${encodeURIComponent(actualFileKey)}`,
         {
           method: 'GET',
-          headers: {
-            'Content-Type': 'application/json',
-          },
+          headers,
         }
       );
 

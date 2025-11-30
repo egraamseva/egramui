@@ -166,6 +166,18 @@ class HttpClient {
     return this.request<T>({ method: "PUT", url, data, ...config });
   }
 
+  putFormData<T>(url: string, formData: FormData, config?: AxiosRequestConfig) {
+    return this.request<T>({
+      method: "PUT",
+      url,
+      data: formData,
+      headers: {
+        "Content-Type": "multipart/form-data",
+      },
+      ...config,
+    });
+  }
+
   patch<T>(url: string, data?: unknown, config?: AxiosRequestConfig) {
     return this.request<T>({ method: "PATCH", url, data, ...config });
   }
@@ -208,6 +220,11 @@ type ServerUser = {
   name: string;
   email: string;
   phone?: string;
+  designation?: string;
+  imageUrl?: string;
+  imageKey?: string;
+  hasImage?: boolean;
+  initials?: string;
   role: "SUPER_ADMIN" | "PANCHAYAT_ADMIN";
   status: "ACTIVE" | "INACTIVE" | "SUSPENDED" | "DELETED";
   panchayatId?: number;
@@ -410,8 +427,59 @@ class PanchayatTeamApi {
     };
   }
 
-  async addMember(payload: { name: string; email: string; phone: string; password: string }) {
-    const data = await this.http.post<ServerUser>("/panchayat/team", payload);
+  async addMember(payload: {
+    name: string;
+    email: string;
+    phone: string;
+    password: string;
+    designation?: string;
+    imageFile?: File;
+    imageUrl?: string;
+    compressionQuality?: string;
+  }) {
+    // Backend always expects multipart/form-data
+    const formData = new FormData();
+    formData.append('name', payload.name);
+    formData.append('email', payload.email);
+    formData.append('phone', payload.phone);
+    formData.append('password', payload.password);
+    if (payload.designation) formData.append('designation', payload.designation);
+    if (payload.imageFile instanceof File) {
+      formData.append('imageFile', payload.imageFile);
+    }
+    if (payload.imageUrl) formData.append('imageUrl', payload.imageUrl);
+    if (payload.compressionQuality) formData.append('compressionQuality', payload.compressionQuality);
+    
+    const data = await this.http.postFormData<ServerUser>("/panchayat/team", formData);
+    return mapTeamMemberResponse(data);
+  }
+
+  async updateMember(
+    userId: string | number,
+    payload: Partial<{
+      name: string;
+      email: string;
+      phone: string;
+      password: string;
+      designation?: string;
+      imageFile?: File;
+      imageUrl?: string;
+      compressionQuality?: string;
+    }>
+  ) {
+    const formData = new FormData();
+    if (payload.name !== undefined) formData.append('name', payload.name);
+    if (payload.email !== undefined) formData.append('email', payload.email);
+    if (payload.phone !== undefined) formData.append('phone', payload.phone);
+    if (payload.password !== undefined) formData.append('password', payload.password);
+    if (payload.designation !== undefined) formData.append('designation', payload.designation || '');
+    if (payload.imageFile instanceof File) {
+      formData.append('imageFile', payload.imageFile);
+    }
+    if (payload.imageUrl !== undefined) formData.append('imageUrl', payload.imageUrl || '');
+    if (payload.compressionQuality) formData.append('compressionQuality', payload.compressionQuality);
+    
+    const data = await this.http.putFormData<ServerUser>(`/panchayat/team/${userId}`, formData);
     return mapTeamMemberResponse(data);
   }
 
@@ -562,6 +630,12 @@ const mapTeamMemberResponse = (user: ServerUser): TeamMember => ({
   panchayatId: user.panchayatId ? String(user.panchayatId) : "",
   name: user.name,
   email: user.email,
+  phone: user.phone,
+  designation: user.designation,
+  image: user.imageUrl,
+  imageKey: user.imageKey,
+  hasImage: user.hasImage ?? false,
+  initials: user.initials || (user.name ? user.name.split(' ').map(n => n[0]).join('').toUpperCase().substring(0, 2) : ''),
   role: user.role.replace("_", " "),
   status: (user.status?.toLowerCase() ?? "inactive") as UserStatus,
   createdAt: user.createdAt,
@@ -1038,20 +1112,30 @@ class PanchayatGalleryApi {
     }>,
   ) {
     const anyPayload: any = payload as any;
-    if (anyPayload.imageFile instanceof File) {
-      const formData = new FormData();
-      if (anyPayload.caption) formData.append('caption', anyPayload.caption);
-      if (anyPayload.tags) formData.append('tags', anyPayload.tags);
-      if (anyPayload.albumId !== undefined) formData.append('albumId', String(anyPayload.albumId));
-      if (anyPayload.displayOrder !== undefined) formData.append('displayOrder', String(anyPayload.displayOrder));
-      formData.append('imageFile', anyPayload.imageFile);
-      const data = await this.http.put<ServerGalleryImage>(`/panchayat/gallery/${id}`, formData, {
-        headers: { 'Content-Type': 'multipart/form-data' },
-      });
-      return mapGalleryImageResponse(data);
+    // Backend always expects multipart/form-data, so always use FormData
+    const formData = new FormData();
+    if (anyPayload.caption !== undefined && anyPayload.caption !== null) {
+      formData.append('caption', String(anyPayload.caption));
     }
-
-    const data = await this.http.put<ServerGalleryImage>(`/panchayat/gallery/${id}`, payload);
+    if (anyPayload.tags !== undefined && anyPayload.tags !== null) {
+      formData.append('tags', String(anyPayload.tags));
+    }
+    if (anyPayload.albumId !== undefined && anyPayload.albumId !== null) {
+      formData.append('albumId', String(anyPayload.albumId));
+    }
+    if (anyPayload.displayOrder !== undefined && anyPayload.displayOrder !== null) {
+      formData.append('displayOrder', String(anyPayload.displayOrder));
+    }
+    if (anyPayload.imageFile instanceof File) {
+      formData.append('imageFile', anyPayload.imageFile);
+    }
+    if (anyPayload.imageUrl !== undefined && anyPayload.imageUrl !== null) {
+      formData.append('imageUrl', String(anyPayload.imageUrl));
+    }
+    
+    const data = await this.http.put<ServerGalleryImage>(`/panchayat/gallery/${id}`, formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
     return mapGalleryImageResponse(data);
   }
 
@@ -1114,10 +1198,14 @@ type ServerPanchayat = {
   officeAddress?: string;
   officePhone?: string;
   officeEmail?: string;
-  mapCoordinates?: string;
   officeHours?: string;
   createdAt?: string;
   updatedAt?: string;
+  population?: number;
+  area?: string;
+  wards?: number;
+  establishedYear?: number;
+  mapCoordinates?: string;
 };
 
 class PanchayatSettingsApi {

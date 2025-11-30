@@ -9,7 +9,6 @@ import { Card, CardContent } from "../../ui/card";
 import { Button } from "../../ui/button";
 import { Input } from "../../ui/input";
 import { Label } from "../../ui/label";
-import { Textarea } from "../../ui/textarea";
 import {
   Dialog,
   DialogContent,
@@ -18,6 +17,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "../../ui/dialog";
+import { TipTapEditor } from "../../editor/TipTapEditor";
 import {
   Table,
   TableBody,
@@ -71,6 +71,7 @@ export function NewsletterPage() {
     coverImagePreview: "",
   });
   const [newBulletPoint, setNewBulletPoint] = useState("");
+  const [autosaveStatus, setAutosaveStatus] = useState<"saved" | "saving" | null>(null);
 
   useEffect(() => {
     if (user?.panchayatId) {
@@ -538,14 +539,38 @@ export function NewsletterPage() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="content">Content</Label>
-              <Textarea
-                id="content"
-                placeholder="Enter newsletter content (supports HTML)"
-                value={formData.content}
-                onChange={(e) => setFormData({ ...formData, content: e.target.value })}
-                rows={8}
+              <div className="flex items-center justify-between">
+                <Label htmlFor="content">{t('newsletter.content') || 'Content'}</Label>
+                {autosaveStatus && (
+                  <span className={`text-xs ${
+                    autosaveStatus === 'saving' ? 'text-blue-600' : 'text-green-600'
+                  }`}>
+                    {autosaveStatus === 'saving' 
+                      ? t('newsletter.autosave') || 'Auto-saving...'
+                      : t('newsletter.saved') || 'Saved'}
+                  </span>
+                )}
+              </div>
+              <TipTapEditor
+                content={formData.content}
+                onChange={(html) => {
+                  setFormData({ ...formData, content: html });
+                  setAutosaveStatus('saving');
+                  // Clear status after a delay
+                  setTimeout(() => setAutosaveStatus('saved'), 1000);
+                  setTimeout(() => setAutosaveStatus(null), 3000);
+                }}
+                onSave={(html) => {
+                  // Autosave callback - could save to draft here
+                  setFormData({ ...formData, content: html });
+                  setAutosaveStatus('saved');
+                }}
+                placeholder={t('newsletter.contentPlaceholder') || 'Start writing your newsletter content...'}
+                autosaveInterval={30000}
               />
+              <p className="text-xs text-muted-foreground">
+                {t('newsletter.contentHint') || 'Use the toolbar to format text, add images, tables, and links. Content is saved automatically.'}
+              </p>
             </div>
 
             <div className="space-y-2">

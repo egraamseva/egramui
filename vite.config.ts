@@ -9,6 +9,20 @@ export default defineConfig({
       '@': path.resolve(__dirname, './src'),
     },
   },
+  optimizeDeps: {
+    include: [
+      '@tiptap/react',
+      '@tiptap/starter-kit',
+      '@tiptap/extension-image',
+      '@tiptap/extension-table',
+      '@tiptap/extension-table-row',
+      '@tiptap/extension-table-cell',
+      '@tiptap/extension-table-header',
+      '@tiptap/extension-link',
+      '@tiptap/extension-underline',
+      '@tiptap/extension-character-count',
+    ],
+  },
   build: {
     outDir: 'dist',
     sourcemap: false,

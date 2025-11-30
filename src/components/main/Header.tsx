@@ -138,22 +138,7 @@ export function Header({ variant = "platform", panchayatName, onLanguageChange }
             ))}
           </nav>
 
-          {/* Action Buttons */}
-          <div className="flex items-center gap-1 sm:gap-2 flex-shrink-0">
-            {/* Search Icon - Desktop only */}
-            <Button variant="ghost" size="icon" className="hidden md:flex h-9 w-9">
-              <Search className="h-4 w-4 sm:h-5 sm:w-5 text-[#666]" />
-            </Button>
-            
-            {/* Calendar - Desktop only */}
-            <Button variant="ghost" size="icon" className="hidden md:flex h-9 w-9">
-              <Calendar className="h-4 w-4 sm:h-5 sm:w-5 text-[#666]" />
-            </Button>
-            
-            {/* Accessibility - Desktop only */}
-            <Button variant="ghost" size="icon" className="hidden md:flex h-9 w-9">
-              <Accessibility className="h-4 w-4 sm:h-5 sm:w-5 text-[#666]" />
-            </Button>
+        
             
             {/* Language Selector - Show on all screens */}
             <DropdownMenu>
@@ -349,7 +334,6 @@ export function Header({ variant = "platform", panchayatName, onLanguageChange }
             </Sheet>
           </div>
         </div>
-      </div>
     </header>
   );
 }

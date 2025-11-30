@@ -51,6 +51,9 @@ export interface PanchayatMember {
   phone: string;
   email?: string;
   image?: string;
+  imageKey?: string;
+  hasImage?: boolean;
+  initials?: string;
   designation?: string;
 }
 
@@ -95,10 +98,10 @@ export interface PanchayatDetails {
   district: string;
   state: string;
   block: string;
-  population: number;
+  population?: number;
   area: string;
   aboutText: string;
-  wards: number;
+  wards?: number;
   subdomain: string;
   established: number;
   description?: string;
@@ -108,8 +111,10 @@ export interface PanchayatDetails {
     phone: string;
     email: string;
     officeHours: string;
+    mapCoordinates?: string;
   };
   features?: string[];
+  mapCoordinates?: string;
 }
 
 export interface RegistrationFormData {
@@ -157,7 +162,7 @@ export interface ActivePanchayat {
   district: string;
   state?: string;
   schemes: number;
-  population: number;
+  population?: number;
   subdomain: string;
   status?: string;
   established?: number;
@@ -187,6 +192,12 @@ export interface TeamMember {
   panchayatId: string;
   name: string;
   email: string;
+  phone?: string;
+  designation?: string;
+  image?: string;
+  imageKey?: string;
+  hasImage?: boolean;
+  initials?: string;
   role: string;
   status: UserStatus;
   createdAt: string;
@@ -255,6 +266,15 @@ export interface PanchayatSettings {
     phone: string;
     email: string;
     officeHours: string;
+    mapCoordinates?: string;
+  };
+  basicInfo: {
+    population?: number;
+    area?: string;
+    wards?: number;
+    establishedYear?: number;
+    mapCoordinates?: string;
+
   };
   logo?: string;
   updatedAt: string;

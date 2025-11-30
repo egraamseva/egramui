@@ -82,6 +82,10 @@ export interface Panchayat {
   officeAddress?: string;
   officePhone?: string;
   officeEmail?: string;
+  population?: number;
+  area?: string;
+  wards?: number;
+  establishedYear?: number;
   mapCoordinates?: string;
   officeHours?: string;
   status: PanchayatStatus;

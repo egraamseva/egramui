@@ -13,11 +13,13 @@ import { Label } from "../ui/label";
 import { ImageWithFallback } from "../figma/ImageWithFallback";
 import { PostCard } from "../sachiv/PostCard";
 import { panchayatAPI, publicAPI } from "../../services/api";
-import { publicNewsletterApi, albumApi } from "../../routes/api";
+import { publicNewsletterApi, albumApi, galleryApi } from "../../routes/api";
 import type { Post, Scheme, Announcement, PanchayatMember, GalleryItem, PanchayatDetails, Album } from "../../types";
 import { formatTimeAgo } from "../../utils/format";
 import { usePresignedUrlRefresh } from "../../hooks/usePresignedUrlRefresh";
-import { useNavigate } from "react-router-dom";
+import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet'
+import { LatLngExpression } from 'leaflet'
+import 'leaflet/dist/leaflet.css';
 
 
 export function PanchayatWebsite() {
@@ -33,9 +35,9 @@ export function PanchayatWebsite() {
   const [newsletters, setNewsletters] = useState<any[]>([]);
   const [selectedNewsletter, setSelectedNewsletter] = useState<any | null>(null);
   const [selectedAlbum, setSelectedAlbum] = useState<Album | null>(null);
+  const [albumImages, setAlbumImages] = useState<GalleryItem[]>([]);
 
   const [loading, setLoading] = useState(true);
-  const navigate = useNavigate();
   const [contactForm, setContactForm] = useState({
     name: "",
     email: "",
@@ -54,6 +56,33 @@ export function PanchayatWebsite() {
     fetchPanchayatData();
   }, [subdomain]);
 
+  useEffect(() => {
+    if (selectedAlbum) {
+      fetchAlbumImages(selectedAlbum.id);
+    } else {
+      setAlbumImages([]);
+    }
+  }, [selectedAlbum]);
+
+
+  const fetchAlbumImages = async (albumId: string) => {
+    try {
+      const result = await galleryApi.list(albumId);
+      setAlbumImages(result.items);
+    } catch (error) {
+      console.error("Error fetching album images:", error);
+      setAlbumImages([]);
+    }
+  };
+
+  const parseCoordinates = (coordString: string): [number, number] => {
+    if (!coordString) return [22.9734, 78.6569]; // Default India center
+    const [latStr, lngStr] = coordString.split(',');
+    const lat = Number(latStr.trim());
+    const lng = Number(lngStr.trim());
+    if (isNaN(lat) || isNaN(lng)) return [22.9734, 78.6569];
+    return [lat, lng];
+  };
 
   const fetchPanchayatData = async () => {
     setLoading(true);
@@ -61,7 +90,7 @@ export function PanchayatWebsite() {
       const subdomainToUse = subdomain || 'ramnagar';
       const panchayatData = await panchayatAPI.getBySubdomain(subdomainToUse);
       setPanchayat(panchayatData);
-      
+
       // Fetch all data using public APIs with slug
       const [postsResult, schemesResult, announcementsResult, membersResult, galleryResult, newslettersResult, albumsResult] = await Promise.all([
         publicAPI.getPublicPosts(subdomainToUse, { page: 0, size: 50 }),
@@ -72,7 +101,7 @@ export function PanchayatWebsite() {
         publicNewsletterApi.list(subdomainToUse, { page: 0, size: 50 }).catch(() => ({ items: [], page: 0, size: 0, totalItems: 0, totalPages: 0, isFirst: true, isLast: true })),
         albumApi.list().catch(() => ({ items: [], page: 0, size: 0, totalItems: 0, totalPages: 0, isFirst: true, isLast: true })),
       ]);
-      
+
       // Map posts
       const mappedPosts = postsResult.content
         .filter((post: any) => post.bodyText) // Only include posts with content
@@ -88,7 +117,7 @@ export function PanchayatWebsite() {
           comments: post.commentsCount || 0,
           shares: post.viewCount || 0,
         }));
-      
+
       // Map schemes
       const mappedSchemes = schemesResult.content
         .filter((scheme: any) => scheme.title) // Only include schemes with titles
@@ -98,24 +127,24 @@ export function PanchayatWebsite() {
           if (scheme.status === 'ACTIVE') progress = 50;
           else if (scheme.status === 'ONGOING') progress = 75;
           else if (scheme.status === 'COMPLETED') progress = 100;
-          
+
           // Map status
           let status: "Active" | "Completed" | "Pending" = "Pending";
           if (scheme.status === 'ACTIVE' || scheme.status === 'ONGOING') status = "Active";
           else if (scheme.status === 'COMPLETED') status = "Completed";
-          
+
           // Format budget
           const budget = scheme.budgetAmount
             ? `₹${scheme.budgetAmount.toLocaleString("en-IN")}`
             : "₹0";
-          
+
           // Use description as category, truncate if too long
           const category = scheme.description
             ? scheme.description.length > 50
               ? scheme.description.substring(0, 50) + "..."
               : scheme.description
             : "General";
-          
+
           return {
             id: scheme.schemeId.toString(),
             panchayatId: scheme.panchayatId?.toString(),
@@ -127,7 +156,7 @@ export function PanchayatWebsite() {
             status: status,
           };
         });
-      
+
       // Map announcements
       const mappedAnnouncements = announcementsResult.content.map((announcement: any) => ({
         id: announcement.announcementId.toString(),
@@ -135,20 +164,20 @@ export function PanchayatWebsite() {
         title: announcement.title || 'Announcement',
         description: announcement.bodyText || announcement.title || 'No description available',
         date: announcement.createdAt
-          ? new Date(announcement.createdAt).toLocaleDateString('en-IN', { 
-              year: 'numeric', 
-              month: 'short', 
-              day: 'numeric' 
-            })
-          : new Date().toLocaleDateString('en-IN', { 
-              year: 'numeric', 
-              month: 'short', 
-              day: 'numeric' 
-            }),
+          ? new Date(announcement.createdAt).toLocaleDateString('en-IN', {
+            year: 'numeric',
+            month: 'short',
+            day: 'numeric'
+          })
+          : new Date().toLocaleDateString('en-IN', {
+            year: 'numeric',
+            month: 'short',
+            day: 'numeric'
+          }),
         status: (announcement.isActive ? "Published" : "Draft") as "Published" | "Draft",
         views: 0,
       }));
-      
+
       // Map members (users)
       const mappedMembers = membersResult.content
         .filter((member: any) => member.status === 'ACTIVE') // Only show active members
@@ -156,11 +185,11 @@ export function PanchayatWebsite() {
           // Format role name properly
           const roleName = member.role
             ? member.role.replace(/_/g, ' ')
-                .split(' ')
-                .map((word: string) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
-                .join(' ')
+              .split(' ')
+              .map((word: string) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+              .join(' ')
             : 'Member';
-          
+
           return {
             id: member.userId.toString(),
             panchayatId: member.panchayatId?.toString(),
@@ -169,11 +198,14 @@ export function PanchayatWebsite() {
             ward: 'Ward ' + ((member.userId % 8) + 1), // Placeholder - backend doesn't have ward
             phone: member.phone || 'Not available',
             email: member.email || undefined,
-            image: undefined, // Backend doesn't have image field yet
+            image: member.imageUrl || undefined,
+            imageKey: member.imageKey || undefined,
+            hasImage: member.hasImage || false,
+            initials: member.initials || (member.name ? member.name.split(' ').map((n: string) => n[0]).join('').toUpperCase().substring(0, 2) : ''),
             designation: member.designation || undefined,
           };
         });
-      
+
       // Map gallery
       const mappedGallery = galleryResult.content
         .filter((image: any) => image.imageUrl) // Only include images with URLs
@@ -185,14 +217,14 @@ export function PanchayatWebsite() {
           description: image.caption || undefined,
           category: image.albumName || undefined,
           date: image.createdAt
-            ? new Date(image.createdAt).toLocaleDateString('en-IN', { 
-                year: 'numeric', 
-                month: 'short', 
-                day: 'numeric' 
-              })
+            ? new Date(image.createdAt).toLocaleDateString('en-IN', {
+              year: 'numeric',
+              month: 'short',
+              day: 'numeric'
+            })
             : undefined,
         }));
-      
+
       setPosts(mappedPosts);
       setSchemes(mappedSchemes);
       setAnnouncements(mappedAnnouncements);
@@ -236,34 +268,34 @@ export function PanchayatWebsite() {
 
   const validateContactForm = () => {
     const errors: Record<string, string> = {};
-    
+
     if (!contactForm.name.trim()) {
       errors.name = "Name is required";
     }
-    
+
     if (!contactForm.email.trim()) {
       errors.email = "Email is required";
     } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(contactForm.email)) {
       errors.email = "Please enter a valid email address";
     }
-    
+
     if (!contactForm.subject.trim()) {
       errors.subject = "Subject is required";
     }
-    
+
     if (!contactForm.message.trim()) {
       errors.message = "Message is required";
     } else if (contactForm.message.trim().length < 10) {
       errors.message = "Message must be at least 10 characters";
     }
-    
+
     setFormErrors(errors);
     return Object.keys(errors).length === 0;
   };
 
   const handleContactSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (validateContactForm()) {
       // TODO: Implement actual form submission
 
@@ -414,61 +446,55 @@ export function PanchayatWebsite() {
           <div className="inline-flex sm:grid grid-cols-3 lg:grid-cols-6 w-full h-14 sm:h-16 overflow-x-auto overflow-y-hidden whitespace-nowrap scrollbar-hide gap-1 sm:gap-0">
             <button
               onClick={() => setActiveTab("home")}
-              className={`text-sm px-6 h-full rounded-t-lg transition-colors flex-shrink-0 flex items-center justify-center ${
-                activeTab === "home"
+              className={`text-sm px-6 h-full rounded-t-lg transition-colors flex-shrink-0 flex items-center justify-center ${activeTab === "home"
                   ? "bg-[#E31E24] text-white font-semibold"
                   : "text-[#666] hover:text-[#1B2B5E]"
-              }`}
+                }`}
             >
               Home
             </button>
             <button
               onClick={() => setActiveTab("about")}
-              className={`text-sm px-6 h-full rounded-t-lg transition-colors flex-shrink-0 flex items-center justify-center ${
-                activeTab === "about"
+              className={`text-sm px-6 h-full rounded-t-lg transition-colors flex-shrink-0 flex items-center justify-center ${activeTab === "about"
                   ? "bg-[#E31E24] text-white font-semibold"
                   : "text-[#666] hover:text-[#1B2B5E]"
-              }`}
+                }`}
             >
               About
             </button>
             <button
               onClick={() => setActiveTab("schemes")}
-              className={`text-sm px-6 h-full rounded-t-lg transition-colors flex-shrink-0 flex items-center justify-center ${
-                activeTab === "schemes"
+              className={`text-sm px-6 h-full rounded-t-lg transition-colors flex-shrink-0 flex items-center justify-center ${activeTab === "schemes"
                   ? "bg-[#E31E24] text-white font-semibold"
                   : "text-[#666] hover:text-[#1B2B5E]"
-              }`}
+                }`}
             >
               Schemes
             </button>
             <button
               onClick={() => setActiveTab("gallery")}
-              className={`text-sm px-6 h-full rounded-t-lg transition-colors flex-shrink-0 flex items-center justify-center ${
-                activeTab === "gallery"
+              className={`text-sm px-6 h-full rounded-t-lg transition-colors flex-shrink-0 flex items-center justify-center ${activeTab === "gallery"
                   ? "bg-[#E31E24] text-white font-semibold"
                   : "text-[#666] hover:text-[#1B2B5E]"
-              }`}
+                }`}
             >
               Gallery
             </button>
             <button
               onClick={() => setActiveTab("newsletters")}
-              className={`text-sm px-6 h-full rounded-t-lg transition-colors flex-shrink-0 flex items-center justify-center ${
-                activeTab === "newsletters"
+              className={`text-sm px-6 h-full rounded-t-lg transition-colors flex-shrink-0 flex items-center justify-center ${activeTab === "newsletters"
                   ? "bg-[#E31E24] text-white font-semibold"
                   : "text-[#666] hover:text-[#1B2B5E]"
-              }`}
+                }`}
             >
               Newsletter
             </button>
             <button
               onClick={() => setActiveTab("contact")}
-              className={`text-sm px-6 h-full rounded-t-lg transition-colors flex-shrink-0 flex items-center justify-center ${
-                activeTab === "contact"
+              className={`text-sm px-6 h-full rounded-t-lg transition-colors flex-shrink-0 flex items-center justify-center ${activeTab === "contact"
                   ? "bg-[#E31E24] text-white font-semibold"
                   : "text-[#666] hover:text-[#1B2B5E]"
-              }`}
+                }`}
             >
               Contact
             </button>
@@ -483,592 +509,643 @@ export function PanchayatWebsite() {
             <div className="space-y-6 sm:space-y-8">
 
 
-            {/* Home Tab */}
-            <TabsContent value="home" className="space-y-6 sm:space-y-8">
-              <div className="grid gap-6 sm:gap-8 lg:grid-cols-3">
-                {/* Left Sidebar - Stack on mobile, sidebar on desktop */}
-                <aside className="space-y-4 sm:space-y-6 lg:col-span-1 order-2 lg:order-1" aria-label="Sidebar content">
-                  {/* Latest Announcements */}
-                  <section>
-                    <h3 className="mb-3 sm:mb-4 text-lg sm:text-xl font-semibold">Latest Announcements</h3>
-                    <div className="space-y-3">
-                      {announcements.length === 0 ? (
-                        <Card>
-                          <CardContent className="p-3 sm:p-4">
-                            <p className="text-xs sm:text-sm text-muted-foreground text-center">
-                              No announcements available
-                            </p>
-                          </CardContent>
-                        </Card>
-                      ) : (
-                        announcements.slice(0, 3).map((announcement) => (
-                        <Card key={announcement.id} className="border-l-4 border-l-[#FF9933]">
-                          <CardContent className="p-3 sm:p-4">
-                            <div className="mb-2 flex flex-wrap items-center gap-2">
-                              <AlertCircle className="h-3 w-3 sm:h-4 sm:w-4 text-[#FF9933]" />
-                              <Badge variant="secondary" className="text-xs">
-                                {announcement.date}
-                              </Badge>
-                            </div>
-                            <h4 className="mb-2 text-sm sm:text-base">{announcement.title}</h4>
-                            <p className="text-xs sm:text-sm text-muted-foreground line-clamp-2">
-                              {announcement.description}
-                            </p>
-                          </CardContent>
-                        </Card>
-                        ))
-                      )}
+              {/* Home Tab */}
+              <TabsContent value="home" className="space-y-6 sm:space-y-8">
+                <div className="grid gap-6 sm:gap-8 lg:grid-cols-3">
+                  {/* Left Sidebar - Stack on mobile, sidebar on desktop */}
+                  <aside className="space-y-4 sm:space-y-6 lg:col-span-1 order-2 lg:order-1" aria-label="Sidebar content">
+                    {/* Latest Announcements */}
+                    <section>
+                      <h3 className="mb-3 sm:mb-4 text-lg sm:text-xl font-semibold">Latest Announcements</h3>
+                      <div className="space-y-3">
+                        {announcements.length === 0 ? (
+                          <Card>
+                            <CardContent className="p-3 sm:p-4">
+                              <p className="text-xs sm:text-sm text-muted-foreground text-center">
+                                No announcements available
+                              </p>
+                            </CardContent>
+                          </Card>
+                        ) : (
+                          announcements.slice(0, 3).map((announcement) => (
+                            <Card key={announcement.id} className="border-l-4 border-l-[#FF9933]">
+                              <CardContent className="p-3 sm:p-4">
+                                <div className="mb-2 flex flex-wrap items-center gap-2">
+                                  <AlertCircle className="h-3 w-3 sm:h-4 sm:w-4 text-[#FF9933]" />
+                                  <Badge variant="secondary" className="text-xs">
+                                    {announcement.date}
+                                  </Badge>
+                                </div>
+                                <h4 className="mb-2 text-sm sm:text-base">{announcement.title}</h4>
+                                <p className="text-xs sm:text-sm text-muted-foreground line-clamp-2">
+                                  {announcement.description}
+                                </p>
+                              </CardContent>
+                            </Card>
+                          ))
+                        )}
+                      </div>
+                    </section>
+
+
+                    {/* Featured Schemes */}
+                    <section>
+                      <div className="mb-3 sm:mb-4 flex items-center justify-between">
+                        <h3 className="text-lg sm:text-xl font-semibold">Active Schemes</h3>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => setActiveTab("schemes")}
+                          className="text-xs sm:text-sm"
+                        >
+                          View All
+                        </Button>
+                      </div>
+                      <div className="space-y-3">
+                        {schemes.length === 0 ? (
+                          <Card>
+                            <CardContent className="p-3 sm:p-4">
+                              <p className="text-xs sm:text-sm text-muted-foreground text-center">
+                                No active schemes
+                              </p>
+                            </CardContent>
+                          </Card>
+                        ) : (
+                          schemes.slice(0, 2).map((scheme) => (
+                            <Card key={scheme.id}>
+                              <CardContent className="p-3 sm:p-4">
+                                <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+                                  <Badge className="bg-[#138808] text-white text-xs">
+                                    {scheme.category}
+                                  </Badge>
+                                  <Badge variant="outline" className="text-xs">
+                                    {scheme.status}
+                                  </Badge>
+                                </div>
+                                <h4 className="mb-2 text-sm sm:text-base">{scheme.name}</h4>
+                                <div className="mb-2">
+                                  <div className="mb-1 flex justify-between text-xs">
+                                    <span className="text-muted-foreground">Progress</span>
+                                    <span>{scheme.progress}%</span>
+                                  </div>
+                                  <Progress value={scheme.progress} className="h-1" />
+                                </div>
+                                <p className="text-xs text-muted-foreground">
+                                  {scheme.beneficiaries} beneficiaries
+                                </p>
+                              </CardContent>
+                            </Card>
+                          ))
+                        )}
+                      </div>
+                    </section>
+                  </aside>
+
+
+                  {/* Main Feed */}
+                  <section className="space-y-4 sm:space-y-6 lg:col-span-2 order-1 lg:order-2" aria-label="Community feed">
+                    <div>
+                      <h2 className="mb-4 sm:mb-6 text-xl sm:text-2xl font-bold">Community Feed</h2>
+                      <div className="space-y-4 sm:space-y-6">
+                        {loading ? (
+                          <div className="text-center text-muted-foreground py-8 text-sm sm:text-base">Loading posts...</div>
+                        ) : posts.length === 0 ? (
+                          <div className="text-center text-muted-foreground py-8 text-sm sm:text-base">No posts yet</div>
+                        ) : (
+                          posts.map((post) => (
+                            <PostCard
+                              key={post.id}
+                              post={{
+                                ...post,
+                                timestamp: formatTimeAgo(new Date(post.timestamp)),
+                              }}
+                            />
+                          ))
+                        )}
+                      </div>
                     </div>
                   </section>
+                </div>
+              </TabsContent>
 
 
-                  {/* Featured Schemes */}
+              {/* About Tab */}
+              <TabsContent value="about" className="space-y-6 sm:space-y-8">
+                <div className="grid gap-6 sm:gap-8 lg:grid-cols-2">
                   <section>
-                    <div className="mb-3 sm:mb-4 flex items-center justify-between">
-                      <h3 className="text-lg sm:text-xl font-semibold">Active Schemes</h3>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => setActiveTab("schemes")}
-                        className="text-xs sm:text-sm"
-                      >
-                        View All
-                      </Button>
-                    </div>
-                    <div className="space-y-3">
-                      {schemes.length === 0 ? (
-                        <Card>
-                          <CardContent className="p-3 sm:p-4">
-                            <p className="text-xs sm:text-sm text-muted-foreground text-center">
-                              No active schemes
-                            </p>
-                          </CardContent>
-                        </Card>
-                      ) : (
-                        schemes.slice(0, 2).map((scheme) => (
-                        <Card key={scheme.id}>
-                          <CardContent className="p-3 sm:p-4">
-                            <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
-                              <Badge className="bg-[#138808] text-white text-xs">
-                                {scheme.category}
-                              </Badge>
-                              <Badge variant="outline" className="text-xs">
-                                {scheme.status}
-                              </Badge>
-                            </div>
-                            <h4 className="mb-2 text-sm sm:text-base">{scheme.name}</h4>
-                            <div className="mb-2">
-                              <div className="mb-1 flex justify-between text-xs">
-                                <span className="text-muted-foreground">Progress</span>
+                    <h2 className="mb-3 sm:mb-4 text-xl sm:text-2xl font-bold">About {panchayat?.name || 'Ramnagar'}</h2>
+                    {panchayat?.aboutText ? (
+                      <p className="mb-4 text-sm sm:text-base text-muted-foreground whitespace-pre-line">
+                        {panchayat.aboutText}
+                      </p>
+                    ) : (
+                      <>
+                        <p className="mb-4 text-sm sm:text-base text-muted-foreground">
+                          {panchayat?.name || 'Ramnagar'} Gram Panchayat is a vibrant rural community located in {panchayat?.district || 'Varanasi'}
+                          district. Established in {panchayat?.established || '1995'}, our village has a rich history and cultural
+                          heritage spanning several centuries.
+                        </p>
+                        <p className="mb-4 text-sm sm:text-base text-muted-foreground">
+                          With a population of over {panchayat?.population?.toLocaleString() || '5,200'} residents spread across {panchayat?.wards || '8'} wards, we are
+                          committed to sustainable development, preserving our traditions while embracing
+                          modern governance practices.
+                        </p>
+                      </>
+                    )}
+                    {panchayat?.features && panchayat.features.length > 0 && (
+                      <>
+                        <h3 className="mb-3 text-lg sm:text-xl">Key Features</h3>
+                        <ul className="space-y-2 text-sm sm:text-base text-muted-foreground">
+                          {panchayat.features.map((feature, index) => (
+                            <li key={index}>• {feature}</li>
+                          ))}
+                        </ul>
+                      </>
+                    )}
+                  </section>
+                  <section>
+                    <h3 className="mb-3 sm:mb-4 text-lg sm:text-xl font-semibold">Elected Members</h3>
+                    {loading ? (
+                      <div className="text-center text-muted-foreground py-8 text-sm sm:text-base">Loading members...</div>
+                    ) : members.length === 0 ? (
+                      <div className="text-center text-muted-foreground py-8 text-sm sm:text-base">No members available</div>
+                    ) : (
+                      <div className="space-y-4">
+                        {members.map((member) => (
+                          <Card key={member.id}>
+                            <CardContent className="flex flex-col sm:flex-row items-center sm:items-start gap-3 sm:gap-4 p-3 sm:p-4">
+                              <Avatar className="h-12 w-12 sm:h-16 sm:w-16">
+                                {member.hasImage && member.image ? (
+                                  <TeamMemberImageWithRefresh src={member.image} alt={member.name} />
+                                ) : (
+                                  <AvatarFallback className="bg-[#FF9933]/10 text-[#FF9933]">
+                                    {member.initials || member.name
+                                      .split(" ")
+                                      .map((n) => n[0])
+                                      .join("")
+                                      .toUpperCase()
+                                      .substring(0, 2)}
+                                  </AvatarFallback>
+                                )}
+                              </Avatar>
+                              <div className="flex-1 text-center sm:text-left">
+                                <h4 className="text-sm sm:text-base">{member.name}</h4>
+                                <p className="text-xs sm:text-sm text-muted-foreground">{member.designation}</p>
+                                <div className="mt-1 flex flex-col sm:flex-row items-center gap-2 sm:gap-4 text-xs sm:text-sm">
+                                  <span className="text-[#138808]">{member.ward}</span>
+                                  <span className="text-muted-foreground">{member.phone}</span>
+                                </div>
+                              </div>
+                            </CardContent>
+                          </Card>
+                        ))}
+                      </div>
+                    )}
+                  </section>
+                </div>
+              </TabsContent>
+
+
+              {/* Schemes Tab */}
+              <TabsContent value="schemes" className="space-y-6 sm:space-y-8">
+                <section>
+                  <h2 className="mb-4 sm:mb-6 text-xl sm:text-2xl font-bold">Government Schemes</h2>
+                  <div className="grid gap-4 sm:gap-6 md:grid-cols-2">
+                    {schemes.map((scheme) => (
+                      <Card key={scheme.id} className="transition-shadow hover:shadow-lg">
+                        <CardHeader className="p-4 sm:p-6">
+                          <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+                            <Badge className="bg-[#138808] text-white text-xs">{scheme.category}</Badge>
+                            <Badge variant="outline" className="text-xs">{scheme.status}</Badge>
+                          </div>
+                          <CardTitle className="text-base sm:text-lg">{scheme.name}</CardTitle>
+                          <CardDescription className="text-xs sm:text-sm">Allocated Budget: {scheme.budget}</CardDescription>
+                        </CardHeader>
+                        <CardContent className="p-4 sm:p-6 pt-0">
+                          <div className="space-y-4">
+                            <div>
+                              <div className="mb-2 flex justify-between text-xs sm:text-sm">
+                                <span className="text-muted-foreground">Implementation Progress</span>
                                 <span>{scheme.progress}%</span>
                               </div>
-                              <Progress value={scheme.progress} className="h-1" />
+                              <Progress value={scheme.progress} className="h-2" />
                             </div>
-                            <p className="text-xs text-muted-foreground">
-                              {scheme.beneficiaries} beneficiaries
-                            </p>
-                          </CardContent>
-                        </Card>
-                        ))
-                      )}
-                    </div>
-                  </section>
-                </aside>
-
-
-                {/* Main Feed */}
-                <section className="space-y-4 sm:space-y-6 lg:col-span-2 order-1 lg:order-2" aria-label="Community feed">
-                  <div>
-                    <h2 className="mb-4 sm:mb-6 text-xl sm:text-2xl font-bold">Community Feed</h2>
-                    <div className="space-y-4 sm:space-y-6">
-                      {loading ? (
-                        <div className="text-center text-muted-foreground py-8 text-sm sm:text-base">Loading posts...</div>
-                      ) : posts.length === 0 ? (
-                        <div className="text-center text-muted-foreground py-8 text-sm sm:text-base">No posts yet</div>
-                      ) : (
-                        posts.map((post) => (
-                          <PostCard 
-                            key={post.id} 
-                            post={{
-                              ...post,
-                              timestamp: formatTimeAgo(new Date(post.timestamp)),
-                            }} 
-                          />
-                        ))
-                      )}
-                    </div>
+                            <div className="flex items-center justify-between rounded-lg bg-muted/50 p-3">
+                              <span className="text-xs sm:text-sm text-muted-foreground">Beneficiaries</span>
+                              <span className="text-sm sm:text-base text-[#FF9933]">
+                                {scheme.beneficiaries} families
+                              </span>
+                            </div>
+                            <Button variant="outline" className="w-full text-xs sm:text-sm">
+                              <Download className="mr-2 h-3 w-3 sm:h-4 sm:w-4" />
+                              Download Details
+                            </Button>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    ))}
                   </div>
                 </section>
-              </div>
-            </TabsContent>
+              </TabsContent>
 
 
-            {/* About Tab */}
-            <TabsContent value="about" className="space-y-6 sm:space-y-8">
-              <div className="grid gap-6 sm:gap-8 lg:grid-cols-2">
-                <section>
-                  <h2 className="mb-3 sm:mb-4 text-xl sm:text-2xl font-bold">About {panchayat?.name || 'Ramnagar'}</h2>
-                  {panchayat?.aboutText ? (
-                    <p className="mb-4 text-sm sm:text-base text-muted-foreground whitespace-pre-line">
-                      {panchayat.aboutText}
-                    </p>
-                  ) : (
-                    <>
-                      <p className="mb-4 text-sm sm:text-base text-muted-foreground">
-                        {panchayat?.name || 'Ramnagar'} Gram Panchayat is a vibrant rural community located in {panchayat?.district || 'Varanasi'}
-                        district. Established in {panchayat?.established || '1995'}, our village has a rich history and cultural
-                        heritage spanning several centuries.
-                      </p>
-                      <p className="mb-4 text-sm sm:text-base text-muted-foreground">
-                        With a population of over {panchayat?.population?.toLocaleString() || '5,200'} residents spread across {panchayat?.wards || '8'} wards, we are
-                        committed to sustainable development, preserving our traditions while embracing
-                        modern governance practices.
-                      </p>
-                    </>
-                  )}
-                  {panchayat?.features && panchayat.features.length > 0 && (
-                    <>
-                      <h3 className="mb-3 text-lg sm:text-xl">Key Features</h3>
-                      <ul className="space-y-2 text-sm sm:text-base text-muted-foreground">
-                        {panchayat.features.map((feature, index) => (
-                          <li key={index}>• {feature}</li>
+
+
+              {/* Gallery Tab */}
+              <TabsContent value="gallery" className="space-y-6 sm:space-y-8">
+                {selectedAlbum ? (
+                  <section>
+                    <div className="mb-4 sm:mb-6 flex items-center gap-4">
+                      <Button variant="ghost" onClick={() => setSelectedAlbum(null)}>
+                        ← Back to Albums
+                      </Button>
+                      <h2 className="text-xl sm:text-2xl font-bold">{selectedAlbum.title}</h2>
+                    </div>
+                    {loading ? (
+                      <div className="text-center text-muted-foreground py-8 text-sm sm:text-base">Loading images...</div>
+                    ) : (
+                      <div className="grid gap-4 sm:gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
+                        {albumImages.length === 0 ? (
+                          <div className="col-span-full text-center text-muted-foreground py-8 text-sm sm:text-base">
+                            No images in this album
+                          </div>
+                        ) : (
+                          albumImages.map((item) => (
+                            <Card key={item.id} className="overflow-hidden transition-transform hover:scale-105">
+                              <AlbumImageWithRefresh src={item.image} alt={item.title} />
+                              <CardContent className="p-3 sm:p-4">
+                                <p className="font-medium text-sm sm:text-base">{item.title}</p>
+                                {item.description && (
+                                  <p className="mt-1 text-xs sm:text-sm text-muted-foreground">{item.description}</p>
+                                )}
+                              </CardContent>
+                            </Card>
+                          ))
+                        )}
+                      </div>
+                    )}
+                  </section>
+                ) : (
+                  <section>
+                    <h2 className="mb-4 sm:mb-6 text-xl sm:text-2xl font-bold">Photo Gallery</h2>
+                    {albums.length > 0 ? (
+                      <>
+                        <h3 className="mb-3 sm:mb-4 text-lg sm:text-xl font-semibold">Albums</h3>
+                        <div className="grid gap-4 sm:gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 mb-6 sm:mb-8">
+                          {albums.map((album) => (
+                            <Card
+                              key={album.id}
+                              className="overflow-hidden transition-transform hover:scale-105 cursor-pointer"
+                              onClick={() => setSelectedAlbum(album)}
+                            >
+                              {album.coverImage && (
+                                <AlbumImageWithRefresh src={album.coverImage} alt={album.title} />
+                              )}
+                              <CardContent className="p-3 sm:p-4">
+                                <p className="font-medium text-sm sm:text-base">{album.title}</p>
+                                {album.description && (
+                                  <p className="mt-1 text-xs sm:text-sm text-muted-foreground line-clamp-2">{album.description}</p>
+                                )}
+                                <p className="mt-2 text-xs text-muted-foreground">{album.imageCount || 0} images</p>
+                              </CardContent>
+                            </Card>
+                          ))}
+                        </div>
+                      </>
+                    ) : null}
+                    {gallery.length > 0 && (
+                      <>
+                        <h3 className="mb-3 sm:mb-4 text-lg sm:text-xl font-semibold">All Images</h3>
+                        <div className="grid gap-4 sm:gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
+                          {gallery.map((item) => (
+                            <Card key={item.id} className="overflow-hidden transition-transform hover:scale-105">
+                              <AlbumImageWithRefresh src={item.image} alt={item.title} />
+                              <CardContent className="p-3 sm:p-4">
+                                <p className="font-medium text-sm sm:text-base">{item.title}</p>
+                                {item.description && (
+                                  <p className="mt-1 text-xs sm:text-sm text-muted-foreground">{item.description}</p>
+                                )}
+                                {item.date && (
+                                  <p className="mt-1 text-xs text-muted-foreground">{item.date}</p>
+                                )}
+                              </CardContent>
+                            </Card>
+                          ))}
+                        </div>
+                      </>
+                    )}
+                    {albums.length === 0 && gallery.length === 0 && (
+                      <div className="text-center text-muted-foreground py-8 text-sm sm:text-base">No gallery items available</div>
+                    )}
+                  </section>
+                )}
+              </TabsContent>
+
+              {/* Newsletter Tab */}
+              <TabsContent value="newsletters" className="space-y-6 sm:space-y-8">
+                {selectedNewsletter ? (
+                  <NewsletterDetailView newsletter={selectedNewsletter} onBack={() => setSelectedNewsletter(null)} />
+                ) : (
+                  <section>
+                    <h2 className="mb-4 sm:mb-6 text-xl sm:text-2xl font-bold">Newsletters</h2>
+                    {loading ? (
+                      <div className="text-center text-muted-foreground py-8 text-sm sm:text-base">Loading newsletters...</div>
+                    ) : newsletters.length === 0 ? (
+                      <div className="text-center text-muted-foreground py-8 text-sm sm:text-base">No newsletters available</div>
+                    ) : (
+                      <div className="grid gap-4 sm:gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
+                        {newsletters.map((newsletter) => (
+                          <Card
+                            key={newsletter.id}
+                            className="overflow-hidden transition-transform hover:scale-105 cursor-pointer"
+                            onClick={() => setSelectedNewsletter(newsletter)}
+                          >
+                            {newsletter.coverImageUrl && (
+                              <div className="h-48 w-full overflow-hidden">
+                                <NewsletterCoverImage fileKey={newsletter.coverImageFileKey} url={newsletter.coverImageUrl} />
+                              </div>
+                            )}
+                            <CardContent className="p-4 sm:p-6">
+                              <h3 className="font-semibold text-base sm:text-lg mb-2">{newsletter.title}</h3>
+                              {newsletter.subtitle && (
+                                <p className="text-sm text-muted-foreground mb-3 line-clamp-2">{newsletter.subtitle}</p>
+                              )}
+                              <div className="flex items-center justify-between text-xs text-muted-foreground">
+                                <span>{newsletter.publishedOn ? new Date(newsletter.publishedOn).toLocaleDateString() : "Draft"}</span>
+                                {newsletter.authorName && <span>By {newsletter.authorName}</span>}
+                              </div>
+                            </CardContent>
+                          </Card>
                         ))}
-                      </ul>
-                    </>
-                  )}
-                </section>
-                <section>
-                  <h3 className="mb-3 sm:mb-4 text-lg sm:text-xl font-semibold">Elected Members</h3>
-                  {loading ? (
-                    <div className="text-center text-muted-foreground py-8 text-sm sm:text-base">Loading members...</div>
-                  ) : members.length === 0 ? (
-                    <div className="text-center text-muted-foreground py-8 text-sm sm:text-base">No members available</div>
-                  ) : (
-                    <div className="space-y-4">
-                      {members.map((member) => (
-                        <Card key={member.id}>
-                          <CardContent className="flex flex-col sm:flex-row items-center sm:items-start gap-3 sm:gap-4 p-3 sm:p-4">
-                            <Avatar className="h-12 w-12 sm:h-16 sm:w-16">
-                              <AvatarImage src={member.image} />
-                              <AvatarFallback className="bg-[#FF9933]/10 text-[#FF9933]">
-                                {member.name
-                                  .split(" ")
-                                  .map((n) => n[0])
-                                  .join("")}
-                              </AvatarFallback>
-                            </Avatar>
-                            <div className="flex-1 text-center sm:text-left">
-                              <h4 className="text-sm sm:text-base">{member.name}</h4>
-                              <p className="text-xs sm:text-sm text-muted-foreground">{member.designation}</p>
-                              <div className="mt-1 flex flex-col sm:flex-row items-center gap-2 sm:gap-4 text-xs sm:text-sm">
-                                <span className="text-[#138808]">{member.ward}</span>
-                                <span className="text-muted-foreground">{member.phone}</span>
+                      </div>
+                    )}
+                  </section>
+                )}
+              </TabsContent>
+
+
+              {/* Contact Tab */}
+              <TabsContent value="contact" className="space-y-6 sm:space-y-8">
+                <div className="grid gap-6 sm:gap-8 lg:grid-cols-2">
+                  <section>
+                    <h2 className="mb-4 sm:mb-6 text-xl sm:text-2xl font-bold">Contact Information</h2>
+                    {(panchayat?.mapCoordinates) && (
+                      <div className="mb-6 relative z-0">
+                      <h3 className="mb-2 sm:mb-4 text-base sm:text-lg font-semibold">Location</h3>
+                      <div style={{ height: '300px', width: '100%' }} className="sm:h-96 lg:h-[400px] rounded-lg overflow-hidden border border-[#E5E5E5]">
+                        <MapContainer
+                        center={parseCoordinates(panchayat.mapCoordinates || '') as LatLngExpression}
+                        zoom={15}
+                        style={{ height: '100%', width: '100%' }}
+                        scrollWheelZoom={false}
+                        >
+                        <TileLayer
+                        url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                        attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+                        />
+                        <Marker position={parseCoordinates(panchayat.mapCoordinates || '')}>
+                        <Popup>
+                        <strong>{panchayat?.name}</strong><br />
+                        Gram Panchayat Office
+                        </Popup>
+                        </Marker>
+                        </MapContainer>
+                      </div>
+                      </div>
+                    )}
+                    <Card>
+                      <CardContent className="space-y-4 sm:space-y-6 p-4 sm:p-6">
+                        {panchayat?.contactInfo && (
+                          panchayat.contactInfo.address || panchayat.contactInfo.phone || panchayat.contactInfo.email ? (
+                            <>
+                              {panchayat.contactInfo.address && (
+                                <div className="flex items-start gap-3">
+                                  <MapPin className="mt-1 h-4 w-4 sm:h-5 sm:w-5 flex-shrink-0 text-[#FF9933]" />
+                                  <div>
+                                    <h4 className="text-sm sm:text-base font-semibold">Address</h4>
+                                    <p className="text-xs sm:text-sm text-muted-foreground whitespace-pre-line">
+                                      {panchayat.contactInfo.address}
+                                    </p>
+                                  </div>
+                                </div>
+                              )}
+                              {panchayat.contactInfo.phone && (
+                                <div className="flex items-start gap-3">
+                                  <Phone className="mt-1 h-4 w-4 sm:h-5 sm:w-5 flex-shrink-0 text-[#FF9933]" />
+                                  <div>
+                                    <h4 className="text-sm sm:text-base font-semibold">Phone</h4>
+                                    <p className="text-xs sm:text-sm text-muted-foreground break-all">{panchayat.contactInfo.phone}</p>
+                                  </div>
+                                </div>
+                              )}
+                              {panchayat.contactInfo.email && (
+                                <div className="flex items-start gap-3">
+                                  <Mail className="mt-1 h-4 w-4 sm:h-5 sm:w-5 flex-shrink-0 text-[#FF9933]" />
+                                  <div>
+                                    <h4 className="text-sm sm:text-base font-semibold">Email</h4>
+                                    <p className="text-xs sm:text-sm text-muted-foreground break-all">{panchayat.contactInfo.email}</p>
+                                  </div>
+                                </div>
+                              )}
+                              {panchayat.contactInfo.officeHours && (
+                                <div className="flex items-start gap-3">
+                                  <Calendar className="mt-1 h-4 w-4 sm:h-5 sm:w-5 flex-shrink-0 text-[#FF9933]" />
+                                  <div>
+                                    <h4 className="text-sm sm:text-base font-semibold">Office Hours</h4>
+                                    <p className="text-xs sm:text-sm text-muted-foreground whitespace-pre-line">
+                                      {panchayat.contactInfo.officeHours}
+                                    </p>
+                                  </div>
+                                </div>
+                              )}
+                            </>
+                          ) : null
+                        )}
+                        {(!panchayat?.contactInfo || (!panchayat.contactInfo.address && !panchayat.contactInfo.phone && !panchayat.contactInfo.email)) && (
+                          <>
+                            <div className="flex items-start gap-3">
+                              <MapPin className="mt-1 h-4 w-4 sm:h-5 sm:w-5 flex-shrink-0 text-[#FF9933]" />
+                              <div>
+                                <h4 className="text-sm sm:text-base font-semibold">Address</h4>
+                                <p className="text-xs sm:text-sm text-muted-foreground">
+                                  {panchayat?.name || 'Ramnagar'} Gram Panchayat Bhawan
+                                  <br />
+                                  {panchayat?.district || 'Varanasi'}, {panchayat?.state || 'Uttar Pradesh'} - 221001
+                                </p>
                               </div>
                             </div>
-                          </CardContent>
-                        </Card>
-                      ))}
-                    </div>
-                  )}
-                </section>
-              </div>
-            </TabsContent>
-
-
-            {/* Schemes Tab */}
-            <TabsContent value="schemes" className="space-y-6 sm:space-y-8">
-              <section>
-                <h2 className="mb-4 sm:mb-6 text-xl sm:text-2xl font-bold">Government Schemes</h2>
-                <div className="grid gap-4 sm:gap-6 md:grid-cols-2">
-                  {schemes.map((scheme) => (
-                    <Card key={scheme.id} className="transition-shadow hover:shadow-lg">
-                      <CardHeader className="p-4 sm:p-6">
-                        <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
-                          <Badge className="bg-[#138808] text-white text-xs">{scheme.category}</Badge>
-                          <Badge variant="outline" className="text-xs">{scheme.status}</Badge>
-                        </div>
-                        <CardTitle className="text-base sm:text-lg">{scheme.name}</CardTitle>
-                        <CardDescription className="text-xs sm:text-sm">Allocated Budget: {scheme.budget}</CardDescription>
-                      </CardHeader>
-                      <CardContent className="p-4 sm:p-6 pt-0">
-                        <div className="space-y-4">
-                          <div>
-                            <div className="mb-2 flex justify-between text-xs sm:text-sm">
-                              <span className="text-muted-foreground">Implementation Progress</span>
-                              <span>{scheme.progress}%</span>
+                            <div className="flex items-start gap-3">
+                              <Phone className="mt-1 h-4 w-4 sm:h-5 sm:w-5 flex-shrink-0 text-[#FF9933]" />
+                              <div>
+                                <h4 className="text-sm sm:text-base font-semibold">Phone</h4>
+                                <p className="text-xs sm:text-sm text-muted-foreground">+91 542-XXXXXX</p>
+                              </div>
                             </div>
-                            <Progress value={scheme.progress} className="h-2" />
-                          </div>
-                          <div className="flex items-center justify-between rounded-lg bg-muted/50 p-3">
-                            <span className="text-xs sm:text-sm text-muted-foreground">Beneficiaries</span>
-                            <span className="text-sm sm:text-base text-[#FF9933]">
-                              {scheme.beneficiaries} families
-                            </span>
-                          </div>
-                          <Button variant="outline" className="w-full text-xs sm:text-sm">
-                            <Download className="mr-2 h-3 w-3 sm:h-4 sm:w-4" />
-                            Download Details
-                          </Button>
-                        </div>
+                            <div className="flex items-start gap-3">
+                              <Mail className="mt-1 h-4 w-4 sm:h-5 sm:w-5 flex-shrink-0 text-[#FF9933]" />
+                              <div>
+                                <h4 className="text-sm sm:text-base font-semibold">Email</h4>
+                                <p className="text-xs sm:text-sm text-muted-foreground break-all">
+                                  {panchayat?.subdomain || 'ramnagar'}@egramseva.gov.in
+                                </p>
+                              </div>
+                            </div>
+                            <div className="flex items-start gap-3">
+                              <Calendar className="mt-1 h-4 w-4 sm:h-5 sm:w-5 flex-shrink-0 text-[#FF9933]" />
+                              <div>
+                                <h4 className="text-sm sm:text-base font-semibold">Office Hours</h4>
+                                <p className="text-xs sm:text-sm text-muted-foreground">
+                                  Monday - Friday: 10:00 AM - 5:00 PM
+                                  <br />
+                                  Saturday: 10:00 AM - 2:00 PM
+                                </p>
+                              </div>
+                            </div>
+                          </>
+                        )}
                       </CardContent>
                     </Card>
-                  ))}
+                  </section>
+                  <section>
+                    <h2 className="mb-4 sm:mb-6 text-xl sm:text-2xl font-bold">Send us a Message</h2>
+                    <Card>
+                      <CardContent className="space-y-3 sm:space-y-4 p-4 sm:p-6">
+                        {formSubmitted && (
+                          <div className="rounded-lg bg-[#138808]/10 border border-[#138808] p-3 text-sm text-[#138808]">
+                            Thank you! Your message has been sent successfully. We will get back to you soon.
+                          </div>
+                        )}
+                        <form onSubmit={handleContactSubmit} noValidate>
+                          <div className="space-y-3 sm:space-y-4">
+                            <div className="space-y-2">
+                              <Label htmlFor="name" className="text-xs sm:text-sm">
+                                Name <span className="text-destructive" aria-label="required">*</span>
+                              </Label>
+                              <Input
+                                id="name"
+                                placeholder="Your name"
+                                className={`text-sm ${formErrors.name ? 'border-destructive' : ''}`}
+                                value={contactForm.name}
+                                onChange={(e) => {
+                                  setContactForm({ ...contactForm, name: e.target.value });
+                                  if (formErrors.name) setFormErrors({ ...formErrors, name: '' });
+                                }}
+                                aria-invalid={!!formErrors.name}
+                                aria-describedby={formErrors.name ? 'name-error' : undefined}
+                                required
+                              />
+                              {formErrors.name && (
+                                <p id="name-error" className="text-xs text-destructive" role="alert">
+                                  {formErrors.name}
+                                </p>
+                              )}
+                            </div>
+                            <div className="space-y-2">
+                              <Label htmlFor="email" className="text-xs sm:text-sm">
+                                Email <span className="text-destructive" aria-label="required">*</span>
+                              </Label>
+                              <Input
+                                id="email"
+                                type="email"
+                                placeholder="your@email.com"
+                                className={`text-sm ${formErrors.email ? 'border-destructive' : ''}`}
+                                value={contactForm.email}
+                                onChange={(e) => {
+                                  setContactForm({ ...contactForm, email: e.target.value });
+                                  if (formErrors.email) setFormErrors({ ...formErrors, email: '' });
+                                }}
+                                aria-invalid={!!formErrors.email}
+                                aria-describedby={formErrors.email ? 'email-error' : undefined}
+                                required
+                              />
+                              {formErrors.email && (
+                                <p id="email-error" className="text-xs text-destructive" role="alert">
+                                  {formErrors.email}
+                                </p>
+                              )}
+                            </div>
+                            <div className="space-y-2">
+                              <Label htmlFor="subject" className="text-xs sm:text-sm">
+                                Subject <span className="text-destructive" aria-label="required">*</span>
+                              </Label>
+                              <Input
+                                id="subject"
+                                placeholder="What is this about?"
+                                className={`text-sm ${formErrors.subject ? 'border-destructive' : ''}`}
+                                value={contactForm.subject}
+                                onChange={(e) => {
+                                  setContactForm({ ...contactForm, subject: e.target.value });
+                                  if (formErrors.subject) setFormErrors({ ...formErrors, subject: '' });
+                                }}
+                                aria-invalid={!!formErrors.subject}
+                                aria-describedby={formErrors.subject ? 'subject-error' : undefined}
+                                required
+                              />
+                              {formErrors.subject && (
+                                <p id="subject-error" className="text-xs text-destructive" role="alert">
+                                  {formErrors.subject}
+                                </p>
+                              )}
+                            </div>
+                            <div className="space-y-2">
+                              <Label htmlFor="message" className="text-xs sm:text-sm">
+                                Message <span className="text-destructive" aria-label="required">*</span>
+                              </Label>
+                              <Textarea
+                                id="message"
+                                placeholder="Your message..."
+                                rows={5}
+                                className={`text-sm ${formErrors.message ? 'border-destructive' : ''}`}
+                                value={contactForm.message}
+                                onChange={(e) => {
+                                  setContactForm({ ...contactForm, message: e.target.value });
+                                  if (formErrors.message) setFormErrors({ ...formErrors, message: '' });
+                                }}
+                                aria-invalid={!!formErrors.message}
+                                aria-describedby={formErrors.message ? 'message-error' : undefined}
+                                required
+                              />
+                              {formErrors.message && (
+                                <p id="message-error" className="text-xs text-destructive" role="alert">
+                                  {formErrors.message}
+                                </p>
+                              )}
+                            </div>
+                            <Button
+                              type="submit"
+                              className="w-full bg-[#FF9933] hover:bg-[#FF9933]/90 text-sm sm:text-base"
+                              aria-label="Submit contact form"
+                            >
+                              Send Message
+                            </Button>
+                          </div>
+                        </form>
+                      </CardContent>
+                    </Card>
+                  </section>
                 </div>
-              </section>
-            </TabsContent>
-
-
-           
-
-            {/* Gallery Tab */}
-            <TabsContent value="gallery" className="space-y-6 sm:space-y-8">
-              {selectedAlbum ? (
-                <section>
-                  <div className="mb-4 sm:mb-6 flex items-center gap-4">
-                    <Button variant="ghost" onClick={() => setSelectedAlbum(null)}>
-                      ← Back to Albums
-                    </Button>
-                    <h2 className="text-xl sm:text-2xl font-bold">{selectedAlbum.title}</h2>
-                  </div>
-                  {loading ? (
-                    <div className="text-center text-muted-foreground py-8 text-sm sm:text-base">Loading images...</div>
-                  ) : (
-                    <div className="grid gap-4 sm:gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
-                      {gallery.filter((item: any) => item.albumId === selectedAlbum.id).map((item) => (
-                        <Card key={item.id} className="overflow-hidden transition-transform hover:scale-105">
-                          <AlbumImageWithRefresh src={item.image} alt={item.title} />
-                          <CardContent className="p-3 sm:p-4">
-                            <p className="font-medium text-sm sm:text-base">{item.title}</p>
-                            {item.description && (
-                              <p className="mt-1 text-xs sm:text-sm text-muted-foreground">{item.description}</p>
-                            )}
-                          </CardContent>
-                        </Card>
-                      ))}
-                    </div>
-                  )}
-                </section>
-              ) : (
-                <section>
-                  <h2 className="mb-4 sm:mb-6 text-xl sm:text-2xl font-bold">Photo Gallery</h2>
-                  {albums.length > 0 ? (
-                    <>
-                      <h3 className="mb-3 sm:mb-4 text-lg sm:text-xl font-semibold">Albums</h3>
-                      <div className="grid gap-4 sm:gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 mb-6 sm:mb-8">
-                        {albums.map((album) => (
-                          <Card
-                            key={album.id}
-                            className="overflow-hidden transition-transform hover:scale-105 cursor-pointer"
-                            onClick={() => setSelectedAlbum(album)}
-                          >
-                            {album.coverImage && (
-                              <AlbumImageWithRefresh src={album.coverImage} alt={album.title} />
-                            )}
-                            <CardContent className="p-3 sm:p-4">
-                              <p className="font-medium text-sm sm:text-base">{album.title}</p>
-                              {album.description && (
-                                <p className="mt-1 text-xs sm:text-sm text-muted-foreground line-clamp-2">{album.description}</p>
-                              )}
-                              <p className="mt-2 text-xs text-muted-foreground">{album.imageCount || 0} images</p>
-                            </CardContent>
-                          </Card>
-                        ))}
-                      </div>
-                    </>
-                  ) : null}
-                  {gallery.length > 0 && (
-                    <>
-                      <h3 className="mb-3 sm:mb-4 text-lg sm:text-xl font-semibold">All Images</h3>
-                      <div className="grid gap-4 sm:gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
-                        {gallery.map((item) => (
-                          <Card key={item.id} className="overflow-hidden transition-transform hover:scale-105">
-                            <AlbumImageWithRefresh src={item.image} alt={item.title} />
-                            <CardContent className="p-3 sm:p-4">
-                              <p className="font-medium text-sm sm:text-base">{item.title}</p>
-                              {item.description && (
-                                <p className="mt-1 text-xs sm:text-sm text-muted-foreground">{item.description}</p>
-                              )}
-                              {item.date && (
-                                <p className="mt-1 text-xs text-muted-foreground">{item.date}</p>
-                              )}
-                            </CardContent>
-                          </Card>
-                        ))}
-                      </div>
-                    </>
-                  )}
-                  {albums.length === 0 && gallery.length === 0 && (
-                    <div className="text-center text-muted-foreground py-8 text-sm sm:text-base">No gallery items available</div>
-                  )}
-                </section>
-              )}
-            </TabsContent>
-
-            {/* Newsletter Tab */}
-            <TabsContent value="newsletters" className="space-y-6 sm:space-y-8">
-              {selectedNewsletter ? (
-                <NewsletterDetailView newsletter={selectedNewsletter} onBack={() => setSelectedNewsletter(null)} />
-              ) : (
-                <section>
-                  <h2 className="mb-4 sm:mb-6 text-xl sm:text-2xl font-bold">Newsletters</h2>
-                  {loading ? (
-                    <div className="text-center text-muted-foreground py-8 text-sm sm:text-base">Loading newsletters...</div>
-                  ) : newsletters.length === 0 ? (
-                    <div className="text-center text-muted-foreground py-8 text-sm sm:text-base">No newsletters available</div>
-                  ) : (
-                    <div className="grid gap-4 sm:gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
-                      {newsletters.map((newsletter) => (
-                        <Card
-                          key={newsletter.id}
-                          className="overflow-hidden transition-transform hover:scale-105 cursor-pointer"
-                          onClick={() => setSelectedNewsletter(newsletter)}
-                        >
-                          {newsletter.coverImageUrl && (
-                            <div className="h-48 w-full overflow-hidden">
-                              <NewsletterCoverImage fileKey={newsletter.coverImageFileKey} url={newsletter.coverImageUrl} />
-                            </div>
-                          )}
-                          <CardContent className="p-4 sm:p-6">
-                            <h3 className="font-semibold text-base sm:text-lg mb-2">{newsletter.title}</h3>
-                            {newsletter.subtitle && (
-                              <p className="text-sm text-muted-foreground mb-3 line-clamp-2">{newsletter.subtitle}</p>
-                            )}
-                            <div className="flex items-center justify-between text-xs text-muted-foreground">
-                              <span>{newsletter.publishedOn ? new Date(newsletter.publishedOn).toLocaleDateString() : "Draft"}</span>
-                              {newsletter.authorName && <span>By {newsletter.authorName}</span>}
-                            </div>
-                          </CardContent>
-                        </Card>
-                      ))}
-                    </div>
-                  )}
-                </section>
-              )}
-            </TabsContent>
-
-
-            {/* Contact Tab */}
-            <TabsContent value="contact" className="space-y-6 sm:space-y-8">
-              <div className="grid gap-6 sm:gap-8 lg:grid-cols-2">
-                <section>
-                  <h2 className="mb-4 sm:mb-6 text-xl sm:text-2xl font-bold">Contact Information</h2>
-                  <Card>
-                    <CardContent className="space-y-4 sm:space-y-6 p-4 sm:p-6">
-                      {panchayat?.contactInfo && (
-                        panchayat.contactInfo.address || panchayat.contactInfo.phone || panchayat.contactInfo.email ? (
-                          <>
-                            {panchayat.contactInfo.address && (
-                              <div className="flex items-start gap-3">
-                                <MapPin className="mt-1 h-4 w-4 sm:h-5 sm:w-5 flex-shrink-0 text-[#FF9933]" />
-                                <div>
-                                  <h4 className="text-sm sm:text-base font-semibold">Address</h4>
-                                  <p className="text-xs sm:text-sm text-muted-foreground whitespace-pre-line">
-                                    {panchayat.contactInfo.address}
-                                  </p>
-                                </div>
-                              </div>
-                            )}
-                            {panchayat.contactInfo.phone && (
-                              <div className="flex items-start gap-3">
-                                <Phone className="mt-1 h-4 w-4 sm:h-5 sm:w-5 flex-shrink-0 text-[#FF9933]" />
-                                <div>
-                                  <h4 className="text-sm sm:text-base font-semibold">Phone</h4>
-                                  <p className="text-xs sm:text-sm text-muted-foreground break-all">{panchayat.contactInfo.phone}</p>
-                                </div>
-                              </div>
-                            )}
-                            {panchayat.contactInfo.email && (
-                              <div className="flex items-start gap-3">
-                                <Mail className="mt-1 h-4 w-4 sm:h-5 sm:w-5 flex-shrink-0 text-[#FF9933]" />
-                                <div>
-                                  <h4 className="text-sm sm:text-base font-semibold">Email</h4>
-                                  <p className="text-xs sm:text-sm text-muted-foreground break-all">{panchayat.contactInfo.email}</p>
-                                </div>
-                              </div>
-                            )}
-                            {panchayat.contactInfo.officeHours && (
-                              <div className="flex items-start gap-3">
-                                <Calendar className="mt-1 h-4 w-4 sm:h-5 sm:w-5 flex-shrink-0 text-[#FF9933]" />
-                                <div>
-                                  <h4 className="text-sm sm:text-base font-semibold">Office Hours</h4>
-                                  <p className="text-xs sm:text-sm text-muted-foreground whitespace-pre-line">
-                                    {panchayat.contactInfo.officeHours}
-                                  </p>
-                                </div>
-                              </div>
-                            )}
-                          </>
-                        ) : null
-                      )}
-                      {(!panchayat?.contactInfo || (!panchayat.contactInfo.address && !panchayat.contactInfo.phone && !panchayat.contactInfo.email)) && (
-                        <>
-                          <div className="flex items-start gap-3">
-                            <MapPin className="mt-1 h-4 w-4 sm:h-5 sm:w-5 flex-shrink-0 text-[#FF9933]" />
-                            <div>
-                              <h4 className="text-sm sm:text-base font-semibold">Address</h4>
-                              <p className="text-xs sm:text-sm text-muted-foreground">
-                                {panchayat?.name || 'Ramnagar'} Gram Panchayat Bhawan
-                                <br />
-                                {panchayat?.district || 'Varanasi'}, {panchayat?.state || 'Uttar Pradesh'} - 221001
-                              </p>
-                            </div>
-                          </div>
-                          <div className="flex items-start gap-3">
-                            <Phone className="mt-1 h-4 w-4 sm:h-5 sm:w-5 flex-shrink-0 text-[#FF9933]" />
-                            <div>
-                              <h4 className="text-sm sm:text-base font-semibold">Phone</h4>
-                              <p className="text-xs sm:text-sm text-muted-foreground">+91 542-XXXXXX</p>
-                            </div>
-                          </div>
-                          <div className="flex items-start gap-3">
-                            <Mail className="mt-1 h-4 w-4 sm:h-5 sm:w-5 flex-shrink-0 text-[#FF9933]" />
-                            <div>
-                              <h4 className="text-sm sm:text-base font-semibold">Email</h4>
-                              <p className="text-xs sm:text-sm text-muted-foreground break-all">
-                                {panchayat?.subdomain || 'ramnagar'}@egramseva.gov.in
-                              </p>
-                            </div>
-                          </div>
-                          <div className="flex items-start gap-3">
-                            <Calendar className="mt-1 h-4 w-4 sm:h-5 sm:w-5 flex-shrink-0 text-[#FF9933]" />
-                            <div>
-                              <h4 className="text-sm sm:text-base font-semibold">Office Hours</h4>
-                              <p className="text-xs sm:text-sm text-muted-foreground">
-                                Monday - Friday: 10:00 AM - 5:00 PM
-                                <br />
-                                Saturday: 10:00 AM - 2:00 PM
-                              </p>
-                            </div>
-                          </div>
-                        </>
-                      )}
-                    </CardContent>
-                  </Card>
-                </section>
-                <section>
-                  <h2 className="mb-4 sm:mb-6 text-xl sm:text-2xl font-bold">Send us a Message</h2>
-                  <Card>
-                    <CardContent className="space-y-3 sm:space-y-4 p-4 sm:p-6">
-                      {formSubmitted && (
-                        <div className="rounded-lg bg-[#138808]/10 border border-[#138808] p-3 text-sm text-[#138808]">
-                          Thank you! Your message has been sent successfully. We will get back to you soon.
-                        </div>
-                      )}
-                      <form onSubmit={handleContactSubmit} noValidate>
-                        <div className="space-y-3 sm:space-y-4">
-                          <div className="space-y-2">
-                            <Label htmlFor="name" className="text-xs sm:text-sm">
-                              Name <span className="text-destructive" aria-label="required">*</span>
-                            </Label>
-                            <Input
-                              id="name"
-                              placeholder="Your name"
-                              className={`text-sm ${formErrors.name ? 'border-destructive' : ''}`}
-                              value={contactForm.name}
-                              onChange={(e) => {
-                                setContactForm({ ...contactForm, name: e.target.value });
-                                if (formErrors.name) setFormErrors({ ...formErrors, name: '' });
-                              }}
-                              aria-invalid={!!formErrors.name}
-                              aria-describedby={formErrors.name ? 'name-error' : undefined}
-                              required
-                            />
-                            {formErrors.name && (
-                              <p id="name-error" className="text-xs text-destructive" role="alert">
-                                {formErrors.name}
-                              </p>
-                            )}
-                          </div>
-                          <div className="space-y-2">
-                            <Label htmlFor="email" className="text-xs sm:text-sm">
-                              Email <span className="text-destructive" aria-label="required">*</span>
-                            </Label>
-                            <Input
-                              id="email"
-                              type="email"
-                              placeholder="your@email.com"
-                              className={`text-sm ${formErrors.email ? 'border-destructive' : ''}`}
-                              value={contactForm.email}
-                              onChange={(e) => {
-                                setContactForm({ ...contactForm, email: e.target.value });
-                                if (formErrors.email) setFormErrors({ ...formErrors, email: '' });
-                              }}
-                              aria-invalid={!!formErrors.email}
-                              aria-describedby={formErrors.email ? 'email-error' : undefined}
-                              required
-                            />
-                            {formErrors.email && (
-                              <p id="email-error" className="text-xs text-destructive" role="alert">
-                                {formErrors.email}
-                              </p>
-                            )}
-                          </div>
-                          <div className="space-y-2">
-                            <Label htmlFor="subject" className="text-xs sm:text-sm">
-                              Subject <span className="text-destructive" aria-label="required">*</span>
-                            </Label>
-                            <Input
-                              id="subject"
-                              placeholder="What is this about?"
-                              className={`text-sm ${formErrors.subject ? 'border-destructive' : ''}`}
-                              value={contactForm.subject}
-                              onChange={(e) => {
-                                setContactForm({ ...contactForm, subject: e.target.value });
-                                if (formErrors.subject) setFormErrors({ ...formErrors, subject: '' });
-                              }}
-                              aria-invalid={!!formErrors.subject}
-                              aria-describedby={formErrors.subject ? 'subject-error' : undefined}
-                              required
-                            />
-                            {formErrors.subject && (
-                              <p id="subject-error" className="text-xs text-destructive" role="alert">
-                                {formErrors.subject}
-                              </p>
-                            )}
-                          </div>
-                          <div className="space-y-2">
-                            <Label htmlFor="message" className="text-xs sm:text-sm">
-                              Message <span className="text-destructive" aria-label="required">*</span>
-                            </Label>
-                            <Textarea
-                              id="message"
-                              placeholder="Your message..."
-                              rows={5}
-                              className={`text-sm ${formErrors.message ? 'border-destructive' : ''}`}
-                              value={contactForm.message}
-                              onChange={(e) => {
-                                setContactForm({ ...contactForm, message: e.target.value });
-                                if (formErrors.message) setFormErrors({ ...formErrors, message: '' });
-                              }}
-                              aria-invalid={!!formErrors.message}
-                              aria-describedby={formErrors.message ? 'message-error' : undefined}
-                              required
-                            />
-                            {formErrors.message && (
-                              <p id="message-error" className="text-xs text-destructive" role="alert">
-                                {formErrors.message}
-                              </p>
-                            )}
-                          </div>
-                          <Button 
-                            type="submit" 
-                            className="w-full bg-[#FF9933] hover:bg-[#FF9933]/90 text-sm sm:text-base"
-                            aria-label="Submit contact form"
-                          >
-                            Send Message
-                          </Button>
-                        </div>
-                      </form>
-                    </CardContent>
-                  </Card>
-                </section>
-              </div>
-            </TabsContent>
+              </TabsContent>
             </div>
           </div>
         </Tabs>
       </main>
     </div>
+  );
+}
+
+// Helper component for team member image with presigned URL refresh
+function TeamMemberImageWithRefresh({ src, alt }: { src?: string; alt: string }) {
+  const { presignedUrl } = usePresignedUrlRefresh({
+    fileKey: src || undefined,
+    initialPresignedUrl: src || undefined,
+  });
+
+  if (!presignedUrl) {
+    return null;
+  }
+
+  return (
+    <AvatarImage src={presignedUrl} alt={alt} />
   );
 }
 

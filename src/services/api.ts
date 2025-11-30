@@ -49,15 +49,84 @@ api.interceptors.request.use(
   (error) => Promise.reject(error)
 );
 
-// Response interceptor for error handling
+// Response interceptor for error handling with refresh token support
+let isRefreshing = false;
+let failedQueue: Array<{
+  resolve: (value?: any) => void;
+  reject: (error?: any) => void;
+}> = [];
+
+const processQueue = (error: any, token: string | null = null) => {
+  failedQueue.forEach((prom) => {
+    if (error) {
+      prom.reject(error);
+    } else {
+      prom.resolve(token);
+    }
+  });
+  failedQueue = [];
+};
+
 api.interceptors.response.use(
   (response) => response.data,
-  (error: AxiosError) => {
-    if (error.response?.status === 401) {
+  async (error: AxiosError) => {
+    const originalRequest = error.config as any;
+
+    // Handle 401 Unauthorized
+    if (error.response?.status === 401 && !originalRequest._retry) {
+      if (isRefreshing) {
+        // If already refreshing, queue this request
+        return new Promise((resolve, reject) => {
+          failedQueue.push({ resolve, reject });
+        })
+          .then((token) => {
+            originalRequest.headers.Authorization = `Bearer ${token}`;
+            return api(originalRequest);
+          })
+          .catch((err) => {
+            return Promise.reject(err);
+          });
+      }
+
+      originalRequest._retry = true;
+      isRefreshing = true;
+
+      // Try to refresh token (if refresh token endpoint exists)
+      const refreshToken = localStorage.getItem('refreshToken');
+      if (refreshToken) {
+        try {
+          const response = await axios.post<ApiResponse<{ token: string; refreshToken?: string }>>(
+            `${import.meta.env.VITE_API_BASE_URL || 'https://egram-backend-5g58.onrender.com'}/api/v1/auth/refresh`,
+            { refreshToken }
+          );
+          const { token } = response.data.data || response.data;
+          if (token) {
+            localStorage.setItem('authToken', token);
+            originalRequest.headers.Authorization = `Bearer ${token}`;
+            processQueue(null, token);
+            isRefreshing = false;
+            return api(originalRequest);
+          }
+        } catch (refreshError) {
+          processQueue(refreshError, null);
+          isRefreshing = false;
+          // Refresh failed, logout user
+          localStorage.removeItem('authToken');
+          localStorage.removeItem('refreshToken');
+          localStorage.removeItem('user');
+          window.location.href = '/login';
+          return Promise.reject(refreshError);
+        }
+      }
+
+      // No refresh token or refresh failed
+      isRefreshing = false;
       localStorage.removeItem('authToken');
+      localStorage.removeItem('refreshToken');
       localStorage.removeItem('user');
       window.location.href = '/login';
     }
+
     return Promise.reject(error);
   }
 );
@@ -418,10 +487,10 @@ export const panchayatAPI = {
       district: p.district,
       state: p.state,
       subdomain: p.slug,
-      population: 0,
-      area: '0',
-      wards: 0,
-      established: new Date(p.createdAt).getFullYear(),
+      population: p.population || undefined,
+      area: p.area || '',
+      wards: p.wards || undefined,
+      established: p.establishedYear || new Date(p.createdAt).getFullYear(),
       status: p.status as any,
       schemes: 0,
     }));
@@ -451,13 +520,14 @@ export const panchayatAPI = {
       state: panchayat.state || '',
       aboutText: panchayat.aboutText || '',
       block: '', // Not available in backend
-      population: 0, // Not available in backend
-      area: '0', // Not available in backend
-      wards: 0, // Not available in backend
+      population: panchayat.population || undefined, // Not available in backend
+      area: panchayat.area || '', // Not available in backend
+      wards: panchayat.wards || undefined, // Not available in backend
       subdomain: panchayat.slug || '',
-      established: established,
+      established: panchayat.establishedYear || established,
       description: description,
       heroImage: panchayat.heroImageUrl || undefined,
+      mapCoordinates: panchayat.mapCoordinates || '',
       contactInfo: {
         address: contactAddress,
         phone: contactPhone,
@@ -694,6 +764,13 @@ export const settingsAPI = {
         email: data.officeEmail || data.contactEmail || '',
         officeHours: data.officeHours || '',
       },
+      basicInfo: {
+        population: data.population || undefined,
+        area: data.area || '',
+        wards: data.wards || undefined,
+        establishedYear: data.establishedYear || undefined,
+        mapCoordinates: data.mapCoordinates || '',
+      },
       logo: data.logoUrl,
       updatedAt: data.updatedAt || new Date().toISOString(),
     };
@@ -732,6 +809,13 @@ export const settingsAPI = {
     if (updates.logo !== undefined) {
       payload.logoUrl = updates.logo || null;
     }
+    if (updates.basicInfo) {
+      if (updates.basicInfo.population !== undefined) payload.population = updates.basicInfo.population || null;
+      if (updates.basicInfo.area !== undefined) payload.area = updates.basicInfo.area || null;
+      if (updates.basicInfo.wards !== undefined) payload.wards = updates.basicInfo.wards || null;
+      if (updates.basicInfo.establishedYear !== undefined) payload.establishedYear = updates.basicInfo.establishedYear || null;
+      if (updates.basicInfo.mapCoordinates !== undefined) payload.mapCoordinates = updates.basicInfo.mapCoordinates || null;
+    }
     
     // Remove null/undefined values to allow partial updates
     Object.keys(payload).forEach(key => {
@@ -745,6 +829,10 @@ export const settingsAPI = {
   },
   updateHero: async ( hero: PanchayatSettings['hero']): Promise<PanchayatSettings> => {
     return await settingsAPI.update( { hero });
+  },
+
+  updateBasicInfo: async ( basicInfo: PanchayatSettings['basicInfo']): Promise<PanchayatSettings> => {
+    return await settingsAPI.update( { basicInfo });
   },
   updateAbout: async ( about: PanchayatSettings['about']): Promise<PanchayatSettings> => {
     return await settingsAPI.update( { about });

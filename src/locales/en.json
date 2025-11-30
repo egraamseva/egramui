@@ -711,6 +711,67 @@
     "noUsers": "No users found",
     "panchayatActivated": "Panchayat activated successfully",
     "panchayatDeactivated": "Panchayat deactivated successfully"
+  },
+  "teamManagement": {
+    "title": "Team Management",
+    "subtitle": "Manage your panchayat admin team (Max 4 admins)",
+    "addMember": "Add Member",
+    "editMember": "Edit Team Member",
+    "removeMember": "Remove",
+    "activate": "Activate",
+    "deactivate": "Deactivate",
+    "name": "Name",
+    "email": "Email",
+    "phone": "Phone",
+    "designation": "Designation",
+    "password": "Password",
+    "profileImage": "Profile Image (Optional)",
+    "imageUrl": "Or enter image URL",
+    "maxReached": "Maximum of 4 admins reached. Remove a member to add a new one.",
+    "memberAdded": "Team member added successfully",
+    "memberUpdated": "Team member updated successfully",
+    "memberRemoved": "Team member removed successfully",
+    "statusUpdated": "Member status updated successfully",
+    "validation": {
+      "required": "Please fill all required fields",
+      "email": "Please enter a valid email address",
+      "phone": "Phone number must be exactly 10 digits",
+      "password": "Password must be at least 8 characters",
+      "imageSize": "Image size must be less than 5MB",
+      "imageType": "Please select an image file"
+    }
+  },
+  "newsletter": {
+    "title": "Newsletter",
+    "create": "Create Newsletter",
+    "edit": "Edit Newsletter",
+    "publish": "Publish",
+    "unpublish": "Unpublish",
+    "delete": "Delete",
+    "titleField": "Title",
+    "subtitle": "Subtitle",
+    "content": "Content",
+    "bulletPoints": "Bullet Points",
+    "addBullet": "Add Bullet Point",
+    "coverImage": "Cover Image",
+    "publishedOn": "Published On",
+    "authorName": "Author Name",
+    "isPublished": "Published",
+    "draft": "Draft",
+    "autosave": "Auto-saving...",
+    "saved": "Saved",
+    "contentPlaceholder": "Start writing your newsletter content...",
+    "contentHint": "Use the toolbar to format text, add images, tables, and links. Content is saved automatically.",
+    "formatting": {
+      "bold": "Bold",
+      "italic": "Italic",
+      "underline": "Underline",
+      "bulletList": "Bullet List",
+      "numberedList": "Numbered List",
+      "table": "Insert Table",
+      "image": "Insert Image",
+      "link": "Insert Link"
+    }
   }
 }
 

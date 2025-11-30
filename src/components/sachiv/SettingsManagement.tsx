@@ -15,6 +15,7 @@ import { toast } from "sonner";
 import { settingsAPI } from "../../services/api";
 import type { PanchayatSettings } from "../../types";
 import { ImageWithFallback } from "../figma/ImageWithFallback";
+import { LocationIQAutocomplete } from "./LocationIQ";
 
 interface SettingsManagementProps {
   panchayatId: string;
@@ -87,6 +88,24 @@ export function SettingsManagement({ panchayatId }: SettingsManagementProps) {
     }
   };
 
+  const handleSaveBasicInfo = async (e?: React.FormEvent) => {
+    e?.preventDefault();
+    if (!settings) return;
+    setSaving(true);
+    try {
+      // TODO: Implement API call for basic info update
+      // For now, we'll use a generic update method
+      // console.log(settings.basicInfo);
+      const updated = await settingsAPI.updateBasicInfo(settings.basicInfo);
+      setSettings(updated);
+      toast.success("Basic information updated successfully");
+    } catch (error: any) {
+      toast.error(error.message || "Failed to update basic information");
+    } finally {
+      setSaving(false);
+    }
+  };
+
   const handleLogoUpload = async (file: File) => {
     if (!file) return;
     setSaving(true);
@@ -134,12 +153,113 @@ export function SettingsManagement({ panchayatId }: SettingsManagementProps) {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid w-full grid-cols-4">
+        <TabsList className="grid w-full grid-cols-5">
+          <TabsTrigger value="basic">Basic Info</TabsTrigger>
           <TabsTrigger value="hero">Hero Section</TabsTrigger>
           <TabsTrigger value="about">About</TabsTrigger>
           <TabsTrigger value="contact">Contact</TabsTrigger>
           <TabsTrigger value="branding">Branding</TabsTrigger>
         </TabsList>
+
+        <TabsContent value="basic" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Basic Information</CardTitle>
+              <CardDescription>Panchayat demographics and location</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="population">Population</Label>
+                  <Input
+                    id="population"
+                    type="number"
+                    value={settings.basicInfo?.population || ''}
+                    onChange={(e) => setSettings({
+                      ...settings,
+                      basicInfo: {
+                        ...settings.basicInfo,
+                        population: e.target.value ? parseInt(e.target.value) : undefined
+                      }
+                    })}
+                    placeholder="Enter population"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="area">Area (km²)</Label>
+                  <Input
+                    id="area"
+                    value={settings.basicInfo?.area || ''}
+                    onChange={(e) => setSettings({
+                      ...settings,
+                      basicInfo: {
+                        ...settings.basicInfo,
+                        area: e.target.value
+                      }
+                    })}
+                    placeholder="e.g., 12.5"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="wards">Number of Wards</Label>
+                  <Input
+                    id="wards"
+                    type="number"
+                    value={settings.basicInfo?.wards || ''}
+                    onChange={(e) => setSettings({
+                      ...settings,
+                      basicInfo: {
+                        ...settings.basicInfo,
+                        wards: e.target.value ? parseInt(e.target.value) : undefined
+                      }
+                    })}
+                    placeholder="Enter number of wards"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="establishedYear">Established Year</Label>
+                  <Input
+                    id="establishedYear"
+                    type="number"
+                    value={settings.basicInfo?.establishedYear || ''}
+                    onChange={(e) => setSettings({
+                      ...settings,
+                      basicInfo: {
+                        ...settings.basicInfo,
+                        establishedYear: e.target.value ? parseInt(e.target.value) : undefined
+                      }
+                    })}
+                    placeholder="e.g., 1995"
+                    min="1900"
+                    max={new Date().getFullYear()}
+                  />
+                </div>
+              </div>
+              <LocationIQAutocomplete
+                value={settings.basicInfo?.mapCoordinates || ''}
+                onChange={(value) => setSettings({
+                  ...settings,
+                  basicInfo: {
+                    ...settings.basicInfo,
+                    mapCoordinates: value
+                  }
+                })}
+                label={
+                  <>
+                    <MapPin className="h-4 w-4 inline mr-2" />
+                    Map Location
+                  </>
+                }
+                id="basic-mapCoordinates"
+                placeholder="Search for your panchayat office location..."
+              />
+              <Button type="button" onClick={(e) => handleSaveBasicInfo(e)} disabled={saving}>
+                <Save className="h-4 w-4 mr-2" />
+                {saving ? "Saving..." : "Save Changes"}
+              </Button>
+            </CardContent>
+          </Card>
+        </TabsContent>
 
         <TabsContent value="hero" className="space-y-4">
           <Card>
@@ -335,6 +455,24 @@ export function SettingsManagement({ panchayatId }: SettingsManagementProps) {
                   rows={3}
                 />
               </div>
+              <LocationIQAutocomplete
+                value={settings.contact?.mapCoordinates || ''}
+                onChange={(value) => setSettings({
+                  ...settings,
+                  contact: {
+                    ...settings.contact,
+                    mapCoordinates: value
+                  }
+                })}
+                label={
+                  <>
+                    <MapPin className="h-4 w-4 inline mr-2" />
+                    Map Location
+                  </>
+                }
+                id="contact-mapCoordinates"
+                placeholder="Search for your panchayat office location..."
+              />
               <Button type="button" onClick={(e) => handleSaveContact(e)} disabled={saving}>
                 <Save className="h-4 w-4 mr-2" />
                 {saving ? "Saving..." : "Save Changes"}
