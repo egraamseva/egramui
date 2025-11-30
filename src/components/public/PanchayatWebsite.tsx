@@ -87,7 +87,7 @@ export function PanchayatWebsite() {
   const fetchPanchayatData = async () => {
     setLoading(true);
     try {
-      const subdomainToUse = subdomain || 'ramnagar';
+      const subdomainToUse = subdomain || '';
       const panchayatData = await panchayatAPI.getBySubdomain(subdomainToUse);
       setPanchayat(panchayatData);
 
@@ -344,7 +344,7 @@ export function PanchayatWebsite() {
               </li>
               <li>/</li>
               <li className="text-[#1B2B5E] font-medium">
-                {panchayat?.name || 'Ramnagar'}
+                {panchayat?.name || ''}
               </li>
             </ol>
           </nav>

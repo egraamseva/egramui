@@ -1,6 +1,6 @@
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useState } from "react";
-import { Menu, Globe, User, Search, Calendar, Accessibility } from "lucide-react";
+import { Menu, Globe, User, X } from "lucide-react";
 import { Button } from "../ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "../ui/sheet";
 import {
@@ -171,7 +171,7 @@ export function Header({ variant = "platform", panchayatName, onLanguageChange }
                 </Button>
               </SheetTrigger>
               <SheetContent side="right" className="w-72 p-0">
-                <div className="flex flex-col h-full">
+                <div className="flex flex-col h-[11/12]">
                   {/* Mobile Header */}
                   <div className="px-6 py-4 border-b border-gray-200">
                     <h2 className="text-lg font-semibold text-gray-900">

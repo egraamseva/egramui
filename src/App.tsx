@@ -41,7 +41,7 @@ function AppContent() {
         {shouldShowHeader && (
           <Header
             variant={isPanchayatWebsite ? "panchayat" : "platform"}
-            panchayatName={isPanchayatWebsite ? "Ramnagar" : undefined}
+            panchayatName={isPanchayatWebsite ? "eGramSeva" : undefined}
             onLanguageChange={handleLanguageChange}
           />
         )}
