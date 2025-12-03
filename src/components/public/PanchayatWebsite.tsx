@@ -37,6 +37,7 @@ export function PanchayatWebsite() {
   const [selectedNewsletter, setSelectedNewsletter] = useState<any | null>(null);
   const [selectedAlbum, setSelectedAlbum] = useState<Album | null>(null);
   const [albumImages, setAlbumImages] = useState<GalleryItem[]>([]);
+  const [loadingAlbumImages, setLoadingAlbumImages] = useState(false);
 
   const [loading, setLoading] = useState(true);
   const [contactForm, setContactForm] = useState({
@@ -49,6 +50,8 @@ export function PanchayatWebsite() {
   const [formSubmitted, setFormSubmitted] = useState(false);
   const [isImageModalOpen, setIsImageModalOpen] = useState(false);
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
+  const [modalImages, setModalImages] = useState<string[]>([]); // Array of image URLs for modal carousel
+  const [modalImageTitles, setModalImageTitles] = useState<string[]>([]); // Array of image titles for modal
   const [isNewsletterImageModalOpen, setIsNewsletterImageModalOpen] = useState(false);
   const [selectedNewsletterImageUrl, setSelectedNewsletterImageUrl] = useState<string>("");
 
@@ -71,12 +74,15 @@ export function PanchayatWebsite() {
 
 
   const fetchAlbumImages = async (albumId: string) => {
+    setLoadingAlbumImages(true);
     try {
       const result = await galleryApi.list(albumId);
       setAlbumImages(result.items);
     } catch (error) {
       console.error("Error fetching album images:", error);
       setAlbumImages([]);
+    } finally {
+      setLoadingAlbumImages(false);
     }
   };
 
@@ -760,116 +766,196 @@ export function PanchayatWebsite() {
               <TabsContent value="gallery" className="space-y-6 sm:space-y-8">
                 {selectedAlbum ? (
                   <section>
-                    <div className="mb-4 sm:mb-6 flex items-center gap-4">
-                      <Button variant="ghost" onClick={() => setSelectedAlbum(null)}>
+                    <div className="mb-4 sm:mb-6 flex flex-col sm:flex-row items-start sm:items-center gap-4">
+                      <Button 
+                        variant="ghost" 
+                        onClick={() => {
+                          setSelectedAlbum(null);
+                          setAlbumImages([]);
+                        }}
+                        className="flex items-center gap-2"
+                      >
                         ← Back to Albums
                       </Button>
-                      <h2 className="text-xl sm:text-2xl font-bold">{selectedAlbum.title}</h2>
-                    </div>
-                    {loading ? (
-                      <div className="text-center text-muted-foreground py-8 text-sm sm:text-base">Loading images...</div>
-                    ) : (
-                      <div className="grid gap-4 sm:gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
-                        {albumImages.length === 0 ? (
-                          <div className="col-span-full text-center text-muted-foreground py-8 text-sm sm:text-base">
-                            No images in this album
-                          </div>
-                        ) : (
-                          albumImages.map((item, index) => (
-                            <Card 
-                              key={item.id} 
-                              className="overflow-hidden transition-transform hover:scale-105 cursor-pointer"
-                              onClick={() => {
-                                setSelectedImageIndex(index);
-                                setIsImageModalOpen(true);
-                              }}
-                            >
-                              <AlbumImageWithRefresh 
-                                src={item.image} 
-                                alt={item.title}
-                                entityType="gallery"
-                                entityId={item.id}
-                              />
-                              {/* <CardContent className="p-3 sm:p-4">
-                                <p className="font-medium text-sm sm:text-base">{item.title}</p>
-                                {item.description && (
-                                  <p className="mt-1 text-xs sm:text-sm text-muted-foreground">{item.description}</p>
-                                )}
-                              </CardContent> */}
-                            </Card>
-                          ))
+                      <div className="flex-1">
+                        <h2 className="text-xl sm:text-2xl font-bold">{selectedAlbum.title}</h2>
+                        {selectedAlbum.description && (
+                          <p className="mt-1 text-sm text-muted-foreground">{selectedAlbum.description}</p>
+                        )}
+                        {albumImages.length > 0 && (
+                          <p className="mt-1 text-xs sm:text-sm text-muted-foreground">
+                            {albumImages.length} {albumImages.length === 1 ? 'image' : 'images'}
+                          </p>
                         )}
                       </div>
+                    </div>
+                    {loadingAlbumImages ? (
+                      <div className="text-center text-muted-foreground py-12">
+                        <Loader2 className="h-8 w-8 animate-spin mx-auto mb-2 text-[#E31E24]" />
+                        <p className="text-sm sm:text-base">Loading images...</p>
+                      </div>
+                    ) : (
+                      <>
+                        {albumImages.length === 0 ? (
+                          <Card>
+                            <CardContent className="p-12 text-center">
+                              <p className="text-muted-foreground text-sm sm:text-base">No images in this album</p>
+                            </CardContent>
+                          </Card>
+                        ) : (
+                          <div className="grid gap-3 sm:gap-4 md:gap-6 grid-cols-2 sm:grid-cols-3 lg:grid-cols-4">
+                            {albumImages.map((item, index) => (
+                              <Card 
+                                key={item.id} 
+                                className="group overflow-hidden transition-all hover:shadow-lg cursor-pointer border-2 hover:border-[#E31E24]/50"
+                                onClick={() => {
+                                  const imageUrls = albumImages.map(img => img.image || "").filter(Boolean);
+                                  const titles = albumImages.map(img => img.title || "Image");
+                                  setModalImages(imageUrls);
+                                  setModalImageTitles(titles);
+                                  setSelectedImageIndex(index);
+                                  setIsImageModalOpen(true);
+                                }}
+                              >
+                                <div className="relative  overflow-hidden bg-muted">
+                                  <AlbumImageWithRefresh 
+                                    src={item.image} 
+                                    alt={item.title}
+                                    entityType="gallery"
+                                    entityId={item.id}
+                                  />
+                                  <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors" />
+                                  {item.title && (
+                                    <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/60 to-transparent p-2 sm:p-3 opacity-0 group-hover:opacity-100 transition-opacity">
+                                      <p className="text-white text-xs sm:text-sm font-medium line-clamp-2">{item.title}</p>
+                                    </div>
+                                  )}
+                                </div>
+                              </Card>
+                            ))}
+                          </div>
+                        )}
+                      </>
                     )}
                   </section>
                 ) : (
                   <section>
-                    <h2 className="mb-4 sm:mb-6 text-xl sm:text-2xl font-bold">Photo Gallery</h2>
-                    {albums.length > 0 ? (
-                      <>
-                        <h3 className="mb-3 sm:mb-4 text-lg sm:text-xl font-semibold">Albums</h3>
-                        <div className="grid gap-4 sm:gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 mb-6 sm:mb-8">
+                    <div className="mb-4 sm:mb-6">
+                      <h2 className="text-xl sm:text-2xl font-bold">Photo Gallery</h2>
+                      <p className="mt-1 text-sm text-muted-foreground">
+                        Browse through our collection of photos and albums
+                      </p>
+                    </div>
+                    
+                    {albums.length > 0 && (
+                      <div className="mb-8 sm:mb-10">
+                        <div className="mb-3 sm:mb-4 flex items-center justify-between">
+                          <h3 className="text-lg sm:text-xl font-semibold">Albums</h3>
+                          <Badge variant="secondary" className="text-xs sm:text-sm">
+                            {albums.length} {albums.length === 1 ? 'album' : 'albums'}
+                          </Badge>
+                        </div>
+                        <div className="grid gap-4 sm:gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
                           {albums.map((album) => (
                             <Card
                               key={album.id}
-                              className="overflow-hidden transition-transform hover:scale-105 cursor-pointer"
+                              className="group overflow-hidden transition-all hover:shadow-lg cursor-pointer border-2 hover:border-[#E31E24]/50"
                               onClick={() => setSelectedAlbum(album)}
                             >
-                              {album.coverImage && (
-                                <AlbumImageWithRefresh 
-                                  src={album.coverImage} 
-                                  alt={album.title}
-                                  entityType="album"
-                                  entityId={album.id}
-                                />
-                              )}
-                              {/* <CardContent className="p-3 sm:p-4">
-                                <p className="font-medium text-sm sm:text-base">{album.title}</p>
-                                {album.description && (
-                                  <p className="mt-1 text-xs sm:text-sm text-muted-foreground line-clamp-2">{album.description}</p>
+                              <div className="relative aspect-video overflow-hidden bg-muted">
+                                {album.coverImage ? (
+                                  <AlbumImageWithRefresh 
+                                    src={album.coverImage} 
+                                    alt={album.title}
+                                    entityType="album"
+                                    entityId={album.id}
+                                  />
+                                ) : (
+                                  <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-[#FF9933]/20 to-[#138808]/20">
+                                    <div className="text-center p-4">
+                                      <div className="text-4xl mb-2">📷</div>
+                                      <p className="text-xs text-muted-foreground">No cover image</p>
+                                    </div>
+                                  </div>
                                 )}
-                                <p className="mt-2 text-xs text-muted-foreground">{album.imageCount || 0} images</p>
-                              </CardContent> */}
+                                <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-colors" />
+                                <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                                  <Badge className="bg-white/90 text-[#1B2B5E] hover:bg-white">
+                                    View Album
+                                  </Badge>
+                                </div>
+                              </div>
+                              <CardContent className="p-3 sm:p-4">
+                                <h4 className="font-semibold text-sm sm:text-base mb-1 line-clamp-1">{album.title}</h4>
+                                {album.description && (
+                                  <p className="text-xs sm:text-sm text-muted-foreground line-clamp-2 mb-2">{album.description}</p>
+                                )}
+                                <div className="flex items-center justify-between text-xs text-muted-foreground">
+                                  <span>{album.imageCount || 0} {album.imageCount === 1 ? 'image' : 'images'}</span>
+                                  {album.createdAt && !isNaN(new Date(album.createdAt).getTime()) && (
+                                    <span>{new Date(album.createdAt).toLocaleDateString('en-IN', { month: 'short', year: 'numeric' })}</span>
+                                  )}
+                                </div>
+                              </CardContent>
                             </Card>
                           ))}
                         </div>
-                      </>
-                    ) : null}
+                      </div>
+                    )}
+                    
                     {gallery.length > 0 && (
-                      <>
-                        <h3 className="mb-3 sm:mb-4 text-lg sm:text-xl font-semibold">All Images</h3>
-                        <div className="grid gap-4 sm:gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
+                      <div>
+                        <div className="mb-3 sm:mb-4 flex items-center justify-between">
+                          <h3 className="text-lg sm:text-xl font-semibold">All Images</h3>
+                          <Badge variant="secondary" className="text-xs sm:text-sm">
+                            {gallery.length} {gallery.length === 1 ? 'image' : 'images'}
+                          </Badge>
+                        </div>
+                        <div className="grid gap-3 sm:gap-4 md:gap-6 grid-cols-2 sm:grid-cols-3 lg:grid-cols-4">
                           {gallery.map((item, index) => (
                             <Card 
-                            key={item.id} 
-                            className="overflow-hidden transition-transform hover:scale-105 cursor-pointer"
-                            onClick={() => {
-                              setSelectedImageIndex(index);
-                              setIsImageModalOpen(true);
-                            }}
-                          >
-                              <AlbumImageWithRefresh 
-                                src={item.image} 
-                                alt={item.title}
-                                entityType="gallery"
-                                entityId={item.id}
-                              />
-                              {/* <CardContent className="p-3 sm:p-4">
-                                <p className="font-medium text-sm sm:text-base">{item.title}</p>
-                                {item.description && (
-                                  <p className="mt-1 text-xs sm:text-sm text-muted-foreground">{item.description}</p>
+                              key={item.id} 
+                              className="group overflow-hidden transition-all hover:shadow-lg cursor-pointer border-2 hover:border-[#E31E24]/50"
+                              onClick={() => {
+                                const imageUrls = gallery.map(img => img.image || "").filter(Boolean);
+                                const titles = gallery.map(img => img.title || "Image");
+                                setModalImages(imageUrls);
+                                setModalImageTitles(titles);
+                                setSelectedImageIndex(index);
+                                setIsImageModalOpen(true);
+                              }}
+                            >
+                              <div className="relative overflow-hidden bg-muted">
+                                <AlbumImageWithRefresh 
+                                  src={item.image} 
+                                  alt={item.title}
+                                  entityType="gallery"
+                                  entityId={item.id}
+                                />
+                                <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors" />
+                                {item.title && (
+                                  <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/60 to-transparent p-2 sm:p-3 opacity-0 group-hover:opacity-100 transition-opacity">
+                                    <p className="text-white text-xs sm:text-sm font-medium line-clamp-2">{item.title}</p>
+                                    {item.date && (
+                                      <p className="text-white/80 text-xs mt-1">{item.date}</p>
+                                    )}
+                                  </div>
                                 )}
-                                {item.date && (
-                                  <p className="mt-1 text-xs text-muted-foreground">{item.date}</p>
-                                )}
-                              </CardContent> */}
+                              </div>
                             </Card>
                           ))}
                         </div>
-                      </>
+                      </div>
                     )}
-                    {albums.length === 0 && gallery.length === 0 && (
-                      <div className="text-center text-muted-foreground py-8 text-sm sm:text-base">No gallery items available</div>
+                    
+                    {albums.length === 0 && gallery.length === 0 && !loading && (
+                      <Card>
+                        <CardContent className="p-12 text-center">
+                          <div className="text-5xl mb-4">📸</div>
+                          <p className="text-muted-foreground text-sm sm:text-base mb-2">No gallery items available</p>
+                          <p className="text-muted-foreground text-xs">Check back later for updates</p>
+                        </CardContent>
+                      </Card>
                     )}
                   </section>
                 )}
@@ -878,7 +964,14 @@ export function PanchayatWebsite() {
               {/* Newsletter Tab */}
               <TabsContent value="newsletters" className="space-y-6 sm:space-y-8">
                 {selectedNewsletter ? (
-                  <NewsletterDetailView newsletter={selectedNewsletter} onBack={() => setSelectedNewsletter(null)} />
+                  <NewsletterDetailView 
+                    newsletter={selectedNewsletter} 
+                    onBack={() => setSelectedNewsletter(null)}
+                    onImageClick={(imageUrl) => {
+                      setSelectedNewsletterImageUrl(imageUrl);
+                      setIsNewsletterImageModalOpen(true);
+                    }}
+                  />
                 ) : (
                   <section>
                     <h2 className="mb-4 sm:mb-6 text-xl sm:text-2xl font-bold">Newsletters</h2>
@@ -1172,17 +1265,23 @@ export function PanchayatWebsite() {
       </main>
 
       {/* Image Modal for Gallery/Album Images */}
-      {albumImages.length > 0 && (
-        <ImageModal
-          isOpen={isImageModalOpen}
-          onClose={() => setIsImageModalOpen(false)}
-          imageUrl={albumImages[selectedImageIndex]?.image || ""}
-          alt={albumImages[selectedImageIndex]?.title || "Album image"}
-          images={albumImages.map((img) => img.image || "").filter(Boolean)}
-          currentIndex={selectedImageIndex}
-          onIndexChange={setSelectedImageIndex}
-        />
-      )}
+      <ImageModal
+        isOpen={isImageModalOpen}
+        onClose={() => {
+          setIsImageModalOpen(false);
+          setModalImages([]);
+          setModalImageTitles([]);
+        }}
+        imageUrl={modalImages[selectedImageIndex] || ""}
+        alt={modalImageTitles[selectedImageIndex] || "Gallery image"}
+        images={modalImages.length > 0 ? modalImages : undefined}
+        currentIndex={selectedImageIndex}
+        onIndexChange={(newIndex) => {
+          if (newIndex >= 0 && newIndex < modalImages.length) {
+            setSelectedImageIndex(newIndex);
+          }
+        }}
+      />
 
       {/* Image Modal for Newsletter Cover Images */}
       <ImageModal
@@ -1274,7 +1373,15 @@ function AlbumImageWithRefresh({
 }
 
 // Newsletter Detail View Component
-function NewsletterDetailView({ newsletter, onBack }: { newsletter: any; onBack: () => void }) {
+function NewsletterDetailView({ 
+  newsletter, 
+  onBack,
+  onImageClick 
+}: { 
+  newsletter: any; 
+  onBack: () => void;
+  onImageClick: (imageUrl: string) => void;
+}) {
   return (
     <article className="max-w-4xl mx-auto space-y-6 sm:space-y-8">
       <Button variant="ghost" onClick={onBack} className="mb-4">
@@ -1283,11 +1390,8 @@ function NewsletterDetailView({ newsletter, onBack }: { newsletter: any; onBack:
 
       {newsletter.coverImageUrl && (
         <div 
-          className="w-full h-64 sm:h-96 rounded-lg overflow-hidden cursor-pointer"
-          onClick={() => {
-            setSelectedNewsletterImageUrl(newsletter.coverImageUrl || "");
-            setIsNewsletterImageModalOpen(true);
-          }}
+          className="w-full h-64 sm:h-96 rounded-lg overflow-hidden cursor-pointer transition-transform hover:scale-[1.02]"
+          onClick={() => onImageClick(newsletter.coverImageUrl || "")}
         >
           <NewsletterCoverImage fileKey={newsletter.coverImageFileKey} url={newsletter.coverImageUrl} />
         </div>
