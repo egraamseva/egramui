@@ -99,7 +99,7 @@ export function PanchayatWebsite() {
         publicAPI.getPublicMembers(subdomainToUse, { page: 0, size: 50 }),
         publicAPI.getPublicGallery(subdomainToUse, { page: 0, size: 50 }),
         publicNewsletterApi.list(subdomainToUse, { page: 0, size: 50 }).catch(() => ({ items: [], page: 0, size: 0, totalItems: 0, totalPages: 0, isFirst: true, isLast: true })),
-        albumApi.list().catch(() => ({ items: [], page: 0, size: 0, totalItems: 0, totalPages: 0, isFirst: true, isLast: true })),
+        publicAPI.getPublicAlbum(subdomainToUse, { page: 0, size: 50 }).catch(() => ({ items: [], page: 0, size: 0, totalItems: 0, totalPages: 0, isFirst: true, isLast: true })),
       ]);
 
       // Map posts

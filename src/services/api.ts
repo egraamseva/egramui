@@ -233,6 +233,11 @@ export const publicAPI = {
     return response.data;
   },
 
+  getPublicAlbum: async (slug: string, params?: { page?: number; size?: number; albumId?: number }): Promise<PaginatedResponse<Album>> => {
+    const response = await api.get<any, ApiResponse<PaginatedResponse<any>>>(`/public/${slug}/albums`, { params });
+    return response.data;
+  },
+
   getPublicMembers: async (slug: string, params?: { page?: number; size?: number }): Promise<PaginatedResponse<PanchayatMember>> => {
     const response = await api.get<any, ApiResponse<PaginatedResponse<any>>>(`/public/${slug}/members`, { params });
     return response.data;
