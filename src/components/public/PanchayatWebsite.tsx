@@ -11,6 +11,7 @@ import { Input } from "../ui/input";
 import { Textarea } from "../ui/textarea";
 import { Label } from "../ui/label";
 import { ImageWithFallback } from "../figma/ImageWithFallback";
+import { ImageModal } from "../ui/image-modal";
 import { PostCard } from "../sachiv/PostCard";
 import { panchayatAPI, publicAPI } from "../../services/api";
 import { publicNewsletterApi, galleryApi } from "../../routes/api";
@@ -46,6 +47,10 @@ export function PanchayatWebsite() {
   });
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
   const [formSubmitted, setFormSubmitted] = useState(false);
+  const [isImageModalOpen, setIsImageModalOpen] = useState(false);
+  const [selectedImageIndex, setSelectedImageIndex] = useState(0);
+  const [isNewsletterImageModalOpen, setIsNewsletterImageModalOpen] = useState(false);
+  const [selectedNewsletterImageUrl, setSelectedNewsletterImageUrl] = useState<string>("");
 
   // Scroll to top when component mounts or subdomain changes
   useEffect(() => {
@@ -770,20 +775,27 @@ export function PanchayatWebsite() {
                             No images in this album
                           </div>
                         ) : (
-                          albumImages.map((item) => (
-                            <Card key={item.id} className="overflow-hidden transition-transform hover:scale-105">
+                          albumImages.map((item, index) => (
+                            <Card 
+                              key={item.id} 
+                              className="overflow-hidden transition-transform hover:scale-105 cursor-pointer"
+                              onClick={() => {
+                                setSelectedImageIndex(index);
+                                setIsImageModalOpen(true);
+                              }}
+                            >
                               <AlbumImageWithRefresh 
                                 src={item.image} 
                                 alt={item.title}
                                 entityType="gallery"
                                 entityId={item.id}
                               />
-                              <CardContent className="p-3 sm:p-4">
+                              {/* <CardContent className="p-3 sm:p-4">
                                 <p className="font-medium text-sm sm:text-base">{item.title}</p>
                                 {item.description && (
                                   <p className="mt-1 text-xs sm:text-sm text-muted-foreground">{item.description}</p>
                                 )}
-                              </CardContent>
+                              </CardContent> */}
                             </Card>
                           ))
                         )}
@@ -811,13 +823,13 @@ export function PanchayatWebsite() {
                                   entityId={album.id}
                                 />
                               )}
-                              <CardContent className="p-3 sm:p-4">
+                              {/* <CardContent className="p-3 sm:p-4">
                                 <p className="font-medium text-sm sm:text-base">{album.title}</p>
                                 {album.description && (
                                   <p className="mt-1 text-xs sm:text-sm text-muted-foreground line-clamp-2">{album.description}</p>
                                 )}
                                 <p className="mt-2 text-xs text-muted-foreground">{album.imageCount || 0} images</p>
-                              </CardContent>
+                              </CardContent> */}
                             </Card>
                           ))}
                         </div>
@@ -827,15 +839,22 @@ export function PanchayatWebsite() {
                       <>
                         <h3 className="mb-3 sm:mb-4 text-lg sm:text-xl font-semibold">All Images</h3>
                         <div className="grid gap-4 sm:gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
-                          {gallery.map((item) => (
-                            <Card key={item.id} className="overflow-hidden transition-transform hover:scale-105">
+                          {gallery.map((item, index) => (
+                            <Card 
+                            key={item.id} 
+                            className="overflow-hidden transition-transform hover:scale-105 cursor-pointer"
+                            onClick={() => {
+                              setSelectedImageIndex(index);
+                              setIsImageModalOpen(true);
+                            }}
+                          >
                               <AlbumImageWithRefresh 
                                 src={item.image} 
                                 alt={item.title}
                                 entityType="gallery"
                                 entityId={item.id}
                               />
-                              <CardContent className="p-3 sm:p-4">
+                              {/* <CardContent className="p-3 sm:p-4">
                                 <p className="font-medium text-sm sm:text-base">{item.title}</p>
                                 {item.description && (
                                   <p className="mt-1 text-xs sm:text-sm text-muted-foreground">{item.description}</p>
@@ -843,7 +862,7 @@ export function PanchayatWebsite() {
                                 {item.date && (
                                   <p className="mt-1 text-xs text-muted-foreground">{item.date}</p>
                                 )}
-                              </CardContent>
+                              </CardContent> */}
                             </Card>
                           ))}
                         </div>
@@ -876,7 +895,14 @@ export function PanchayatWebsite() {
                             onClick={() => setSelectedNewsletter(newsletter)}
                           >
                             {newsletter.coverImageUrl && (
-                              <div className="h-48 w-full overflow-hidden">
+                              <div 
+                                className="h-48 w-full overflow-hidden cursor-pointer"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setSelectedNewsletterImageUrl(newsletter.coverImageUrl || "");
+                                  setIsNewsletterImageModalOpen(true);
+                                }}
+                              >
                                 <NewsletterCoverImage fileKey={newsletter.coverImageFileKey} url={newsletter.coverImageUrl} />
                               </div>
                             )}
@@ -1144,6 +1170,27 @@ export function PanchayatWebsite() {
           </div>
         </Tabs>
       </main>
+
+      {/* Image Modal for Gallery/Album Images */}
+      {albumImages.length > 0 && (
+        <ImageModal
+          isOpen={isImageModalOpen}
+          onClose={() => setIsImageModalOpen(false)}
+          imageUrl={albumImages[selectedImageIndex]?.image || ""}
+          alt={albumImages[selectedImageIndex]?.title || "Album image"}
+          images={albumImages.map((img) => img.image || "").filter(Boolean)}
+          currentIndex={selectedImageIndex}
+          onIndexChange={setSelectedImageIndex}
+        />
+      )}
+
+      {/* Image Modal for Newsletter Cover Images */}
+      <ImageModal
+        isOpen={isNewsletterImageModalOpen}
+        onClose={() => setIsNewsletterImageModalOpen(false)}
+        imageUrl={selectedNewsletterImageUrl}
+        alt="Newsletter cover"
+      />
     </div>
   );
 }
@@ -1235,7 +1282,13 @@ function NewsletterDetailView({ newsletter, onBack }: { newsletter: any; onBack:
       </Button>
 
       {newsletter.coverImageUrl && (
-        <div className="w-full h-64 sm:h-96 rounded-lg overflow-hidden">
+        <div 
+          className="w-full h-64 sm:h-96 rounded-lg overflow-hidden cursor-pointer"
+          onClick={() => {
+            setSelectedNewsletterImageUrl(newsletter.coverImageUrl || "");
+            setIsNewsletterImageModalOpen(true);
+          }}
+        >
           <NewsletterCoverImage fileKey={newsletter.coverImageFileKey} url={newsletter.coverImageUrl} />
         </div>
       )}

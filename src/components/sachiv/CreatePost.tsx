@@ -6,6 +6,7 @@ import { Button } from "../ui/button";
 import { Textarea } from "../ui/textarea";
 import { Label } from "../ui/label";
 import { ImageWithFallback } from "../figma/ImageWithFallback";
+import { ImageModal } from "../ui/image-modal";
 import type { PostMedia } from "../../types";
 import { FILE_UPLOAD_LIMITS } from "../../constants";
 import { validateFileSize, validateFileType } from "../../utils/validation";
@@ -23,6 +24,8 @@ interface CreatePostProps {
 export function CreatePost({ authorName, authorRole, onSubmit }: CreatePostProps) {
   const [content, setContent] = useState("");
   const [mediaFiles, setMediaFiles] = useState<PostMedia[]>([]);
+  const [isImageModalOpen, setIsImageModalOpen] = useState(false);
+  const [selectedImageIndex, setSelectedImageIndex] = useState(0);
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
@@ -120,35 +123,46 @@ export function CreatePost({ authorName, authorRole, onSubmit }: CreatePostProps
                   : "grid-cols-3"
               }`}
             >
-              {mediaFiles.map((media, index) => (
-                <div
-                  key={index}
-                  className="group relative aspect-square overflow-hidden rounded-lg bg-muted"
-                >
-                  {media.type === "image" ? (
-                    <ImageWithFallback
-                      src={media.url}
-                      alt={`Upload ${index + 1}`}
-                      className="h-full w-full object-cover"
-                    />
-                  ) : (
+              {mediaFiles.map((media, index) => {
+                const imageIndex = mediaFiles.slice(0, index).filter((m) => m.type === "image").length;
+                return (
+                  <div
+                    key={index}
+                    className="group relative aspect-square overflow-hidden rounded-lg bg-muted"
+                  >
+                    {media.type === "image" ? (
+                      <div
+                        className="h-full w-full cursor-pointer"
+                        onClick={() => {
+                          setSelectedImageIndex(imageIndex);
+                          setIsImageModalOpen(true);
+                        }}
+                      >
+                        <ImageWithFallback
+                          src={media.url}
+                          alt={`Upload ${index + 1}`}
+                          className="h-full w-full object-cover"
+                        />
+                      </div>
+                    ) : (
                     <div className="relative h-full w-full">
                       <video src={media.url} className="h-full w-full object-cover" />
                       <div className="absolute inset-0 flex items-center justify-center bg-black/30">
                         <Video className="h-8 w-8 text-white" />
                       </div>
                     </div>
-                  )}
-                  <Button
-                    variant="destructive"
-                    size="icon"
-                    className="absolute right-2 top-2 h-8 w-8 opacity-0 transition-opacity group-hover:opacity-100"
-                    onClick={() => handleRemoveMedia(index)}
-                  >
-                    <X className="h-4 w-4" />
-                  </Button>
-                </div>
-              ))}
+                    )}
+                    <Button
+                      variant="destructive"
+                      size="icon"
+                      className="absolute right-2 top-2 h-8 w-8 opacity-0 transition-opacity group-hover:opacity-100"
+                      onClick={() => handleRemoveMedia(index)}
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
+                  </div>
+                );
+              })}
             </div>
           </div>
         )}
@@ -200,6 +214,19 @@ export function CreatePost({ authorName, authorRole, onSubmit }: CreatePostProps
           </Button>
         </div>
       </CardContent>
+
+      {/* Image Modal */}
+      {mediaFiles.filter(m => m.type === "image").length > 0 && (
+        <ImageModal
+          isOpen={isImageModalOpen}
+          onClose={() => setIsImageModalOpen(false)}
+          imageUrl={mediaFiles.filter(m => m.type === "image")[selectedImageIndex]?.url || ""}
+          alt={`Upload ${selectedImageIndex + 1}`}
+          images={mediaFiles.filter(m => m.type === "image").map(m => m.url)}
+          currentIndex={selectedImageIndex}
+          onIndexChange={setSelectedImageIndex}
+        />
+      )}
     </Card>
   );
 }

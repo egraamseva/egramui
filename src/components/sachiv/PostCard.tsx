@@ -5,6 +5,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";
 import { Button } from "../ui/button";
 import { Separator } from "../ui/separator";
 import { ImageWithFallback } from "../figma/ImageWithFallback";
+import { ImageModal } from "../ui/image-modal";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -23,11 +24,24 @@ interface PostCardProps {
 export function PostCard({ post, showActions = false, onEdit, onDelete }: PostCardProps) {
   const [isLiked, setIsLiked] = useState(false);
   const [likesCount, setLikesCount] = useState(post.likes);
+  const [isImageModalOpen, setIsImageModalOpen] = useState(false);
+  const [selectedImageIndex, setSelectedImageIndex] = useState(0);
 
   const handleLike = () => {
     setIsLiked(!isLiked);
     setLikesCount(isLiked ? likesCount - 1 : likesCount + 1);
   };
+
+  const handleImageClick = (index: number) => {
+    // Only open modal for images, not videos
+    const imageItems = post.media?.filter((item) => item.type === "image") || [];
+    if (imageItems.length > 0) {
+      setSelectedImageIndex(index);
+      setIsImageModalOpen(true);
+    }
+  };
+
+  const imageUrls = post.media?.filter((item) => item.type === "image").map((item) => item.url) || [];
 
   return (
     <Card className="overflow-hidden">
@@ -91,46 +105,52 @@ export function PostCard({ post, showActions = false, onEdit, onDelete }: PostCa
                 : "grid-cols-2"
             }`}
           >
-            {post.media.slice(0, 4).map((item, index) => (
-              <div
-                key={index}
-                className={`relative aspect-square overflow-hidden bg-muted ${
-                  post.media!.length === 1 ? "aspect-video" : ""
-                } ${post.media!.length > 4 && index === 3 ? "relative" : ""}`}
-              >
-                {item.type === "image" ? (
-                  <>
-                    <ImageWithFallback
-                      src={item.url}
-                      alt={`Post media ${index + 1}`}
-                      className="h-full w-full object-cover"
-                      data-post-id={post.id}
-                      entityType="post"
-                      entityId={post.id}
-                    />
-                    {post.media!.length > 4 && index === 3 && (
-                      <div className="absolute inset-0 flex items-center justify-center bg-black/60 text-white">
-                        <span style={{ fontSize: "1.5rem" }}>+{post.media!.length - 4}</span>
-                      </div>
-                    )}
-                  </>
-                ) : (
-                  <div className="relative h-full w-full">
-                    <ImageWithFallback
-                      src={item.thumbnail || item.url}
-                      alt={`Video thumbnail ${index + 1}`}
-                      className="h-full w-full object-cover"
-                      data-post-id={post.id}
-                    />
-                    <div className="absolute inset-0 flex items-center justify-center bg-black/30">
-                      <div className="flex h-16 w-16 items-center justify-center rounded-full bg-white/90">
-                        <Play className="h-8 w-8 text-[#FF9933]" />
+            {post.media.slice(0, 4).map((item, index) => {
+              const imageIndex = post.media!.slice(0, index).filter((i) => i.type === "image").length;
+              return (
+                <div
+                  key={index}
+                  className={`relative aspect-square overflow-hidden bg-muted ${
+                    post.media!.length === 1 ? "aspect-video" : ""
+                  } ${post.media!.length > 4 && index === 3 ? "relative" : ""} ${
+                    item.type === "image" ? "cursor-pointer" : ""
+                  }`}
+                  onClick={() => item.type === "image" && handleImageClick(imageIndex)}
+                >
+                  {item.type === "image" ? (
+                    <>
+                      <ImageWithFallback
+                        src={item.url}
+                        alt={`Post media ${index + 1}`}
+                        className="h-full w-full object-cover"
+                        data-post-id={post.id}
+                        entityType="post"
+                        entityId={post.id}
+                      />
+                      {post.media!.length > 4 && index === 3 && (
+                        <div className="absolute inset-0 flex items-center justify-center bg-black/60 text-white">
+                          <span style={{ fontSize: "1.5rem" }}>+{post.media!.length - 4}</span>
+                        </div>
+                      )}
+                    </>
+                  ) : (
+                    <div className="relative h-full w-full">
+                      <ImageWithFallback
+                        src={item.thumbnail || item.url}
+                        alt={`Video thumbnail ${index + 1}`}
+                        className="h-full w-full object-cover"
+                        data-post-id={post.id}
+                      />
+                      <div className="absolute inset-0 flex items-center justify-center bg-black/30">
+                        <div className="flex h-16 w-16 items-center justify-center rounded-full bg-white/90">
+                          <Play className="h-8 w-8 text-[#FF9933]" />
+                        </div>
                       </div>
                     </div>
-                  </div>
-                )}
-              </div>
-            ))}
+                  )}
+                </div>
+              );
+            })}
           </div>
         )}
 
@@ -170,6 +190,19 @@ export function PostCard({ post, showActions = false, onEdit, onDelete }: PostCa
           </Button>
         </div>
       </CardContent>
+
+      {/* Image Modal */}
+      {imageUrls.length > 0 && (
+        <ImageModal
+          isOpen={isImageModalOpen}
+          onClose={() => setIsImageModalOpen(false)}
+          imageUrl={imageUrls[selectedImageIndex] || imageUrls[0]}
+          alt={`Post image ${selectedImageIndex + 1}`}
+          images={imageUrls.length > 1 ? imageUrls : undefined}
+          currentIndex={selectedImageIndex}
+          onIndexChange={setSelectedImageIndex}
+        />
+      )}
     </Card>
   );
 }

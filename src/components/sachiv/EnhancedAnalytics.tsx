@@ -70,21 +70,21 @@ export function EnhancedAnalytics({ panchayatId, refreshKey = 0 }: EnhancedAnaly
   }));
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       <div>
-        <h2 className="text-2xl font-bold text-[#1B2B5E]">Analytics Dashboard</h2>
-        <p className="text-[#666] mt-1">Detailed insights into your panchayat website performance</p>
+        <h2 className="text-xl sm:text-2xl font-bold text-[#1B2B5E]">Analytics Dashboard</h2>
+        <p className="text-sm sm:text-base text-[#666] mt-1">Detailed insights into your panchayat website performance</p>
       </div>
 
       {/* Overview Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-sm font-medium text-[#666]">Total Visitors</CardTitle>
             <Eye className="h-5 w-5 text-[#FF9933]" />
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold text-primary">{overview.totalVisitors.toLocaleString()}</div>
+            <div className="text-2xl sm:text-3xl font-bold text-primary">{overview.totalVisitors.toLocaleString()}</div>
           </CardContent>
         </Card>
         <Card>
@@ -93,7 +93,7 @@ export function EnhancedAnalytics({ panchayatId, refreshKey = 0 }: EnhancedAnaly
             <BarChart3 className="h-5 w-5 text-[#138808]" />
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold text-[#138808]">{overview.totalPosts}</div>
+            <div className="text-2xl sm:text-3xl font-bold text-[#138808]">{overview.totalPosts}</div>
           </CardContent>
         </Card>
         <Card>
@@ -102,7 +102,7 @@ export function EnhancedAnalytics({ panchayatId, refreshKey = 0 }: EnhancedAnaly
             <MessageSquare className="h-5 w-5 text-[#FF9933]" />
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold text-[#FF9933]">{overview.totalComments}</div>
+            <div className="text-2xl sm:text-3xl font-bold text-[#FF9933]">{overview.totalComments}</div>
           </CardContent>
         </Card>
         <Card>
@@ -111,7 +111,7 @@ export function EnhancedAnalytics({ panchayatId, refreshKey = 0 }: EnhancedAnaly
             <Heart className="h-5 w-5 text-[#138808]" />
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold text-[#138808]">{overview.totalLikes}</div>
+            <div className="text-2xl sm:text-3xl font-bold text-[#138808]">{overview.totalLikes}</div>
           </CardContent>
         </Card>
       </div>

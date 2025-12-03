@@ -224,8 +224,8 @@ export function RegistrationFlow() {
           <CardContent>
             {/* Step 1: Personal Details */}
             {step === 1 && (
-              <div className="space-y-6">
-                <div className="grid gap-6 md:grid-cols-2">
+              <div className="space-y-4 sm:space-y-6">
+                <div className="grid gap-4 sm:gap-6 md:grid-cols-2">
                   <div className="space-y-2">
                     <Label htmlFor="sachivName">{t('registration.fullName')} *</Label>
                     <Input
@@ -257,7 +257,7 @@ export function RegistrationFlow() {
                     </Select>
                   </div>
                 </div>
-                <div className="grid gap-6 md:grid-cols-2">
+                <div className="grid gap-4 sm:gap-6 md:grid-cols-2">
                   <div className="space-y-2">
                     <Label htmlFor="email">{t('registration.email')} *</Label>
                     <Input
@@ -279,7 +279,7 @@ export function RegistrationFlow() {
                     />
                   </div>
                 </div>
-                <div className="grid gap-6 md:grid-cols-2">
+                <div className="grid gap-4 sm:gap-6 md:grid-cols-2">
                   <div className="space-y-2">
                     <Label htmlFor="password">{t('registration.password')} *</Label>
                     <Input
@@ -309,8 +309,8 @@ export function RegistrationFlow() {
 
             {/* Step 2: Panchayat Details */}
             {step === 2 && (
-              <div className="space-y-6">
-                <div className="grid gap-6 md:grid-cols-2">
+              <div className="space-y-4 sm:space-y-6">
+                <div className="grid gap-4 sm:gap-6 md:grid-cols-2">
                   <div className="space-y-2">
                     <Label htmlFor="panchayatName">{t('registration.panchayatName')} *</Label>
                     <Input
@@ -341,7 +341,7 @@ export function RegistrationFlow() {
                     </Select>
                   </div>
                 </div>
-                <div className="grid gap-6 md:grid-cols-2">
+                <div className="grid gap-4 sm:gap-6 md:grid-cols-2">
                   <div className="space-y-2">
                     <Label htmlFor="district">{t('registration.district')} *</Label>
                     <Input
@@ -388,8 +388,8 @@ export function RegistrationFlow() {
 
             {/* Step 3: Review */}
             {step === 3 && (
-              <div className="space-y-6">
-                <div className="rounded-lg border bg-muted/50 p-6">
+              <div className="space-y-4 sm:space-y-6">
+                <div className="rounded-lg border bg-muted/50 p-4 sm:p-6">
                   <h4 className="mb-4">{t('registration.personalInfo')}</h4>
                   <div className="grid gap-4 md:grid-cols-2">
                     <div>
@@ -411,7 +411,7 @@ export function RegistrationFlow() {
                   </div>
                 </div>
 
-                <div className="rounded-lg border bg-muted/50 p-6">
+                <div className="rounded-lg border bg-muted/50 p-4 sm:p-6">
                   <h4 className="mb-4">{t('registration.panchayatInfo')}</h4>
                   <div className="grid gap-4 md:grid-cols-2">
                     <div>
@@ -463,11 +463,12 @@ export function RegistrationFlow() {
             )}
 
             {/* Navigation Buttons */}
-            <div className="mt-8 flex justify-between">
+            <div className="mt-6 sm:mt-8 flex flex-col sm:flex-row justify-between gap-3 sm:gap-0">
               <Button
                 variant="outline"
                 onClick={handlePrevious}
                 disabled={step === 1}
+                className="w-full sm:w-auto order-2 sm:order-1"
               >
                 <ArrowLeft className="mr-2 h-4 w-4" />
                 {t('common.previous')}
@@ -476,7 +477,7 @@ export function RegistrationFlow() {
                 <Button
                   onClick={handleNext}
                   disabled={!isCurrentStepValid()}
-                  className="bg-[#FF9933] hover:bg-[#FF9933]/90"
+                  className="bg-[#FF9933] hover:bg-[#FF9933]/90 w-full sm:w-auto order-1 sm:order-2"
                 >
                   {t('common.next')}
                   <ArrowRight className="ml-2 h-4 w-4" />
@@ -485,7 +486,7 @@ export function RegistrationFlow() {
                 <Button
                   onClick={handleSubmit}
                   disabled={!formData.acceptTerms || isSubmitting}
-                  className="bg-[#138808] hover:bg-[#138808]/90"
+                  className="bg-[#138808] hover:bg-[#138808]/90 w-full sm:w-auto order-1 sm:order-2"
                 >
                   {isSubmitting ? t('registration.submitting') : t('registration.submitButton')}
                   <Check className="ml-2 h-4 w-4" />

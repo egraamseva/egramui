@@ -479,11 +479,11 @@ export function SuperAdminDashboard() {
               {activeSection === "dashboard" && (
                 <div className="space-y-6">
                   <div>
-                    <h2 className="text-3xl font-bold text-[#1B2B5E]">Platform Overview</h2>
-                    <p className="text-[#666] mt-1">Monitor and manage the entire platform</p>
+                    <h2 className="text-xl sm:text-2xl lg:text-3xl font-bold text-[#1B2B5E]">Platform Overview</h2>
+                    <p className="text-sm sm:text-base text-[#666] mt-1">Monitor and manage the entire platform</p>
                   </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
                   {dashboardStats.map((stat) => {
                     const Icon = stat.icon;
                     return (
@@ -493,7 +493,7 @@ export function SuperAdminDashboard() {
                           <Icon className="h-5 w-5" style={{ color: stat.color }} />
                         </CardHeader>
                         <CardContent>
-                          <div className="text-3xl font-bold" style={{ color: stat.color }}>
+                          <div className="text-2xl sm:text-3xl font-bold" style={{ color: stat.color }}>
                             {stat.value}
                           </div>
                         </CardContent>
@@ -526,12 +526,12 @@ export function SuperAdminDashboard() {
 
             {activeSection === "panchayats" && (
               <div className="space-y-6">
-                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 sm:gap-4">
                   <div>
-                    <h2 className="text-3xl font-bold text-[#1B2B5E]">Panchayat Management</h2>
-                    <p className="text-[#666] mt-1">Manage all registered panchayats</p>
+                    <h2 className="text-xl sm:text-2xl lg:text-3xl font-bold text-[#1B2B5E]">Panchayat Management</h2>
+                    <p className="text-sm sm:text-base text-[#666] mt-1">Manage all registered panchayats</p>
                   </div>
-                  <Button onClick={openCreatePanchayatDialog}>
+                  <Button onClick={openCreatePanchayatDialog} className="w-full sm:w-auto">
                     <Plus className="h-4 w-4 mr-2" />
                     Add Panchayat
                   </Button>
@@ -564,78 +564,133 @@ export function SuperAdminDashboard() {
                     </div>
                   </CardHeader>
                   <CardContent>
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead>Name</TableHead>
-                          <TableHead>Subdomain</TableHead>
-                          <TableHead>Location</TableHead>
-                          <TableHead>Admins</TableHead>
-                          <TableHead>Status</TableHead>
-                          <TableHead className="text-right">Actions</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {panchayats.map((panchayat) => (
-                          <TableRow key={panchayat.id}>
-                            <TableCell className="font-medium">{panchayat.panchayatName}</TableCell>
-                            <TableCell>{panchayat.slug}</TableCell>
-                            <TableCell>{panchayat.district}, {panchayat.state}</TableCell>
-                            <TableCell>{panchayat.adminCount}</TableCell>
-                            <TableCell>
-                              <Badge variant={panchayat.status === "active" ? "default" : "secondary"}>
-                                {panchayat.status}
-                              </Badge>
-                            </TableCell>
-                            <TableCell className="text-right">
-                              <DropdownMenu>
-                                <DropdownMenuTrigger asChild>
-                                  <Button variant="ghost" size="icon">
-                                    <MoreVertical className="h-4 w-4" />
-                                  </Button>
-                                </DropdownMenuTrigger>
-                                <DropdownMenuContent align="end">
-                                  <DropdownMenuItem onClick={() => openEditPanchayatDialog(panchayat)}>
-                                    <Edit className="h-4 w-4 mr-2" />
-                                    Edit
-                                  </DropdownMenuItem>
-                                  <DropdownMenuItem onClick={() => handlePanchayatStatusChange(panchayat.id, panchayat.status === "active" ? "inactive" : "active")}>
-                                    {panchayat.status === "active" ? (
-                                      <>
-                                        <X className="h-4 w-4 mr-2" />
-                                        Mark Inactive
-                                      </>
-                                    ) : (
-                                      <>
+                    {/* Mobile: Card View */}
+                    <div className="block sm:hidden space-y-3">
+                      {panchayats.length === 0 ? (
+                        <div className="text-center py-8 text-[#666] text-sm">No panchayats found</div>
+                      ) : (
+                        panchayats.map((panchayat) => (
+                          <Card key={panchayat.id}>
+                            <CardContent className="p-4">
+                              <div className="space-y-3">
+                                <div>
+                                  <h3 className="font-semibold text-sm mb-1">{panchayat.panchayatName}</h3>
+                                  <p className="text-xs text-muted-foreground">{panchayat.slug}</p>
+                                </div>
+                                <div className="space-y-1 text-xs text-muted-foreground">
+                                  <div>Location: {panchayat.district}, {panchayat.state}</div>
+                                  <div>Admins: {panchayat.adminCount}</div>
+                                </div>
+                                <div className="flex items-center justify-between pt-2 border-t">
+                                  <Badge variant={panchayat.status === "active" ? "default" : "secondary"} className="text-xs">
+                                    {panchayat.status}
+                                  </Badge>
+                                  <DropdownMenu>
+                                    <DropdownMenuTrigger asChild>
+                                      <Button variant="outline" size="sm">
+                                        <MoreVertical className="h-4 w-4" />
+                                      </Button>
+                                    </DropdownMenuTrigger>
+                                    <DropdownMenuContent align="end">
+                                      <DropdownMenuItem onClick={() => openEditPanchayatDialog(panchayat)}>
                                         <Edit className="h-4 w-4 mr-2" />
-                                        Activate
-                                      </>
-                                    )}
-                                  </DropdownMenuItem>
-                                  <DropdownMenuItem
-                                    className="text-red-600"
-                                    onClick={() => handleDeletePanchayat(panchayat.id)}
-                                  >
-                                    <Trash2 className="h-4 w-4 mr-2" />
-                                    Delete
-                                  </DropdownMenuItem>
-                                </DropdownMenuContent>
-                              </DropdownMenu>
-                            </TableCell>
+                                        Edit
+                                      </DropdownMenuItem>
+                                      <DropdownMenuItem onClick={() => handlePanchayatStatusChange(panchayat.id, panchayat.status === "active" ? "inactive" : "active")}>
+                                        {panchayat.status === "active" ? "Mark Inactive" : "Activate"}
+                                      </DropdownMenuItem>
+                                      <DropdownMenuItem
+                                        className="text-red-600"
+                                        onClick={() => handleDeletePanchayat(panchayat.id)}
+                                      >
+                                        <Trash2 className="h-4 w-4 mr-2" />
+                                        Delete
+                                      </DropdownMenuItem>
+                                    </DropdownMenuContent>
+                                  </DropdownMenu>
+                                </div>
+                              </div>
+                            </CardContent>
+                          </Card>
+                        ))
+                      )}
+                    </div>
+
+                    {/* Desktop: Table View */}
+                    <div className="hidden sm:block overflow-x-auto">
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>Name</TableHead>
+                            <TableHead>Subdomain</TableHead>
+                            <TableHead>Location</TableHead>
+                            <TableHead>Admins</TableHead>
+                            <TableHead>Status</TableHead>
+                            <TableHead className="text-right">Actions</TableHead>
                           </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
+                        </TableHeader>
+                        <TableBody>
+                          {panchayats.map((panchayat) => (
+                            <TableRow key={panchayat.id}>
+                              <TableCell className="font-medium">{panchayat.panchayatName}</TableCell>
+                              <TableCell>{panchayat.slug}</TableCell>
+                              <TableCell>{panchayat.district}, {panchayat.state}</TableCell>
+                              <TableCell>{panchayat.adminCount}</TableCell>
+                              <TableCell>
+                                <Badge variant={panchayat.status === "active" ? "default" : "secondary"}>
+                                  {panchayat.status}
+                                </Badge>
+                              </TableCell>
+                              <TableCell className="text-right">
+                                <DropdownMenu>
+                                  <DropdownMenuTrigger asChild>
+                                    <Button variant="ghost" size="icon">
+                                      <MoreVertical className="h-4 w-4" />
+                                    </Button>
+                                  </DropdownMenuTrigger>
+                                  <DropdownMenuContent align="end">
+                                    <DropdownMenuItem onClick={() => openEditPanchayatDialog(panchayat)}>
+                                      <Edit className="h-4 w-4 mr-2" />
+                                      Edit
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem onClick={() => handlePanchayatStatusChange(panchayat.id, panchayat.status === "active" ? "inactive" : "active")}>
+                                      {panchayat.status === "active" ? (
+                                        <>
+                                          <X className="h-4 w-4 mr-2" />
+                                          Mark Inactive
+                                        </>
+                                      ) : (
+                                        <>
+                                          <Edit className="h-4 w-4 mr-2" />
+                                          Activate
+                                        </>
+                                      )}
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem
+                                      className="text-red-600"
+                                      onClick={() => handleDeletePanchayat(panchayat.id)}
+                                    >
+                                      <Trash2 className="h-4 w-4 mr-2" />
+                                      Delete
+                                    </DropdownMenuItem>
+                                  </DropdownMenuContent>
+                                </DropdownMenu>
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </div>
                   </CardContent>
                 </Card>
               </div>
             )}
 
             {activeSection === "users" && (
-              <div className="space-y-6">
+              <div className="space-y-4 sm:space-y-6">
                 <div>
-                  <h2 className="text-3xl font-bold text-[#1B2B5E]">User Management</h2>
-                  <p className="text-[#666] mt-1">Manage all platform users</p>
+                  <h2 className="text-xl sm:text-2xl lg:text-3xl font-bold text-[#1B2B5E]">User Management</h2>
+                  <p className="text-sm sm:text-base text-[#666] mt-1">Manage all platform users</p>
                 </div>
 
                 <Card>
@@ -653,35 +708,76 @@ export function SuperAdminDashboard() {
                     </div>
                   </CardHeader>
                   <CardContent>
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead>Name</TableHead>
-                          <TableHead>Email</TableHead>
-                          <TableHead>Role</TableHead>
-                          <TableHead>Panchayat</TableHead>
-                          <TableHead>Status</TableHead>
-                          <TableHead className="text-right">Actions</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {users.map((userItem) => (
-                          <TableRow key={userItem.id}>
-                            <TableCell className="font-medium">{userItem.name}</TableCell>
-                            <TableCell>{userItem.email}</TableCell>
-                            <TableCell>
-                              <Badge variant="outline">{userItem.role}</Badge>
-                            </TableCell>
-                            <TableCell>{userItem.panchayatName || "N/A"}</TableCell>
-                            <TableCell>
-                              <Badge variant={userItem.status === "active" ? "default" : "secondary"}>
-                                {userItem.status}
-                              </Badge>
-                            </TableCell>
-                            <TableCell className="text-right">
-                              <DropdownMenu>
-                                <DropdownMenuTrigger asChild>
-                                  <Button variant="ghost" size="icon">
+                    {/* Mobile: Card View */}
+                    <div className="block sm:hidden space-y-3">
+                      {users.length === 0 ? (
+                        <div className="text-center py-8 text-[#666] text-sm">No users found</div>
+                      ) : (
+                        users.map((userItem) => (
+                          <Card key={userItem.id}>
+                            <CardContent className="p-4">
+                              <div className="space-y-3">
+                                <div>
+                                  <h3 className="font-semibold text-sm mb-1">{userItem.name}</h3>
+                                  <p className="text-xs text-muted-foreground truncate">{userItem.email}</p>
+                                </div>
+                                <div className="flex flex-wrap items-center gap-2 text-xs">
+                                  <Badge variant="outline" className="text-xs">{userItem.role}</Badge>
+                                  <Badge variant={userItem.status === "active" ? "default" : "secondary"} className="text-xs">
+                                    {userItem.status}
+                                  </Badge>
+                                  {userItem.panchayatName && (
+                                    <span className="text-muted-foreground">Panchayat: {userItem.panchayatName}</span>
+                                  )}
+                                </div>
+                                <div className="flex gap-2 pt-2 border-t">
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    className="flex-1"
+                                    onClick={() => handleUserStatusChange(userItem.id, userItem.status === "active" ? "inactive" : "active")}
+                                  >
+                                    {userItem.status === "active" ? "Deactivate" : "Activate"}
+                                  </Button>
+                                </div>
+                              </div>
+                            </CardContent>
+                          </Card>
+                        ))
+                      )}
+                    </div>
+
+                    {/* Desktop: Table View */}
+                    <div className="hidden sm:block overflow-x-auto">
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>Name</TableHead>
+                            <TableHead>Email</TableHead>
+                            <TableHead>Role</TableHead>
+                            <TableHead>Panchayat</TableHead>
+                            <TableHead>Status</TableHead>
+                            <TableHead className="text-right">Actions</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {users.map((userItem) => (
+                            <TableRow key={userItem.id}>
+                              <TableCell className="font-medium">{userItem.name}</TableCell>
+                              <TableCell>{userItem.email}</TableCell>
+                              <TableCell>
+                                <Badge variant="outline">{userItem.role}</Badge>
+                              </TableCell>
+                              <TableCell>{userItem.panchayatName || "N/A"}</TableCell>
+                              <TableCell>
+                                <Badge variant={userItem.status === "active" ? "default" : "secondary"}>
+                                  {userItem.status}
+                                </Badge>
+                              </TableCell>
+                              <TableCell className="text-right">
+                                <DropdownMenu>
+                                  <DropdownMenuTrigger asChild>
+                                    <Button variant="ghost" size="icon">
                                     <MoreVertical className="h-4 w-4" />
                                   </Button>
                                 </DropdownMenuTrigger>
@@ -703,10 +799,10 @@ export function SuperAdminDashboard() {
             )}
 
             {activeSection === "analytics" && (
-              <div className="space-y-6">
+              <div className="space-y-4 sm:space-y-6">
                 <div>
-                  <h2 className="text-3xl font-bold text-[#1B2B5E]">System Analytics</h2>
-                  <p className="text-[#666] mt-1">Platform-wide analytics and insights</p>
+                  <h2 className="text-xl sm:text-2xl lg:text-3xl font-bold text-[#1B2B5E]">System Analytics</h2>
+                  <p className="text-sm sm:text-base text-[#666] mt-1">Platform-wide analytics and insights</p>
                 </div>
                 <Card>
                   <CardHeader>
@@ -737,40 +833,68 @@ export function SuperAdminDashboard() {
             )}
 
             {activeSection === "audit-logs" && (
-              <div className="space-y-6">
+              <div className="space-y-4 sm:space-y-6">
                 <div>
-                  <h2 className="text-3xl font-bold text-[#1B2B5E]">Audit Logs</h2>
-                  <p className="text-[#666] mt-1">System-wide activity logs</p>
+                  <h2 className="text-xl sm:text-2xl lg:text-3xl font-bold text-[#1B2B5E]">Audit Logs</h2>
+                  <p className="text-sm sm:text-base text-[#666] mt-1">System-wide activity logs</p>
                 </div>
                 <Card>
                   <CardHeader>
                     <CardTitle>Recent Activities</CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead>User</TableHead>
-                          <TableHead>Action</TableHead>
-                          <TableHead>Resource</TableHead>
-                          <TableHead>IP Address</TableHead>
-                          <TableHead>Time</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {auditLogs.map((log) => (
-                          <TableRow key={log.id}>
-                            <TableCell className="font-medium">{log.userName}</TableCell>
-                            <TableCell>
-                              <Badge variant="outline">{log.action}</Badge>
-                            </TableCell>
-                            <TableCell>{log.resource}</TableCell>
-                            <TableCell>{log.ipAddress || "N/A"}</TableCell>
-                            <TableCell>{formatTimeAgo(log.createdAt)}</TableCell>
+                    {/* Mobile: Card View */}
+                    <div className="block sm:hidden space-y-3">
+                      {auditLogs.length === 0 ? (
+                        <div className="text-center py-8 text-[#666] text-sm">No audit logs found</div>
+                      ) : (
+                        auditLogs.map((log) => (
+                          <Card key={log.id}>
+                            <CardContent className="p-4">
+                              <div className="space-y-2">
+                                <div className="flex items-center justify-between">
+                                  <h3 className="font-semibold text-sm">{log.userName}</h3>
+                                  <Badge variant="outline" className="text-xs">{log.action}</Badge>
+                                </div>
+                                <div className="space-y-1 text-xs text-muted-foreground">
+                                  <div>Resource: {log.resource}</div>
+                                  {log.ipAddress && <div>IP: {log.ipAddress}</div>}
+                                  <div>Time: {formatTimeAgo(log.createdAt)}</div>
+                                </div>
+                              </div>
+                            </CardContent>
+                          </Card>
+                        ))
+                      )}
+                    </div>
+
+                    {/* Desktop: Table View */}
+                    <div className="hidden sm:block overflow-x-auto">
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>User</TableHead>
+                            <TableHead>Action</TableHead>
+                            <TableHead>Resource</TableHead>
+                            <TableHead>IP Address</TableHead>
+                            <TableHead>Time</TableHead>
                           </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
+                        </TableHeader>
+                        <TableBody>
+                          {auditLogs.map((log) => (
+                            <TableRow key={log.id}>
+                              <TableCell className="font-medium">{log.userName}</TableCell>
+                              <TableCell>
+                                <Badge variant="outline">{log.action}</Badge>
+                              </TableCell>
+                              <TableCell>{log.resource}</TableCell>
+                              <TableCell>{log.ipAddress || "N/A"}</TableCell>
+                              <TableCell>{formatTimeAgo(log.createdAt)}</TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </div>
                   </CardContent>
                 </Card>
               </div>
@@ -782,7 +906,7 @@ export function SuperAdminDashboard() {
 
       {/* Panchayat Create/Edit Dialog */}
       <Dialog open={isPanchayatDialogOpen} onOpenChange={setIsPanchayatDialogOpen}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto p-4 sm:p-6">
           <DialogHeader>
             <DialogTitle>
               {editingPanchayat ? "Edit Panchayat" : "Create New Panchayat"}

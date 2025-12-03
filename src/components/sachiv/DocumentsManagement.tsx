@@ -130,13 +130,13 @@ export function DocumentsManagement({ panchayatId }: DocumentsManagementProps) {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+    <div className="space-y-4 sm:space-y-6">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 sm:gap-4">
         <div>
-          <h2 className="text-2xl font-bold text-[#1B2B5E]">Documents Management</h2>
-          <p className="text-[#666] mt-1">Upload and manage panchayat documents</p>
+          <h2 className="text-xl sm:text-2xl font-bold text-[#1B2B5E]">Documents Management</h2>
+          <p className="text-sm sm:text-base text-[#666] mt-1">Upload and manage panchayat documents</p>
         </div>
-        <Button onClick={() => setIsDialogOpen(true)}>
+        <Button onClick={() => setIsDialogOpen(true)} className="w-full sm:w-auto">
           <Upload className="h-4 w-4 mr-2" />
           Upload Document
         </Button>
@@ -171,78 +171,135 @@ export function DocumentsManagement({ panchayatId }: DocumentsManagementProps) {
           </div>
         </CardHeader>
         <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Title</TableHead>
-                <TableHead>Category</TableHead>
-                <TableHead>File</TableHead>
-                <TableHead>Size</TableHead>
-                <TableHead>Visibility</TableHead>
-                <TableHead>Uploaded</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filteredDocuments.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={7} className="text-center py-8 text-[#666]">
-                    No documents found. Upload your first document.
-                  </TableCell>
-                </TableRow>
-              ) : (
-                filteredDocuments.map((doc) => (
-                  <TableRow key={doc.id}>
-                    <TableCell className="font-medium">{doc.title}</TableCell>
-                    <TableCell>
-                      <Badge variant="outline">{doc.category}</Badge>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-2">
-                        <FileText className="h-4 w-4 text-[#666]" />
-                        <span className="text-sm text-[#666]">{doc.fileName}</span>
+          {/* Mobile: Card View */}
+          <div className="block sm:hidden space-y-3">
+            {filteredDocuments.length === 0 ? (
+              <div className="text-center py-8 text-[#666] text-sm">
+                No documents found. Upload your first document.
+              </div>
+            ) : (
+              filteredDocuments.map((doc) => (
+                <Card key={doc.id}>
+                  <CardContent className="p-4">
+                    <div className="space-y-3">
+                      <div>
+                        <h3 className="font-semibold text-sm mb-1">{doc.title}</h3>
+                        <div className="flex items-center gap-2 mb-2">
+                          <FileText className="h-4 w-4 text-[#666]" />
+                          <span className="text-xs text-muted-foreground truncate">{doc.fileName}</span>
+                        </div>
                       </div>
-                    </TableCell>
-                    <TableCell className="text-sm text-[#666]">
-                      {formatFileSize(doc.fileSize)}
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant={doc.isPublic ? "default" : "secondary"}>
-                        {doc.isPublic ? "Public" : "Private"}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="text-sm text-[#666]">
-                      {formatTimeAgo(doc.uploadedAt)}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex justify-end gap-2">
+                      <div className="flex flex-wrap items-center gap-2 text-xs">
+                        <Badge variant="outline" className="text-xs">{doc.category}</Badge>
+                        <Badge variant={doc.isPublic ? "default" : "secondary"} className="text-xs">
+                          {doc.isPublic ? "Public" : "Private"}
+                        </Badge>
+                        <span className="text-muted-foreground">{formatFileSize(doc.fileSize)}</span>
+                        <span className="text-muted-foreground">•</span>
+                        <span className="text-muted-foreground">{formatTimeAgo(doc.uploadedAt)}</span>
+                      </div>
+                      <div className="flex gap-2 pt-2 border-t">
                         <Button
-                          variant="ghost"
-                          size="icon"
+                          variant="outline"
+                          size="sm"
+                          className="flex-1"
                           onClick={() => window.open(doc.fileUrl, "_blank")}
                         >
-                          <Download className="h-4 w-4" />
+                          <Download className="mr-2 h-3 w-3" />
+                          Download
                         </Button>
                         <Button
-                          variant="ghost"
-                          size="icon"
-                          className="text-red-600"
+                          variant="outline"
+                          size="sm"
+                          className="flex-1 text-destructive"
                           onClick={() => handleDelete(doc.id)}
                         >
-                          <Trash2 className="h-4 w-4" />
+                          <Trash2 className="mr-2 h-3 w-3" />
+                          Delete
                         </Button>
                       </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))
+            )}
+          </div>
+
+          {/* Desktop: Table View */}
+          <div className="hidden sm:block overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Title</TableHead>
+                  <TableHead>Category</TableHead>
+                  <TableHead>File</TableHead>
+                  <TableHead>Size</TableHead>
+                  <TableHead>Visibility</TableHead>
+                  <TableHead>Uploaded</TableHead>
+                  <TableHead className="text-right">Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {filteredDocuments.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={7} className="text-center py-8 text-[#666]">
+                      No documents found. Upload your first document.
                     </TableCell>
                   </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
+                ) : (
+                  filteredDocuments.map((doc) => (
+                    <TableRow key={doc.id}>
+                      <TableCell className="font-medium">{doc.title}</TableCell>
+                      <TableCell>
+                        <Badge variant="outline">{doc.category}</Badge>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-2">
+                          <FileText className="h-4 w-4 text-[#666]" />
+                          <span className="text-sm text-[#666]">{doc.fileName}</span>
+                        </div>
+                      </TableCell>
+                      <TableCell className="text-sm text-[#666]">
+                        {formatFileSize(doc.fileSize)}
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant={doc.isPublic ? "default" : "secondary"}>
+                          {doc.isPublic ? "Public" : "Private"}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-sm text-[#666]">
+                        {formatTimeAgo(doc.uploadedAt)}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <div className="flex justify-end gap-2">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => window.open(doc.fileUrl, "_blank")}
+                          >
+                            <Download className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="text-red-600"
+                            onClick={() => handleDelete(doc.id)}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
+          </div>
         </CardContent>
       </Card>
 
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent className="max-w-2xl">
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto p-4 sm:p-6">
           <DialogHeader>
             <DialogTitle>Upload Document</DialogTitle>
             <DialogDescription>Upload a new document to your panchayat</DialogDescription>

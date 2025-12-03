@@ -32,6 +32,7 @@ import { toast } from "sonner";
 import { useAuth } from "../../../contexts/AuthContext";
 import { newsletterApi } from "@/routes/api";
 import { ImageWithFallback } from "../../figma/ImageWithFallback";
+import { ImageModal } from "../../ui/image-modal";
 import { usePresignedUrlRefresh } from "../../../hooks/usePresignedUrlRefresh";
 import { useTranslation } from "react-i18next";
 
@@ -72,6 +73,8 @@ export function NewsletterPage() {
   });
   const [newBulletPoint, setNewBulletPoint] = useState("");
   const [autosaveStatus, setAutosaveStatus] = useState<"saved" | "saving" | null>(null);
+  const [isImageModalOpen, setIsImageModalOpen] = useState(false);
+  const [selectedImageUrl, setSelectedImageUrl] = useState<string>("");
 
   useEffect(() => {
     if (user?.panchayatId) {
@@ -327,7 +330,13 @@ export function NewsletterPage() {
                   <CardContent className="p-4">
                     <div className="space-y-3">
                       {newsletter.coverImageUrl && (
-                        <div className="w-full h-32 rounded-lg overflow-hidden">
+                        <div 
+                          className="w-full h-32 rounded-lg overflow-hidden cursor-pointer"
+                          onClick={() => {
+                            setSelectedImageUrl(newsletter.coverImageUrl || "");
+                            setIsImageModalOpen(true);
+                          }}
+                        >
                           <NewsletterCoverImage fileKey={newsletter.coverImageFileKey} url={newsletter.coverImageUrl} />
                         </div>
                       )}
@@ -461,7 +470,7 @@ export function NewsletterPage() {
 
       {/* Create/Edit Dialog */}
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto p-4 sm:p-6">
           <DialogHeader>
             <DialogTitle>
               {editingNewsletter ? t('newsletters.edit') || 'Edit Newsletter' : t('newsletters.createNew')}
@@ -655,6 +664,14 @@ export function NewsletterPage() {
           </form>
         </DialogContent>
       </Dialog>
+
+      {/* Image Modal */}
+      <ImageModal
+        isOpen={isImageModalOpen}
+        onClose={() => setIsImageModalOpen(false)}
+        imageUrl={selectedImageUrl}
+        alt="Newsletter cover"
+      />
     </div>
   );
 }

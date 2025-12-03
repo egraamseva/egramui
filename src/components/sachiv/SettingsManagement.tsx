@@ -15,6 +15,7 @@ import { toast } from "sonner";
 import { settingsAPI } from "../../services/api";
 import type { PanchayatSettings } from "../../types";
 import { ImageWithFallback } from "../figma/ImageWithFallback";
+import { ImageModal } from "../ui/image-modal";
 import { LocationIQAutocomplete } from "./LocationIQ";
 
 interface SettingsManagementProps {
@@ -26,6 +27,8 @@ export function SettingsManagement({ panchayatId }: SettingsManagementProps) {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [activeTab, setActiveTab] = useState("hero");
+  const [isImageModalOpen, setIsImageModalOpen] = useState(false);
+  const [selectedImageUrl, setSelectedImageUrl] = useState<string>("");
 
   useEffect(() => {
     fetchSettings();
@@ -146,19 +149,19 @@ export function SettingsManagement({ panchayatId }: SettingsManagementProps) {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       <div>
-        <h2 className="text-2xl font-bold text-[#1B2B5E]">Website Settings</h2>
-        <p className="text-[#666] mt-1">Customize your panchayat website appearance and content</p>
+        <h2 className="text-xl sm:text-2xl font-bold text-[#1B2B5E]">Website Settings</h2>
+        <p className="text-sm sm:text-base text-[#666] mt-1">Customize your panchayat website appearance and content</p>
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="w-full! h-auto! justify-start! overflow-x-auto overflow-y-hidden scrollbar-hide md:flex-wrap! md:justify-start!">
-          <TabsTrigger value="basic" className="whitespace-nowrap">Basic Info</TabsTrigger>
-          <TabsTrigger value="hero" className="whitespace-nowrap">Hero</TabsTrigger>
-          <TabsTrigger value="about" className="whitespace-nowrap">About</TabsTrigger>
-          <TabsTrigger value="contact" className="whitespace-nowrap">Contact</TabsTrigger>
-          <TabsTrigger value="branding" className="whitespace-nowrap">Branding</TabsTrigger>
+        <TabsList className="w-full h-auto justify-start overflow-x-auto overflow-y-hidden scrollbar-hide md:flex-wrap md:justify-start">
+          <TabsTrigger value="basic" className="whitespace-nowrap text-xs sm:text-sm">Basic Info</TabsTrigger>
+          <TabsTrigger value="hero" className="whitespace-nowrap text-xs sm:text-sm">Hero</TabsTrigger>
+          <TabsTrigger value="about" className="whitespace-nowrap text-xs sm:text-sm">About</TabsTrigger>
+          <TabsTrigger value="contact" className="whitespace-nowrap text-xs sm:text-sm">Contact</TabsTrigger>
+          <TabsTrigger value="branding" className="whitespace-nowrap text-xs sm:text-sm">Branding</TabsTrigger>
         </TabsList>
 
         <TabsContent value="basic" className="space-y-4">
@@ -297,7 +300,13 @@ export function SettingsManagement({ panchayatId }: SettingsManagementProps) {
                 <Label>Hero Image</Label>
                 <div className="flex items-center gap-4">
                   {settings.hero.image && (
-                    <div className="relative w-32 h-32 rounded-lg overflow-hidden border">
+                    <div 
+                      className="relative w-32 h-32 rounded-lg overflow-hidden border cursor-pointer"
+                      onClick={() => {
+                        setSelectedImageUrl(settings.hero.image || "");
+                        setIsImageModalOpen(true);
+                      }}
+                    >
                       <ImageWithFallback
                         src={settings.hero.image}
                         alt="Hero"
@@ -492,7 +501,13 @@ export function SettingsManagement({ panchayatId }: SettingsManagementProps) {
                 <Label>Logo</Label>
                 <div className="flex items-center gap-4">
                   {settings.logo && (
-                    <div className="relative w-32 h-32 rounded-lg overflow-hidden border border-[#E5E5E5] flex items-center justify-center bg-[#F5F5F5]">
+                    <div 
+                      className="relative w-32 h-32 rounded-lg overflow-hidden border border-[#E5E5E5] flex items-center justify-center bg-[#F5F5F5] cursor-pointer"
+                      onClick={() => {
+                        setSelectedImageUrl(settings.logo || "");
+                        setIsImageModalOpen(true);
+                      }}
+                    >
                       <ImageWithFallback
                         src={settings.logo}
                         alt="Logo"
@@ -525,6 +540,14 @@ export function SettingsManagement({ panchayatId }: SettingsManagementProps) {
           </Card>
         </TabsContent>
       </Tabs>
+
+      {/* Image Modal */}
+      <ImageModal
+        isOpen={isImageModalOpen}
+        onClose={() => setIsImageModalOpen(false)}
+        imageUrl={selectedImageUrl}
+        alt="Image preview"
+      />
     </div>
   );
 }

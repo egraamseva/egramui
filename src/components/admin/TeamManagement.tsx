@@ -250,11 +250,11 @@ export function TeamManagement({ panchayatId }: TeamManagementProps) {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center">
+    <div className="space-y-4 sm:space-y-6">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 sm:gap-0">
         <div>
-          <h2 className="text-2xl font-bold text-[#1B2B5E]">Team Management</h2>
-          <p className="text-[#666] mt-1">Manage your panchayat admin team (Max 4 admins)</p>
+          <h2 className="text-xl sm:text-2xl font-bold text-[#1B2B5E]">Team Management</h2>
+          <p className="text-sm sm:text-base text-[#666] mt-1">Manage your panchayat admin team (Max 4 admins)</p>
         </div>
         <Button
           onClick={() => {
@@ -262,6 +262,7 @@ export function TeamManagement({ panchayatId }: TeamManagementProps) {
             setIsDialogOpen(true);
           }}
           disabled={isMaxReached}
+          className="w-full sm:w-auto"
         >
           <Plus className="h-4 w-4 mr-2" />
           Add Member
@@ -283,106 +284,192 @@ export function TeamManagement({ panchayatId }: TeamManagementProps) {
           <CardDescription>Current team members with admin access</CardDescription>
         </CardHeader>
         <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Member</TableHead>
-                <TableHead>Email</TableHead>
-                <TableHead>Designation</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Added</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {members.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={6} className="text-center py-8 text-[#666]">
-                    No team members yet. Add your first team member.
-                  </TableCell>
-                </TableRow>
-              ) : (
-                members.map((member) => (
-                  <TableRow key={member.id}>
-                    <TableCell className="font-medium">
+          {/* Mobile: Card View */}
+          <div className="block sm:hidden space-y-3">
+            {members.length === 0 ? (
+              <div className="text-center py-8 text-[#666] text-sm">
+                No team members yet. Add your first team member.
+              </div>
+            ) : (
+              members.map((member) => (
+                <Card key={member.id}>
+                  <CardContent className="p-4">
+                    <div className="space-y-3">
                       <div className="flex items-center gap-3">
                         {member.hasImage && member.image ? (
                           <img
                             src={member.image}
                             alt={member.name}
-                            className="h-10 w-10 rounded-full object-cover"
+                            className="h-12 w-12 rounded-full object-cover"
                             onError={(e) => {
-                              // Fallback to initials if image fails to load
                               const target = e.target as HTMLImageElement;
                               target.style.display = "none";
                               const parent = target.parentElement;
                               if (parent) {
                                 const fallback = document.createElement("div");
-                                fallback.className = "h-10 w-10 rounded-full bg-[#FF9933] flex items-center justify-center text-white font-semibold text-sm";
+                                fallback.className = "h-12 w-12 rounded-full bg-[#FF9933] flex items-center justify-center text-white font-semibold text-sm";
                                 fallback.textContent = member.initials || member.name.charAt(0).toUpperCase();
                                 parent.appendChild(fallback);
                               }
                             }}
                           />
                         ) : (
-                          <div className="h-10 w-10 rounded-full bg-[#FF9933] flex items-center justify-center text-white font-semibold text-sm">
+                          <div className="h-12 w-12 rounded-full bg-[#FF9933] flex items-center justify-center text-white font-semibold text-sm">
                             {member.initials || member.name.split(' ').map(n => n[0]).join('').toUpperCase().substring(0, 2)}
                           </div>
                         )}
-                        <div>
-                          <div className="font-medium">{member.name}</div>
+                        <div className="flex-1 min-w-0">
+                          <div className="font-medium text-sm truncate">{member.name}</div>
                           {member.role && (
-                            <div className="text-xs text-muted-foreground">{member.role}</div>
+                            <div className="text-xs text-muted-foreground truncate">{member.role}</div>
                           )}
                         </div>
+                        <Badge variant={member.status === "active" ? "default" : "secondary"} className="text-xs">
+                          {member.status}
+                        </Badge>
                       </div>
-                    </TableCell>
-                    <TableCell>{member.email}</TableCell>
-                    <TableCell>{member.designation || "-"}</TableCell>
-                    <TableCell>
-                      <Badge variant={member.status === "active" ? "default" : "secondary"}>
-                        {member.status}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>{formatTimeAgo(member.createdAt)}</TableCell>
-                    <TableCell className="text-right">
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="icon">
-                            <MoreVertical className="h-4 w-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuItem onClick={() => handleEditMember(member)}>
-                            <Edit className="h-4 w-4 mr-2" />
-                            Edit
-                          </DropdownMenuItem>
-                          <DropdownMenuItem
-                            onClick={() => handleStatusChange(member.id, member.status === "active" ? "inactive" : "active")}
-                          >
-                            {member.status === "active" ? "Deactivate" : "Activate"}
-                          </DropdownMenuItem>
-                          <DropdownMenuItem
-                            className="text-red-600"
-                            onClick={() => handleRemoveMember(member.id)}
-                          >
-                            <Trash2 className="h-4 w-4 mr-2" />
-                            Remove
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
+                      <div className="space-y-1 text-xs text-muted-foreground">
+                        <div className="truncate">{member.email}</div>
+                        {member.designation && <div>Designation: {member.designation}</div>}
+                        <div>Added: {formatTimeAgo(member.createdAt)}</div>
+                      </div>
+                      <div className="flex gap-2 pt-2 border-t">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="flex-1"
+                          onClick={() => handleEditMember(member)}
+                        >
+                          <Edit className="mr-2 h-3 w-3" />
+                          Edit
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="flex-1"
+                          onClick={() => handleStatusChange(member.id, member.status === "active" ? "inactive" : "active")}
+                        >
+                          {member.status === "active" ? "Deactivate" : "Activate"}
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="flex-1 text-destructive"
+                          onClick={() => handleRemoveMember(member.id)}
+                        >
+                          <Trash2 className="mr-2 h-3 w-3" />
+                          Remove
+                        </Button>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))
+            )}
+          </div>
+
+          {/* Desktop: Table View */}
+          <div className="hidden sm:block overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Member</TableHead>
+                  <TableHead>Email</TableHead>
+                  <TableHead>Designation</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead>Added</TableHead>
+                  <TableHead className="text-right">Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {members.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={6} className="text-center py-8 text-[#666]">
+                      No team members yet. Add your first team member.
                     </TableCell>
                   </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
+                ) : (
+                  members.map((member) => (
+                    <TableRow key={member.id}>
+                      <TableCell className="font-medium">
+                        <div className="flex items-center gap-3">
+                          {member.hasImage && member.image ? (
+                            <img
+                              src={member.image}
+                              alt={member.name}
+                              className="h-10 w-10 rounded-full object-cover"
+                              onError={(e) => {
+                                const target = e.target as HTMLImageElement;
+                                target.style.display = "none";
+                                const parent = target.parentElement;
+                                if (parent) {
+                                  const fallback = document.createElement("div");
+                                  fallback.className = "h-10 w-10 rounded-full bg-[#FF9933] flex items-center justify-center text-white font-semibold text-sm";
+                                  fallback.textContent = member.initials || member.name.charAt(0).toUpperCase();
+                                  parent.appendChild(fallback);
+                                }
+                              }}
+                            />
+                          ) : (
+                            <div className="h-10 w-10 rounded-full bg-[#FF9933] flex items-center justify-center text-white font-semibold text-sm">
+                              {member.initials || member.name.split(' ').map(n => n[0]).join('').toUpperCase().substring(0, 2)}
+                            </div>
+                          )}
+                          <div>
+                            <div className="font-medium">{member.name}</div>
+                            {member.role && (
+                              <div className="text-xs text-muted-foreground">{member.role}</div>
+                            )}
+                          </div>
+                        </div>
+                      </TableCell>
+                      <TableCell>{member.email}</TableCell>
+                      <TableCell>{member.designation || "-"}</TableCell>
+                      <TableCell>
+                        <Badge variant={member.status === "active" ? "default" : "secondary"}>
+                          {member.status}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>{formatTimeAgo(member.createdAt)}</TableCell>
+                      <TableCell className="text-right">
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="icon">
+                              <MoreVertical className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem onClick={() => handleEditMember(member)}>
+                              <Edit className="h-4 w-4 mr-2" />
+                              Edit
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              onClick={() => handleStatusChange(member.id, member.status === "active" ? "inactive" : "active")}
+                            >
+                              {member.status === "active" ? "Deactivate" : "Activate"}
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              className="text-red-600"
+                              onClick={() => handleRemoveMember(member.id)}
+                            >
+                              <Trash2 className="h-4 w-4 mr-2" />
+                              Remove
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
+          </div>
         </CardContent>
       </Card>
 
       {/* Add Member Dialog */}
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto p-4 sm:p-6">
           <DialogHeader>
             <DialogTitle>Add Team Member</DialogTitle>
             <DialogDescription>
@@ -522,7 +609,7 @@ export function TeamManagement({ panchayatId }: TeamManagementProps) {
 
       {/* Edit Member Dialog */}
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto p-4 sm:p-6">
           <DialogHeader>
             <DialogTitle>Edit Team Member</DialogTitle>
             <DialogDescription>

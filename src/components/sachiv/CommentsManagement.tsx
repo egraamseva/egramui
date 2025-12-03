@@ -101,13 +101,13 @@ export function CommentsManagement({ panchayatId }: CommentsManagementProps) {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       <div>
-        <h2 className="text-2xl font-bold text-[#1B2B5E]">Comments Management</h2>
-        <p className="text-[#666] mt-1">Review and moderate comments on posts</p>
+        <h2 className="text-xl sm:text-2xl font-bold text-[#1B2B5E]">Comments Management</h2>
+        <p className="text-sm sm:text-base text-[#666] mt-1">Review and moderate comments on posts</p>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
         <Card className="lg:col-span-1">
           <CardHeader>
             <CardTitle>Posts</CardTitle>
@@ -190,12 +190,13 @@ export function CommentsManagement({ panchayatId }: CommentsManagementProps) {
                           </Badge>
                         </div>
                         <p className="text-[#1a1a1a]">{comment.content}</p>
-                        <div className="flex items-center justify-between text-sm text-[#666]">
+                        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 text-sm text-[#666]">
                           <span>{formatTimeAgo(comment.createdAt)}</span>
-                          <div className="flex gap-2">
+                          <div className="flex gap-2 w-full sm:w-auto">
                             <Button
                               size="sm"
                               variant="outline"
+                              className="flex-1 sm:flex-none"
                               onClick={() => handleApprove(comment.postId, comment.id)}
                             >
                               <Check className="h-4 w-4 mr-1" />
@@ -204,7 +205,7 @@ export function CommentsManagement({ panchayatId }: CommentsManagementProps) {
                             <Button
                               size="sm"
                               variant="outline"
-                              className="text-red-600"
+                              className="text-red-600 flex-1 sm:flex-none"
                               onClick={() => handleDelete(comment.postId, comment.id)}
                             >
                               <X className="h-4 w-4 mr-1" />
@@ -241,12 +242,12 @@ export function CommentsManagement({ panchayatId }: CommentsManagementProps) {
                           </Badge>
                         </div>
                         <p className="text-[#1a1a1a]">{comment.content}</p>
-                        <div className="flex items-center justify-between text-sm text-[#666]">
+                        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 text-sm text-[#666]">
                           <span>{formatTimeAgo(comment.createdAt)}</span>
                           <Button
                             size="sm"
                             variant="outline"
-                            className="text-red-600"
+                            className="text-red-600 w-full sm:w-auto"
                             onClick={() => handleDelete(comment.postId, comment.id)}
                           >
                             <X className="h-4 w-4 mr-1" />

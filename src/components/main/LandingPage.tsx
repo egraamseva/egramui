@@ -10,6 +10,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../ui
 import { Badge } from "../ui/badge";
 import { Input } from "../ui/input";
 import { ImageWithFallback } from "../figma/ImageWithFallback";
+import { ImageModal } from "../ui/image-modal";
 import { panchayatAPI } from "../../services/api";
 import { toast } from "sonner";
 import type { ActivePanchayat } from "../../types";
@@ -21,6 +22,8 @@ export function LandingPage() {
   const [activePanchayats, setActivePanchayats] = useState<ActivePanchayat[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
+  const [isImageModalOpen, setIsImageModalOpen] = useState(false);
+  const [selectedImageUrl, setSelectedImageUrl] = useState<string>("");
 
   // Scroll to top when component mounts (when navigating back to landing page)
   useEffect(() => {
@@ -373,7 +376,13 @@ export function LandingPage() {
           <div className="grid gap-6 md:grid-cols-3">
             {[1, 2, 3].map((item) => (
               <Card key={item} className="border border-[#E5E5E5] bg-white shadow-sm transition-all hover:shadow-md">
-                <div className="aspect-video overflow-hidden rounded-t-lg bg-[#F5F5F5]">
+                <div 
+                  className="aspect-video overflow-hidden rounded-t-lg bg-[#F5F5F5] cursor-pointer"
+                  onClick={() => {
+                    setSelectedImageUrl("https://images.unsplash.com/photo-1736914319111-d54ada582633?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxpbmRpYW4lMjB2aWxsYWdlJTIwcGFuY2hheWF0fGVufDF8fHx8MTc2Mjc1MjM1N3ww&ixlib=rb-4.1.0&q=80&w=1080&utm_source=figma&utm_medium=referral");
+                    setIsImageModalOpen(true);
+                  }}
+                >
                   <ImageWithFallback
                     src="https://images.unsplash.com/photo-1736914319111-d54ada582633?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxpbmRpYW4lMjB2aWxsYWdlJTIwcGFuY2hheWF0fGVufDF8fHx8MTc2Mjc1MjM1N3ww&ixlib=rb-4.1.0&q=80&w=1080&utm_source=figma&utm_medium=referral"
                     alt="News"
@@ -473,6 +482,14 @@ export function LandingPage() {
           </Button>
         </div>
       </section>
+
+      {/* Image Modal */}
+      <ImageModal
+        isOpen={isImageModalOpen}
+        onClose={() => setIsImageModalOpen(false)}
+        imageUrl={selectedImageUrl}
+        alt="News image"
+      />
     </div>
   );
 }

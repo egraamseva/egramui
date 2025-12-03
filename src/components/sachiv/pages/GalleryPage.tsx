@@ -24,6 +24,7 @@ import { useAuth } from "../../../contexts/AuthContext";
 import type { GalleryItem, Album } from "../../../types";
 import { galleryApi, albumApi } from "@/routes/api";
 import { ImageWithFallback } from "@/components/figma/ImageWithFallback";
+import { ImageModal } from "../../ui/image-modal";
 
 export function GalleryPage() {
   const { user } = useAuth();
@@ -41,6 +42,8 @@ export function GalleryPage() {
   });
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [filePreview, setFilePreview] = useState<string>("");
+  const [isImageModalOpen, setIsImageModalOpen] = useState(false);
+  const [selectedImageIndex, setSelectedImageIndex] = useState(0);
 
   useEffect(() => {
     if (user?.panchayatId) {
@@ -270,38 +273,52 @@ export function GalleryPage() {
         <Card>
           <CardContent className="p-3 sm:p-6">
             <div className="grid gap-3 sm:gap-4 grid-cols-2 sm:grid-cols-3 lg:grid-cols-4">
-              {images.map((image) => (
+              {images.map((image, index) => (
                 <div
                   key={image.id}
-                  className="group relative aspect-square overflow-hidden rounded-lg border bg-muted"
+                  className="group relative aspect-square overflow-hidden rounded-lg border bg-muted cursor-pointer"
+                  onClick={() => {
+                    setSelectedImageIndex(index);
+                    setIsImageModalOpen(true);
+                  }}
                 >
-                  <ImageWithFallback
-                    src={image.image}
-                    alt={image.title}
-                    className="w-full h-full object-cover"
-                    data-gallery-id={image.id}
-                    entityType="gallery"
-                    entityId={image.id}
-                  />
+                  <div className="w-full h-full pointer-events-none">
+                    <ImageWithFallback
+                      src={image.image}
+                      alt={image.title}
+                      className="w-full h-full object-cover"
+                      data-gallery-id={image.id}
+                      entityType="gallery"
+                      entityId={image.id}
+                    />
+                  </div>
                   {image.category && (
-                    <div className="absolute top-2 left-2 bg-black/70 text-white text-xs px-2 py-1 rounded">
+                    <div className="absolute top-2 left-2 bg-black/70 text-white text-xs px-2 py-1 rounded z-10 pointer-events-none">
                       {image.category}
                     </div>
                   )}
-                  <div className="absolute inset-0 flex items-center justify-center gap-1 sm:gap-2 bg-black/50 opacity-0 transition-opacity group-hover:opacity-100 group-active:opacity-100">
+                  <div 
+                    className="absolute inset-0 flex items-center justify-center gap-1 sm:gap-2 bg-black/50 opacity-0 transition-opacity group-hover:opacity-100 group-active:opacity-100 z-10 pointer-events-none"
+                  >
                     <Button
                       variant="secondary"
                       size="icon"
-                      className="h-7 w-7 sm:h-9 sm:w-9"
-                      onClick={() => openEditDialog(image)}
+                      className="h-7 w-7 sm:h-9 sm:w-9 pointer-events-auto"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        openEditDialog(image);
+                      }}
                     >
                       <Edit className="h-3 w-3 sm:h-4 sm:w-4" />
                     </Button>
                     <Button
                       variant="secondary"
                       size="icon"
-                      className="h-7 w-7 sm:h-9 sm:w-9"
-                      onClick={() => handleDelete(image.id)}
+                      className="h-7 w-7 sm:h-9 sm:w-9 pointer-events-auto"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleDelete(image.id);
+                      }}
                     >
                       <Trash2 className="h-3 w-3 sm:h-4 sm:w-4" />
                     </Button>
@@ -315,7 +332,7 @@ export function GalleryPage() {
 
       {/* Create/Edit Dialog */}
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto p-4 sm:p-6">
           <DialogHeader>
             <DialogTitle>
               {editingImage ? "Edit Image" : "Upload New Image"}
@@ -424,6 +441,19 @@ export function GalleryPage() {
           </form>
         </DialogContent>
       </Dialog>
+
+      {/* Image Modal */}
+      {images.length > 0 && (
+        <ImageModal
+          isOpen={isImageModalOpen}
+          onClose={() => setIsImageModalOpen(false)}
+          imageUrl={images[selectedImageIndex]?.image || ""}
+          alt={images[selectedImageIndex]?.title || "Gallery image"}
+          images={images.map((img) => img.image)}
+          currentIndex={selectedImageIndex}
+          onIndexChange={setSelectedImageIndex}
+        />
+      )}
     </div>
   );
 }

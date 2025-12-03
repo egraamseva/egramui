@@ -33,6 +33,7 @@ import { toast } from "sonner";
 import type { Album, GalleryItem } from "../../types";
 import { formatTimeAgo } from "../../utils/format";
 import { ImageWithFallback } from "../figma/ImageWithFallback";
+import { ImageModal } from "../ui/image-modal";
 import { albumApi, galleryApi } from "@/routes/api";
 import { usePresignedUrlRefresh } from "../../hooks/usePresignedUrlRefresh";
 
@@ -59,6 +60,8 @@ export function GalleryAlbums({ panchayatId }: GalleryAlbumsProps) {
   const [imageFiles, setImageFiles] = useState<File[]>([]);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [albumToDelete, setAlbumToDelete] = useState<string | null>(null);
+  const [isImageModalOpen, setIsImageModalOpen] = useState(false);
+  const [selectedImageIndex, setSelectedImageIndex] = useState(0);
 
   useEffect(() => {
     fetchAlbums();
@@ -289,10 +292,10 @@ export function GalleryAlbums({ panchayatId }: GalleryAlbumsProps) {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center py-12">
+      <div className="flex items-center justify-center py-8 sm:py-12">
         <div className="text-center">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#FF9933] mx-auto"></div>
-          <p className="mt-4 text-[#666]">Loading albums...</p>
+          <p className="mt-4 text-sm sm:text-base text-[#666]">Loading albums...</p>
         </div>
       </div>
     );
@@ -301,42 +304,44 @@ export function GalleryAlbums({ panchayatId }: GalleryAlbumsProps) {
   // Album Detail View
   if (selectedAlbum) {
     return (
-      <div className="space-y-6">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <Button variant="ghost" onClick={() => setSelectedAlbum(null)}>
+      <div className="space-y-4 sm:space-y-6">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-4">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-4 flex-1 min-w-0">
+            <Button variant="ghost" onClick={() => setSelectedAlbum(null)} className="w-full sm:w-auto">
               <ArrowLeft className="h-4 w-4 mr-2" />
               Back to Albums
             </Button>
-            <div>
-              <h2 className="text-2xl font-bold text-[#1B2B5E]">{selectedAlbum.title}</h2>
+            <div className="flex-1 min-w-0">
+              <h2 className="text-xl sm:text-2xl font-bold text-[#1B2B5E] truncate">{selectedAlbum.title}</h2>
               {selectedAlbum.description && (
-                <p className="text-[#666] mt-1">{selectedAlbum.description}</p>
+                <p className="text-sm sm:text-base text-[#666] mt-1 line-clamp-2">{selectedAlbum.description}</p>
               )}
             </div>
           </div>
-          <div className="flex gap-2">
-            <Button variant="outline" onClick={() => setIsImageDialogOpen(true)}>
+          <div className="flex flex-wrap gap-2 w-full sm:w-auto">
+            <Button variant="outline" onClick={() => setIsImageDialogOpen(true)} className="flex-1 sm:flex-none">
               <Upload className="h-4 w-4 mr-2" />
-              Upload Images
+              <span className="hidden sm:inline">Upload Images</span>
+              <span className="sm:hidden">Upload</span>
             </Button>
-            <Button variant="outline" onClick={() => setIsCoverImageDialogOpen(true)}>
+            <Button variant="outline" onClick={() => setIsCoverImageDialogOpen(true)} className="flex-1 sm:flex-none">
               <ImageIcon className="h-4 w-4 mr-2" />
-              Change Cover
+              <span className="hidden sm:inline">Change Cover</span>
+              <span className="sm:hidden">Cover</span>
             </Button>
-            <Button variant="outline" onClick={() => openEditDialog(selectedAlbum)}>
+            <Button variant="outline" onClick={() => openEditDialog(selectedAlbum)} className="flex-1 sm:flex-none">
               <Edit className="h-4 w-4 mr-2" />
-              Edit Album
+              Edit
             </Button>
           </div>
         </div>
 
         {albumImages.length === 0 ? (
           <Card>
-            <CardContent className="flex flex-col items-center justify-center py-12">
-              <ImageIcon className="h-16 w-16 text-[#666] mb-4" />
-              <p className="text-[#666] text-lg">No images in this album</p>
-              <p className="text-[#666] text-sm mt-2">Upload images to get started</p>
+            <CardContent className="flex flex-col items-center justify-center py-8 sm:py-12">
+              <ImageIcon className="h-12 w-12 sm:h-16 sm:w-16 text-[#666] mb-4" />
+              <p className="text-[#666] text-base sm:text-lg">No images in this album</p>
+              <p className="text-[#666] text-xs sm:text-sm mt-2">Upload images to get started</p>
               <Button className="mt-4" onClick={() => setIsImageDialogOpen(true)}>
                 <Upload className="h-4 w-4 mr-2" />
                 Upload Images
@@ -344,22 +349,36 @@ export function GalleryAlbums({ panchayatId }: GalleryAlbumsProps) {
             </CardContent>
           </Card>
         ) : (
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
-            {albumImages.map((image) => (
-              <div key={image.id} className="group relative aspect-square overflow-hidden rounded-lg border bg-muted">
-                <AlbumImageWithRefresh src={image.image} alt={image.title || "Album image"} />
-                <div className="absolute inset-0 flex items-center justify-center gap-2 bg-black/50 opacity-0 transition-opacity group-hover:opacity-100">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4">
+            {albumImages.map((image, index) => (
+              <div 
+                key={image.id} 
+                className="group relative aspect-square overflow-hidden rounded-lg border bg-muted cursor-pointer"
+                onClick={() => {
+                  setSelectedImageIndex(index);
+                  setIsImageModalOpen(true);
+                }}
+              >
+                <div className="w-full h-full pointer-events-none">
+                  <AlbumImageWithRefresh src={image.image} alt={image.title || "Album image"} />
+                </div>
+                <div 
+                  className="absolute inset-0 flex items-center justify-center gap-2 bg-black/50 opacity-0 transition-opacity group-hover:opacity-100 z-10 pointer-events-none"
+                >
                   <Button
                     variant="secondary"
                     size="icon"
-                    className="h-8 w-8"
-                    onClick={() => handleRemoveImage(image.id)}
+                    className="h-7 w-7 sm:h-8 sm:w-8 pointer-events-auto"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleRemoveImage(image.id);
+                    }}
                   >
-                    <Trash2 className="h-4 w-4" />
+                    <Trash2 className="h-3 w-3 sm:h-4 sm:w-4" />
                   </Button>
                 </div>
                 {image.title && (
-                  <div className="absolute bottom-0 left-0 right-0 bg-black/70 text-white text-xs p-2 truncate">
+                  <div className="absolute bottom-0 left-0 right-0 bg-black/70 text-white text-xs p-2 truncate z-10 pointer-events-none">
                     {image.title}
                   </div>
                 )}
@@ -370,7 +389,7 @@ export function GalleryAlbums({ panchayatId }: GalleryAlbumsProps) {
 
         {/* Upload Images Dialog */}
         <Dialog open={isImageDialogOpen} onOpenChange={setIsImageDialogOpen}>
-          <DialogContent>
+          <DialogContent className="p-4 sm:p-6">
             <DialogHeader>
               <DialogTitle>Upload Images to Album</DialogTitle>
               <DialogDescription>
@@ -396,7 +415,7 @@ export function GalleryAlbums({ panchayatId }: GalleryAlbumsProps) {
               {imageFiles.length > 0 && (
                 <div className="space-y-2">
                   <Label>Selected Images ({imageFiles.length})</Label>
-                  <div className="grid grid-cols-4 gap-2 max-h-48 overflow-y-auto">
+                  <div className="grid grid-cols-3 sm:grid-cols-4 gap-2 max-h-48 overflow-y-auto">
                     {imageFiles.map((file, index) => (
                       <div key={index} className="relative group">
                         <img
@@ -431,7 +450,7 @@ export function GalleryAlbums({ panchayatId }: GalleryAlbumsProps) {
 
         {/* Change Cover Image Dialog */}
         <Dialog open={isCoverImageDialogOpen} onOpenChange={setIsCoverImageDialogOpen}>
-          <DialogContent>
+          <DialogContent className="p-4 sm:p-6">
             <DialogHeader>
               <DialogTitle>Change Cover Image</DialogTitle>
               <DialogDescription>
@@ -442,7 +461,7 @@ export function GalleryAlbums({ panchayatId }: GalleryAlbumsProps) {
               {albumImages.length > 0 && (
                 <div>
                   <Label>Select from Album Images</Label>
-                  <div className="grid grid-cols-4 gap-2 mt-2 max-h-48 overflow-y-auto">
+                  <div className="grid grid-cols-3 sm:grid-cols-4 gap-2 mt-2 max-h-48 overflow-y-auto">
                     {albumImages.map((image) => (
                       <button
                         key={image.id}
@@ -519,19 +538,32 @@ export function GalleryAlbums({ panchayatId }: GalleryAlbumsProps) {
             </DialogFooter>
           </DialogContent>
         </Dialog>
+
+        {/* Image Modal */}
+        {albumImages.length > 0 && (
+          <ImageModal
+            isOpen={isImageModalOpen}
+            onClose={() => setIsImageModalOpen(false)}
+            imageUrl={albumImages[selectedImageIndex]?.image || ""}
+            alt={albumImages[selectedImageIndex]?.title || "Album image"}
+            images={albumImages.map((img) => img.image || "").filter(Boolean)}
+            currentIndex={selectedImageIndex}
+            onIndexChange={setSelectedImageIndex}
+          />
+        )}
       </div>
     );
   }
 
   // Albums List View
   return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center">
+    <div className="space-y-4 sm:space-y-6">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 sm:gap-0">
         <div>
-          <h2 className="text-2xl font-bold text-[#1B2B5E]">Gallery Albums</h2>
-          <p className="text-[#666] mt-1">Organize your gallery images into albums</p>
+          <h2 className="text-xl sm:text-2xl font-bold text-[#1B2B5E]">Gallery Albums</h2>
+          <p className="text-sm sm:text-base text-[#666] mt-1">Organize your gallery images into albums</p>
         </div>
-        <Button onClick={openCreateDialog}>
+        <Button onClick={openCreateDialog} className="w-full sm:w-auto">
           <Plus className="h-4 w-4 mr-2" />
           Create Album
         </Button>
@@ -539,10 +571,10 @@ export function GalleryAlbums({ panchayatId }: GalleryAlbumsProps) {
 
       {albums.length === 0 ? (
         <Card>
-          <CardContent className="flex flex-col items-center justify-center py-12">
-            <Folder className="h-16 w-16 text-[#666] mb-4" />
-            <p className="text-[#666] text-lg">No albums yet</p>
-            <p className="text-[#666] text-sm mt-2">Create your first album to organize images</p>
+          <CardContent className="flex flex-col items-center justify-center py-8 sm:py-12">
+            <Folder className="h-12 w-12 sm:h-16 sm:w-16 text-[#666] mb-4" />
+            <p className="text-[#666] text-base sm:text-lg">No albums yet</p>
+            <p className="text-[#666] text-xs sm:text-sm mt-2">Create your first album to organize images</p>
             <Button className="mt-4" onClick={openCreateDialog}>
               <Plus className="h-4 w-4 mr-2" />
               Create Album
@@ -550,7 +582,7 @@ export function GalleryAlbums({ panchayatId }: GalleryAlbumsProps) {
           </CardContent>
         </Card>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
           {albums.map((album) => (
             <Card
               key={album.id}
@@ -566,7 +598,7 @@ export function GalleryAlbums({ panchayatId }: GalleryAlbumsProps) {
                   </div>
                 )}
                 <div
-                  className="absolute top-2 right-2 flex gap-2"
+                  className="absolute top-2 right-2 flex gap-1 sm:gap-2"
                   onClick={(e) => {
                     e.stopPropagation();
                   }}
@@ -574,35 +606,35 @@ export function GalleryAlbums({ panchayatId }: GalleryAlbumsProps) {
                   <Button
                     variant="secondary"
                     size="icon"
-                    className="h-8 w-8"
+                    className="h-7 w-7 sm:h-8 sm:w-8"
                     onClick={() => openEditDialog(album)}
                   >
-                    <Edit className="h-4 w-4" />
+                    <Edit className="h-3 w-3 sm:h-4 sm:w-4" />
                   </Button>
                   <Button
                     variant="destructive"
                     size="icon"
-                    className="h-8 w-8"
+                    className="h-7 w-7 sm:h-8 sm:w-8"
                     onClick={() => {
                       setAlbumToDelete(album.id);
                       setDeleteConfirmOpen(true);
                     }}
                   >
-                    <Trash2 className="h-4 w-4" />
+                    <Trash2 className="h-3 w-3 sm:h-4 sm:w-4" />
                   </Button>
                 </div>
               </div>
-              <CardContent className="p-4">
-                <h3 className="font-semibold text-lg mb-1">{album.title}</h3>
+              <CardContent className="p-3 sm:p-4">
+                <h3 className="font-semibold text-base sm:text-lg mb-1 truncate">{album.title}</h3>
                 {album.description && (
-                  <p className="text-sm text-[#666] mb-2 line-clamp-2">{album.description}</p>
+                  <p className="text-xs sm:text-sm text-[#666] mb-2 line-clamp-2">{album.description}</p>
                 )}
-                <div className="flex items-center justify-between">
-                  <Badge variant="outline">
+                <div className="flex items-center justify-between gap-2">
+                  <Badge variant="outline" className="text-xs">
                     <ImageIcon className="h-3 w-3 mr-1" />
                     {album.imageCount} images
                   </Badge>
-                  <span className="text-xs text-[#666]">{formatTimeAgo(album.createdAt)}</span>
+                  <span className="text-xs text-[#666] whitespace-nowrap">{formatTimeAgo(album.createdAt)}</span>
                 </div>
               </CardContent>
             </Card>
@@ -612,7 +644,7 @@ export function GalleryAlbums({ panchayatId }: GalleryAlbumsProps) {
 
       {/* Create/Edit Album Dialog */}
       <Dialog open={isDialogOpen} onOpenChange={closeDialog}>
-        <DialogContent>
+        <DialogContent className="p-4 sm:p-6">
           <DialogHeader>
             <DialogTitle>{editingAlbum ? "Edit Album" : "Create Album"}</DialogTitle>
             <DialogDescription>
