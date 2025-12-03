@@ -13,7 +13,7 @@ import { Label } from "../ui/label";
 import { ImageWithFallback } from "../figma/ImageWithFallback";
 import { PostCard } from "../sachiv/PostCard";
 import { panchayatAPI, publicAPI } from "../../services/api";
-import { publicNewsletterApi, albumApi, galleryApi } from "../../routes/api";
+import { publicNewsletterApi, galleryApi } from "../../routes/api";
 import type { Post, Scheme, Announcement, PanchayatMember, GalleryItem, PanchayatDetails, Album } from "../../types";
 import { formatTimeAgo } from "../../utils/format";
 import { usePresignedUrlRefresh } from "../../hooks/usePresignedUrlRefresh";
@@ -231,7 +231,7 @@ export function PanchayatWebsite() {
       setMembers(mappedMembers);
       setGallery(mappedGallery);
       setNewsletters(newslettersResult.items || []);
-      setAlbums(albumsResult.items || []);
+      setAlbums((albumsResult as any).items || (albumsResult as any).content || []);
     } catch (error) {
       console.error("Error fetching panchayat data:", error);
       // Use default data if API fails
@@ -772,7 +772,12 @@ export function PanchayatWebsite() {
                         ) : (
                           albumImages.map((item) => (
                             <Card key={item.id} className="overflow-hidden transition-transform hover:scale-105">
-                              <AlbumImageWithRefresh src={item.image} alt={item.title} />
+                              <AlbumImageWithRefresh 
+                                src={item.image} 
+                                alt={item.title}
+                                entityType="gallery"
+                                entityId={item.id}
+                              />
                               <CardContent className="p-3 sm:p-4">
                                 <p className="font-medium text-sm sm:text-base">{item.title}</p>
                                 {item.description && (
@@ -799,7 +804,12 @@ export function PanchayatWebsite() {
                               onClick={() => setSelectedAlbum(album)}
                             >
                               {album.coverImage && (
-                                <AlbumImageWithRefresh src={album.coverImage} alt={album.title} />
+                                <AlbumImageWithRefresh 
+                                  src={album.coverImage} 
+                                  alt={album.title}
+                                  entityType="album"
+                                  entityId={album.id}
+                                />
                               )}
                               <CardContent className="p-3 sm:p-4">
                                 <p className="font-medium text-sm sm:text-base">{album.title}</p>
@@ -819,7 +829,12 @@ export function PanchayatWebsite() {
                         <div className="grid gap-4 sm:gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
                           {gallery.map((item) => (
                             <Card key={item.id} className="overflow-hidden transition-transform hover:scale-105">
-                              <AlbumImageWithRefresh src={item.image} alt={item.title} />
+                              <AlbumImageWithRefresh 
+                                src={item.image} 
+                                alt={item.title}
+                                entityType="gallery"
+                                entityId={item.id}
+                              />
                               <CardContent className="p-3 sm:p-4">
                                 <p className="font-medium text-sm sm:text-base">{item.title}</p>
                                 {item.description && (
@@ -1174,10 +1189,22 @@ function NewsletterCoverImage({ fileKey, url }: { fileKey?: string; url?: string
 }
 
 // Helper component for album images with presigned URL refresh
-function AlbumImageWithRefresh({ src, alt }: { src?: string; alt: string }) {
+function AlbumImageWithRefresh({ 
+  src, 
+  alt, 
+  entityType, 
+  entityId 
+}: { 
+  src?: string; 
+  alt: string;
+  entityType?: string | null;
+  entityId?: string | number | null;
+}) {
   const { presignedUrl } = usePresignedUrlRefresh({
     fileKey: src || undefined,
     initialPresignedUrl: src || undefined,
+    entityType,
+    entityId,
   });
 
   if (!presignedUrl) {
@@ -1193,6 +1220,8 @@ function AlbumImageWithRefresh({ src, alt }: { src?: string; alt: string }) {
       src={presignedUrl}
       alt={alt}
       className="h-40 sm:h-48 w-full object-cover"
+      entityType={entityType}
+      entityId={entityId}
     />
   );
 }

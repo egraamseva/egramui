@@ -9,25 +9,47 @@ interface ImageWithFallbackProps extends React.ImgHTMLAttributes<HTMLImageElemen
   fileKey?: string | null;
   /** If true, will use the legacy refresh mechanism with data attributes */
   useLegacyRefresh?: boolean;
+  /** Optional entity type for database update (post, gallery, album, newsletter) */
+  entityType?: string | null;
+  /** Optional entity ID for database update */
+  entityId?: string | number | null;
 }
 
 export function ImageWithFallback(props: ImageWithFallbackProps) {
-  const { src, alt, style, className, fileKey, useLegacyRefresh, ...rest } = props
+  const { src, alt, style, className, fileKey, useLegacyRefresh, entityType, entityId, ...rest } = props
+
+  // Extract entityType and entityId from data attributes if not provided directly
+  const actualEntityType = entityType || 
+    ((props as any)['data-post-id'] || (props as any)['dataPostId'] ? 'post' :
+    (props as any)['data-gallery-id'] || (props as any)['dataGalleryId'] ? 'gallery' :
+    (props as any)['data-album-id'] ? 'album' : null);
+  
+  const actualEntityId = entityId || 
+    ((props as any)['data-post-id'] || (props as any)['dataPostId'] ||
+    (props as any)['data-gallery-id'] || (props as any)['dataGalleryId'] ||
+    (props as any)['data-album-id'] || null);
 
   // Use presigned URL refresh hook if fileKey is provided
   const { presignedUrl, isRefreshing: isHookRefreshing, handleImageError } = usePresignedUrlRefresh({
     fileKey: fileKey || null,
     initialPresignedUrl: !fileKey ? src : undefined,
+    entityType: actualEntityType,
+    entityId: actualEntityId,
   });
 
   const [didError, setDidError] = useState(false)
   const [isRefreshing, setIsRefreshing] = useState(false)
   const [attempts, setAttempts] = useState(0)
+  const [hasExceededMaxAttempts, setHasExceededMaxAttempts] = useState(false)
   const [currentSrc, setCurrentSrc] = useState<string | undefined>(
     fileKey ? presignedUrl || undefined : src
   )
+  const lastErrorTimeRef = React.useRef<number>(0)
+  const errorHandlingRef = React.useRef<boolean>(false)
+  const lastFailedUrlRef = React.useRef<string | null>(null)
 
   const MAX_ATTEMPTS = 3
+  const MIN_ERROR_INTERVAL_MS = 2000 // Minimum 2 seconds between error handling attempts
 
   // Update currentSrc when presignedUrl changes (from hook)
   useEffect(() => {
@@ -35,10 +57,16 @@ export function ImageWithFallback(props: ImageWithFallbackProps) {
       setCurrentSrc(presignedUrl)
       setDidError(false)
       setAttempts(0)
+      setHasExceededMaxAttempts(false)
+      lastFailedUrlRef.current = null
+      errorHandlingRef.current = false
     } else if (!fileKey && src) {
       setCurrentSrc(src)
       setDidError(false)
       setAttempts(0)
+      setHasExceededMaxAttempts(false)
+      lastFailedUrlRef.current = null
+      errorHandlingRef.current = false
     }
   }, [fileKey, presignedUrl, src])
 
@@ -58,18 +86,90 @@ export function ImageWithFallback(props: ImageWithFallbackProps) {
 
   const handleError = async (e: React.SyntheticEvent<HTMLImageElement, Event>) => {
     const img = e.currentTarget
-    console.error('Image load failed for', currentSrc)
+    const now = Date.now();
+    const failedUrl = currentSrc || '';
+    
+    // If we've already exceeded max attempts, stop trying
+    if (hasExceededMaxAttempts) {
+      console.log('Max attempts already exceeded, not retrying');
+      setDidError(true);
+      return;
+    }
+
+    // If this is the same URL that failed before, and we've already tried refreshing it, don't retry
+    if (lastFailedUrlRef.current === failedUrl && attempts >= MAX_ATTEMPTS) {
+      console.log('Same URL failed again after max attempts, stopping retries');
+      setHasExceededMaxAttempts(true);
+      setDidError(true);
+      return;
+    }
+    
+    // Prevent multiple simultaneous error handlers
+    if (errorHandlingRef.current) {
+      console.log('Error handler already processing, skipping duplicate call');
+      return;
+    }
+
+    // Debounce error handling
+    if (now - lastErrorTimeRef.current < MIN_ERROR_INTERVAL_MS) {
+      console.log('Error handler debounced');
+      return;
+    }
+
+    errorHandlingRef.current = true;
+    lastErrorTimeRef.current = now;
+    lastFailedUrlRef.current = failedUrl;
+    
+    console.error('Image load failed for', failedUrl, `(attempt ${attempts + 1}/${MAX_ATTEMPTS})`)
 
     // If using hook with fileKey, let the hook handle the refresh
     if (fileKey && !useLegacyRefresh) {
-      const newUrl = await handleImageError();
-      if (newUrl) {
-        setCurrentSrc(newUrl);
+      try {
+        // Check attempts before calling refresh
+        if (attempts >= MAX_ATTEMPTS) {
+          console.error('Max refresh attempts reached, showing error state');
+          setHasExceededMaxAttempts(true);
+          setDidError(true);
+          errorHandlingRef.current = false;
+          return;
+        }
+
+        const newUrl = await handleImageError();
+        if (newUrl && newUrl !== failedUrl) {
+          // Only update if we got a different URL
+          setCurrentSrc(newUrl);
+          setDidError(false);
+          setAttempts(prev => prev + 1);
+          lastFailedUrlRef.current = null; // Reset since we have a new URL
+          errorHandlingRef.current = false;
+          return;
+        }
+        
+        // If we got the same URL or null, increment attempts
+        setAttempts(prev => {
+          const newAttempts = prev + 1;
+          if (newAttempts >= MAX_ATTEMPTS) {
+            setHasExceededMaxAttempts(true);
+            setDidError(true);
+          }
+          return newAttempts;
+        });
+        
+        errorHandlingRef.current = false;
+        return;
+      } catch (err) {
+        console.error('Error in handleImageError:', err);
+        setAttempts(prev => {
+          const newAttempts = prev + 1;
+          if (newAttempts >= MAX_ATTEMPTS) {
+            setHasExceededMaxAttempts(true);
+            setDidError(true);
+          }
+          return newAttempts;
+        });
+        errorHandlingRef.current = false;
         return;
       }
-      // If hook refresh failed, fall through to error state
-      setDidError(true);
-      return;
     }
 
     // Legacy refresh mechanism (for backward compatibility)
@@ -200,15 +300,20 @@ export function ImageWithFallback(props: ImageWithFallbackProps) {
       console.info('Refreshed image URL for', attr.key, attr.id)
       setAttempts((a) => a + 1)
       setCurrentSrc(newUrl)
+      setDidError(false)
+      errorHandlingRef.current = false
       // browser will automatically retry loading the updated src
     } catch (err) {
       console.error('Failed to refresh image URL for', attr?.key, attr?.id, err)
-      setDidError(true)
+      if (attempts >= MAX_ATTEMPTS) {
+        setDidError(true)
+      }
       setIsRefreshing(false)
+      errorHandlingRef.current = false
     }
   }
 
-  if (didError) {
+  if (didError || hasExceededMaxAttempts) {
     return (
       <div className={`inline-block bg-[#F5F5F5] text-center align-middle ${className ?? ''}`} style={style}>
         <div className="flex items-center justify-center w-full h-full">
@@ -226,7 +331,7 @@ export function ImageWithFallback(props: ImageWithFallbackProps) {
         className={className}
         style={style}
         {...rest}
-        onError={handleError}
+        onError={hasExceededMaxAttempts ? undefined : handleError}
         onLoad={handleLoad}
         data-post-id={(props as any)['data-post-id'] || undefined}
       />
