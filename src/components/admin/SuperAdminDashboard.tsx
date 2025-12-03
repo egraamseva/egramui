@@ -793,6 +793,7 @@ export function SuperAdminDashboard() {
                         ))}
                       </TableBody>
                     </Table>
+                    </div>
                   </CardContent>
                 </Card>
               </div>
