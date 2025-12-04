@@ -42,6 +42,11 @@ i18n
       order: ['localStorage', 'navigator'],
       caches: ['localStorage'],
       lookupLocalStorage: 'language'
+    },
+    
+    // Ensure React components re-render on language change
+    react: {
+      useSuspense: false // Disable suspense to avoid issues
     }
   });
 

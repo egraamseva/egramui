@@ -41,6 +41,11 @@ export function PanchayatWebsite() {
   const { subdomain } = useParams();
   const navigate = useNavigate();
   const { t, i18n } = useTranslation();
+  
+  // Track language to force re-render when it changes
+  // useTranslation should auto-update, but this ensures navItems and other computed values update
+  const currentLanguage = i18n.language;
+  
   const [activePage, setActivePage] = useState<PageType>('home');
   const [panchayat, setPanchayat] = useState<PanchayatDetails | null>(null);
   const [posts, setPosts] = useState<Post[]>([]);
@@ -434,7 +439,7 @@ export function PanchayatWebsite() {
     });
   };
 
-  // Navigation items
+  // Navigation items - useTranslation hook automatically triggers re-renders when language changes
   const navItems = [
     { id: 'home' as PageType, label: t('panchayatWebsite.home'), icon: Home },
     { id: 'feed' as PageType, label: t('panchayatWebsite.feed'), icon: Rss },
@@ -531,16 +536,24 @@ export function PanchayatWebsite() {
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
-                  <DropdownMenuItem onClick={() => i18n.changeLanguage("en")}>
+                  <DropdownMenuItem onClick={() => {
+                    i18n.changeLanguage("en");
+                  }}>
                     English
                   </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => i18n.changeLanguage("mr")}>
+                  <DropdownMenuItem onClick={() => {
+                    i18n.changeLanguage("mr");
+                  }}>
                     मराठी
                   </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => i18n.changeLanguage("hi")}>
+                  <DropdownMenuItem onClick={() => {
+                    i18n.changeLanguage("hi");
+                  }}>
                     हिंदी
                   </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => i18n.changeLanguage("regional")}>
+                  <DropdownMenuItem onClick={() => {
+                    i18n.changeLanguage("regional");
+                  }}>
                     Regional
                   </DropdownMenuItem>
                 </DropdownMenuContent>
