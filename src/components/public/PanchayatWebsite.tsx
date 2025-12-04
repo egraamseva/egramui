@@ -1,11 +1,23 @@
 import { useState, useEffect } from "react";
-import { useParams, Link } from "react-router-dom";
-import { Phone, Mail, MapPin, Calendar, Users, TrendingUp, Download, AlertCircle, ExternalLink, Loader2 } from "lucide-react";
+import { useParams, useNavigate } from "react-router-dom";
+import { useTranslation } from "react-i18next";
+import { 
+  Phone, Mail, MapPin, Calendar, Users, TrendingUp, Download, 
+  AlertCircle, Loader2, Menu, X, Building2, 
+  Award, Image as ImageIcon, Newspaper, MessageCircle,
+  ArrowRight, Clock, Home, Rss, UserCircle, Images, FileText, Contact, Globe, ExternalLink
+} from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "../ui/dropdown-menu";
+import type { Language } from "../../types";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../ui/card";
 import { Badge } from "../ui/badge";
 import { Button } from "../ui/button";
 import { Progress } from "../ui/progress";
-import { Tabs, TabsContent } from "../ui/tabs";
 import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";
 import { Input } from "../ui/input";
 import { Textarea } from "../ui/textarea";
@@ -14,18 +26,22 @@ import { ImageWithFallback } from "../figma/ImageWithFallback";
 import { ImageModal } from "../ui/image-modal";
 import { PostCard } from "../sachiv/PostCard";
 import { panchayatAPI, publicAPI } from "../../services/api";
-import { publicNewsletterApi, galleryApi } from "../../routes/api";
-import type { Post, Scheme, Announcement, PanchayatMember, GalleryItem, PanchayatDetails, Album } from "../../types";
+import { publicNewsletterApi, galleryApi, publicPanchayatWebsiteApi } from "../../routes/api";
+import type { Post, Scheme, Announcement, PanchayatMember, GalleryItem, PanchayatDetails, Album, PanchayatWebsiteSection } from "../../types";
 import { formatTimeAgo } from "../../utils/format";
 import { usePresignedUrlRefresh } from "../../hooks/usePresignedUrlRefresh";
-import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet'
-import { LatLngExpression } from 'leaflet'
+import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
+import { LatLngExpression } from 'leaflet';
 import 'leaflet/dist/leaflet.css';
+import { DynamicSectionRenderer } from "../main/DynamicSectionRenderer";
 
+type PageType = 'home' | 'feed' | 'about' | 'gallery' | 'newsletter' | 'contact';
 
 export function PanchayatWebsite() {
   const { subdomain } = useParams();
-  const [activeTab, setActiveTab] = useState("home");
+  const navigate = useNavigate();
+  const { t, i18n } = useTranslation();
+  const [activePage, setActivePage] = useState<PageType>('home');
   const [panchayat, setPanchayat] = useState<PanchayatDetails | null>(null);
   const [posts, setPosts] = useState<Post[]>([]);
   const [schemes, setSchemes] = useState<Scheme[]>([]);
@@ -38,8 +54,13 @@ export function PanchayatWebsite() {
   const [selectedAlbum, setSelectedAlbum] = useState<Album | null>(null);
   const [albumImages, setAlbumImages] = useState<GalleryItem[]>([]);
   const [loadingAlbumImages, setLoadingAlbumImages] = useState(false);
-
+  const [sections, setSections] = useState<PanchayatWebsiteSection[]>([]);
+  const [loadingSections, setLoadingSections] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [scrolled, setScrolled] = useState(false);
+  
+  // Contact form state
   const [contactForm, setContactForm] = useState({
     name: "",
     email: "",
@@ -48,21 +69,51 @@ export function PanchayatWebsite() {
   });
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
   const [formSubmitted, setFormSubmitted] = useState(false);
+  
+  // Image modal state
   const [isImageModalOpen, setIsImageModalOpen] = useState(false);
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
-  const [modalImages, setModalImages] = useState<string[]>([]); // Array of image URLs for modal carousel
-  const [modalImageTitles, setModalImageTitles] = useState<string[]>([]); // Array of image titles for modal
+  const [modalImages, setModalImages] = useState<string[]>([]);
+  const [modalImageTitles, setModalImageTitles] = useState<string[]>([]);
   const [isNewsletterImageModalOpen, setIsNewsletterImageModalOpen] = useState(false);
   const [selectedNewsletterImageUrl, setSelectedNewsletterImageUrl] = useState<string>("");
 
-  // Scroll to top when component mounts or subdomain changes
+  // Scroll to top when page changes
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
-  }, [subdomain]);
+  }, [activePage]);
+
+  // Handle scroll for navbar styling
+  useEffect(() => {
+    const handleScroll = () => {
+      setScrolled(window.scrollY > 50);
+    };
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
 
   useEffect(() => {
     fetchPanchayatData();
+    fetchWebsiteSections();
   }, [subdomain]);
+
+  const fetchWebsiteSections = async () => {
+    if (!subdomain) return;
+    try {
+      setLoadingSections(true);
+      const sectionsData = await publicPanchayatWebsiteApi.getSections(subdomain);
+      if (sectionsData && sectionsData.length > 0) {
+        setSections(sectionsData);
+      } else {
+        setSections([]);
+      }
+    } catch (error) {
+      console.error("Error fetching website sections:", error);
+      setSections([]);
+    } finally {
+      setLoadingSections(false);
+    }
+  };
 
   useEffect(() => {
     if (selectedAlbum) {
@@ -71,7 +122,6 @@ export function PanchayatWebsite() {
       setAlbumImages([]);
     }
   }, [selectedAlbum]);
-
 
   const fetchAlbumImages = async (albumId: string) => {
     setLoadingAlbumImages(true);
@@ -87,7 +137,7 @@ export function PanchayatWebsite() {
   };
 
   const parseCoordinates = (coordString: string): [number, number] => {
-    if (!coordString) return [22.9734, 78.6569]; // Default India center
+    if (!coordString) return [22.9734, 78.6569];
     const [latStr, lngStr] = coordString.split(',');
     const lat = Number(latStr.trim());
     const lng = Number(lngStr.trim());
@@ -102,7 +152,6 @@ export function PanchayatWebsite() {
       const panchayatData = await panchayatAPI.getBySubdomain(subdomainToUse);
       setPanchayat(panchayatData);
 
-      // Fetch all data using public APIs with slug
       const [postsResult, schemesResult, announcementsResult, membersResult, galleryResult, newslettersResult, albumsResult] = await Promise.all([
         publicAPI.getPublicPosts(subdomainToUse, { page: 0, size: 50 }),
         publicAPI.getPublicSchemes(subdomainToUse, { page: 0, size: 50 }),
@@ -115,7 +164,7 @@ export function PanchayatWebsite() {
 
       // Map posts
       const mappedPosts = postsResult.content
-        .filter((post: any) => post.bodyText) // Only include posts with content
+        .filter((post: any) => post.bodyText)
         .map((post: any) => ({
           id: post.postId.toString(),
           panchayatId: post.panchayatId?.toString(),
@@ -131,25 +180,21 @@ export function PanchayatWebsite() {
 
       // Map schemes
       const mappedSchemes = schemesResult.content
-        .filter((scheme: any) => scheme.title) // Only include schemes with titles
+        .filter((scheme: any) => scheme.title)
         .map((scheme: any) => {
-          // Calculate progress based on status
           let progress = 0;
           if (scheme.status === 'ACTIVE') progress = 50;
           else if (scheme.status === 'ONGOING') progress = 75;
           else if (scheme.status === 'COMPLETED') progress = 100;
 
-          // Map status
           let status: "Active" | "Completed" | "Pending" = "Pending";
           if (scheme.status === 'ACTIVE' || scheme.status === 'ONGOING') status = "Active";
           else if (scheme.status === 'COMPLETED') status = "Completed";
 
-          // Format budget
           const budget = scheme.budgetAmount
             ? `₹${scheme.budgetAmount.toLocaleString("en-IN")}`
             : "₹0";
 
-          // Use description as category, truncate if too long
           const category = scheme.description
             ? scheme.description.length > 50
               ? scheme.description.substring(0, 50) + "..."
@@ -189,11 +234,10 @@ export function PanchayatWebsite() {
         views: 0,
       }));
 
-      // Map members (users)
+      // Map members
       const mappedMembers = membersResult.content
-        .filter((member: any) => member.status === 'ACTIVE') // Only show active members
+        .filter((member: any) => member.status === 'ACTIVE')
         .map((member: any) => {
-          // Format role name properly
           const roleName = member.role
             ? member.role.replace(/_/g, ' ')
               .split(' ')
@@ -206,7 +250,7 @@ export function PanchayatWebsite() {
             panchayatId: member.panchayatId?.toString(),
             name: member.name || 'Unknown',
             role: roleName,
-            ward: 'Ward ' + ((member.userId % 8) + 1), // Placeholder - backend doesn't have ward
+            ward: 'Ward ' + ((member.userId % 8) + 1),
             phone: member.phone || 'Not available',
             email: member.email || undefined,
             image: member.imageUrl || undefined,
@@ -219,7 +263,7 @@ export function PanchayatWebsite() {
 
       // Map gallery
       const mappedGallery = galleryResult.content
-        .filter((image: any) => image.imageUrl) // Only include images with URLs
+        .filter((image: any) => image.imageUrl)
         .map((image: any) => ({
           id: image.imageId.toString(),
           panchayatId: image.panchayatId?.toString(),
@@ -245,7 +289,6 @@ export function PanchayatWebsite() {
       setAlbums((albumsResult as any).items || (albumsResult as any).content || []);
     } catch (error) {
       console.error("Error fetching panchayat data:", error);
-      // Use default data if API fails
       setPanchayat({
         id: 'panchayat-1',
         name: subdomain ? subdomain.charAt(0).toUpperCase() + subdomain.slice(1) : 'Ramnagar',
@@ -266,7 +309,6 @@ export function PanchayatWebsite() {
           officeHours: '',
         },
       });
-      // Set empty arrays for failed data
       setPosts([]);
       setSchemes([]);
       setAnnouncements([]);
@@ -279,432 +321,671 @@ export function PanchayatWebsite() {
 
   const validateContactForm = () => {
     const errors: Record<string, string> = {};
-
-    if (!contactForm.name.trim()) {
-      errors.name = "Name is required";
-    }
-
+    if (!contactForm.name.trim()) errors.name = t('panchayatWebsite.nameRequired');
     if (!contactForm.email.trim()) {
-      errors.email = "Email is required";
+      errors.email = t('panchayatWebsite.emailRequired');
     } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(contactForm.email)) {
-      errors.email = "Please enter a valid email address";
+      errors.email = t('panchayatWebsite.emailInvalid');
     }
-
-    if (!contactForm.subject.trim()) {
-      errors.subject = "Subject is required";
-    }
-
+    if (!contactForm.subject.trim()) errors.subject = t('panchayatWebsite.subjectRequired');
     if (!contactForm.message.trim()) {
-      errors.message = "Message is required";
+      errors.message = t('panchayatWebsite.messageRequired');
     } else if (contactForm.message.trim().length < 10) {
-      errors.message = "Message must be at least 10 characters";
+      errors.message = t('panchayatWebsite.messageMinLength');
     }
-
     setFormErrors(errors);
     return Object.keys(errors).length === 0;
   };
 
   const handleContactSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-
     if (validateContactForm()) {
-      // TODO: Implement actual form submission
-
       setFormSubmitted(true);
       setContactForm({ name: "", email: "", subject: "", message: "" });
       setTimeout(() => setFormSubmitted(false), 5000);
     }
   };
 
+  // Render dynamic sections with data injection
+  const renderDynamicSections = () => {
+    if (sections.length === 0) return null;
+
+    return sections.map((section) => {
+      let sectionContent = section.content;
+      
+      if (section.sectionType === 'STATS' && panchayat) {
+        sectionContent = {
+          ...sectionContent,
+          items: [
+            { title: 'Population', value: panchayat.population?.toLocaleString() || 'N/A', icon: 'users' },
+            { title: 'Area', value: `${panchayat.area || 'N/A'} km²`, icon: 'map' },
+            { title: 'Wards', value: panchayat.wards?.toString() || 'N/A', icon: 'building' },
+            { title: 'Established', value: panchayat.established?.toString() || 'N/A', icon: 'calendar' },
+          ],
+        };
+      } else if (section.sectionType === 'ANNOUNCEMENTS' && announcements.length > 0) {
+        sectionContent = {
+          ...sectionContent,
+          items: announcements.slice(0, section.metadata?.limit || 5).map((a) => ({
+            title: a.title,
+            description: a.description,
+            date: a.date,
+          })),
+        };
+      } else if (section.sectionType === 'SCHEMES' && schemes.length > 0) {
+        sectionContent = {
+          ...sectionContent,
+          items: schemes.slice(0, section.metadata?.limit || 6).map((s) => ({
+            title: s.name,
+            description: s.category,
+            progress: s.progress,
+            status: s.status,
+          })),
+        };
+      } else if (section.sectionType === 'GALLERY' && gallery.length > 0) {
+        sectionContent = {
+          ...sectionContent,
+          items: gallery.slice(0, section.metadata?.limit || 12).map((g) => ({
+            title: g.title,
+            image: g.image,
+            description: g.description,
+          })),
+        };
+      } else if (section.sectionType === 'MEMBERS' && members.length > 0) {
+        sectionContent = {
+          ...sectionContent,
+          items: members.map((m) => ({
+            title: m.name,
+            subtitle: m.role,
+            description: m.designation,
+            image: m.image,
+          })),
+        };
+      } else if (section.sectionType === 'CONTACT' && panchayat) {
+        sectionContent = {
+          ...sectionContent,
+          items: [
+            ...(sectionContent.items || []),
+            ...(panchayat.contactInfo?.address ? [{
+              title: 'Address',
+              description: panchayat.contactInfo.address,
+              icon: 'map-pin',
+            }] : []),
+            ...(panchayat.contactInfo?.phone ? [{
+              title: 'Phone',
+              description: panchayat.contactInfo.phone,
+              icon: 'phone',
+            }] : []),
+            ...(panchayat.contactInfo?.email ? [{
+              title: 'Email',
+              description: panchayat.contactInfo.email,
+              icon: 'mail',
+            }] : []),
+          ],
+        };
+      }
+
   return (
-    <div className="min-h-screen bg-[#F5F5F5] relative">
+        <DynamicSectionRenderer
+          key={section.id}
+          section={{ ...section, content: sectionContent }}
+        />
+      );
+    });
+  };
+
+  // Navigation items
+  const navItems = [
+    { id: 'home' as PageType, label: t('panchayatWebsite.home'), icon: Home },
+    { id: 'feed' as PageType, label: t('panchayatWebsite.feed'), icon: Rss },
+    { id: 'about' as PageType, label: t('panchayatWebsite.about'), icon: UserCircle },
+    { id: 'gallery' as PageType, label: t('panchayatWebsite.gallery'), icon: Images },
+    { id: 'newsletter' as PageType, label: t('panchayatWebsite.newsletters'), icon: FileText },
+    { id: 'contact' as PageType, label: t('panchayatWebsite.contact'), icon: Contact },
+  ];
+
+  return (
+    <div className="min-h-screen bg-white">
       {/* Loading Overlay */}
       {loading && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-white/80 backdrop-blur-sm">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-white/90 backdrop-blur-sm">
           <div className="flex flex-col items-center gap-4">
             <Loader2 className="h-12 w-12 animate-spin text-[#E31E24]" />
             <div className="text-center">
-              <p className="text-lg font-semibold text-[#1B2B5E]">Loading Panchayat Information</p>
-              <p className="mt-1 text-sm text-[#666]">Please wait while we fetch the data...</p>
+              <p className="text-lg font-semibold text-[#1B2B5E]">{t('panchayatWebsite.loadingPanchayatInfo')}</p>
+              <p className="mt-1 text-sm text-[#666]">{t('panchayatWebsite.pleaseWait')}</p>
             </div>
           </div>
         </div>
       )}
 
-      {/* Skip to Content Link for Accessibility */}
-      <a
-        href="#main-content"
-        className="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 focus:z-50 focus:bg-[#E31E24] focus:text-white focus:px-4 focus:py-2 focus:rounded-md focus:shadow-lg"
-        aria-label="Skip to main content"
-      >
-        Skip to main content
-      </a>
-
-      {/* Clean Banner with Panchayat Name + Breadcrumb */}
-      <section className="border-b border-[#E5E5E5] bg-white">
-        <div className="container mx-auto px-4 py-6 sm:px-6 lg:px-8">
-          {/* Breadcrumb */}
-          <nav className="mb-4 text-sm text-[#666]" aria-label="Breadcrumb">
-            <ol className="flex items-center gap-2">
-              <li>
-                <Link to="/" className="hover:text-[#E31E24] transition-colors">Home</Link>
-              </li>
-              <li>/</li>
-              <li>
-                <Link to="/panchayats" className="hover:text-[#E31E24] transition-colors">Panchayats</Link>
-              </li>
-              <li>/</li>
-              <li className="text-[#1B2B5E] font-medium">
-                {panchayat?.name || ''}
-              </li>
-            </ol>
-          </nav>
-
-          {/* Panchayat Name and Info */}
-          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-            <div>
-              <h1 className="mb-2 text-3xl font-bold text-[#1B2B5E] sm:text-4xl">
-                {panchayat?.name || 'Ramnagar'} Gram Panchayat
+      {/* Custom Navbar */}
+      <nav className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
+        scrolled ? 'bg-white shadow-lg' : 'bg-white/95 backdrop-blur-sm'
+      }`}>
+        <div className="container mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex items-center justify-between h-16 lg:h-20">
+            {/* Logo and Name */}
+            <button
+              onClick={() => setActivePage('home')}
+              className="flex items-center gap-3 hover:opacity-80 transition-opacity"
+            >
+              {panchayat?.logoUrl && (
+                <ImageWithFallback
+                  src={panchayat.logoUrl}
+                  alt={`${panchayat.name} Logo`}
+                  className="h-10 w-10 lg:h-12 lg:w-12 object-contain"
+                />
+              )}
+              <div className="text-left">
+                <h1 className="text-lg lg:text-xl font-bold text-[#1B2B5E] leading-tight">
+                  {panchayat?.name || t('panchayatWebsite.gramPanchayat')}
               </h1>
-              <p className="text-[#666]">
-                {panchayat?.district || 'Varanasi'} District, {panchayat?.state || 'Uttar Pradesh'}
+                <p className="text-xs text-[#666] hidden sm:block">
+                  {panchayat?.district || ''} {t('panchayatWebsite.district')}
               </p>
             </div>
-            <div className="flex items-center gap-4">
-              <a
-                href="https://www.india.gov.in"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center gap-1 text-sm text-[#666] hover:text-[#E31E24] transition-colors"
-                aria-label="Visit India.gov.in - Opens in new tab"
-              >
-                <span>India.gov.in</span>
-                <ExternalLink className="h-3 w-3" aria-hidden="true" />
-              </a>
+            </button>
+
+            {/* Desktop Navigation */}
+            <div className="hidden lg:flex items-center gap-1">
+              {navItems.map((item) => {
+                const Icon = item.icon;
+                return (
+                  <Button
+                    key={item.id}
+                    variant="ghost"
+                    onClick={() => setActivePage(item.id)}
+                    className={`${
+                      activePage === item.id
+                        ? 'text-[#E31E24] bg-[#E31E24]/10'
+                        : 'text-[#1B2B5E] hover:text-[#E31E24] hover:bg-[#E31E24]/10'
+                    }`}
+                  >
+                    <Icon className="h-4 w-4 mr-2" />
+                    {item.label}
+                  </Button>
+                );
+              })}
             </div>
+
+            {/* Right Actions - Main Platform Link, Language & Mobile Menu */}
+            <div className="flex items-center gap-2">
+              {/* Main Platform Link - Desktop */}
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => navigate("/")}
+                className="hidden lg:flex items-center gap-2 text-[#1B2B5E] hover:text-[#E31E24] hover:bg-[#E31E24]/10"
+                title={t('panchayatWebsite.goToMainPlatform')}
+              >
+                <ExternalLink className="h-4 w-4" />
+                <span className="text-sm">{t('panchayatWebsite.mainPlatform')}</span>
+              </Button>
+
+              {/* Language Selector */}
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" size="icon" className="h-9 w-9">
+                    <Globe className="h-5 w-5 text-[#1B2B5E]" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem onClick={() => i18n.changeLanguage("en")}>
+                    English
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => i18n.changeLanguage("mr")}>
+                    मराठी
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => i18n.changeLanguage("hi")}>
+                    हिंदी
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => i18n.changeLanguage("regional")}>
+                    Regional
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+
+              {/* Mobile Menu Button */}
+              <Button
+                variant="ghost"
+                size="icon"
+                className="lg:hidden"
+                onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+              >
+                {mobileMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
+              </Button>
+          </div>
+        </div>
+
+          {/* Mobile Menu */}
+          {mobileMenuOpen && (
+            <div className="lg:hidden border-t border-[#E5E5E5] py-4 space-y-4">
+              <div className="space-y-2">
+                {navItems.map((item) => {
+                  const Icon = item.icon;
+                  return (
+                    <Button
+                      key={item.id}
+                      variant="ghost"
+                      className={`w-full justify-start ${
+                        activePage === item.id
+                          ? 'text-[#E31E24] bg-[#E31E24]/10'
+                          : 'text-[#1B2B5E]'
+                      }`}
+                      onClick={() => {
+                        setActivePage(item.id);
+                        setMobileMenuOpen(false);
+                      }}
+                    >
+                      <Icon className="h-4 w-4 mr-2" />
+                      {item.label}
+                    </Button>
+                  );
+                })}
+              </div>
+              
+              {/* Main Platform Link - Mobile */}
+              <div className="border-t border-[#E5E5E5] pt-4">
+                <Button
+                  variant="outline"
+                  className="w-full justify-start text-[#1B2B5E] hover:text-[#E31E24] hover:bg-[#E31E24]/10"
+                  onClick={() => {
+                    navigate("/");
+                    setMobileMenuOpen(false);
+                  }}
+                >
+                  <ExternalLink className="h-4 w-4 mr-2" />
+                  {t('panchayatWebsite.mainPlatform')}
+                </Button>
+                </div>
+
+              {/* Language Selector in Mobile Menu */}
+              <div className="border-t border-[#E5E5E5] pt-4">
+                <p className="text-xs font-semibold text-[#666] mb-2 px-2">{t('nav.language')}</p>
+                <div className="grid grid-cols-2 gap-2">
+                  {[
+                    { label: "English", lang: "en" },
+                    { label: "मराठी", lang: "mr" },
+                    { label: "हिंदी", lang: "hi" },
+                    { label: "Regional", lang: "regional" },
+                  ].map(({ label, lang }) => (
+                    <Button
+                      key={lang}
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        i18n.changeLanguage(lang);
+                        setMobileMenuOpen(false);
+                      }}
+                      className="text-xs"
+                    >
+                      {label}
+                    </Button>
+                  ))}
+                </div>
+                </div>
+                </div>
+          )}
+                </div>
+      </nav>
+
+      {/* Spacer for fixed navbar */}
+      <div className="h-16 lg:h-20" />
+
+      {/* Page Content */}
+      <main className="min-h-[calc(100vh-4rem)]">
+        {/* Home Page */}
+        {activePage === 'home' && (
+          <div className="space-y-0">
+            {/* Hero Section */}
+            <section className="relative min-h-[400px] sm:min-h-[500px] lg:min-h-[600px] overflow-hidden">
+              <div className="absolute inset-0 bg-gradient-to-br from-[#1B2B5E] via-[#2A3F6F] to-[#6C5CE7]">
+                {panchayat?.logoUrl && (
+                  <div className="absolute inset-0 opacity-10">
+                    <div className="absolute inset-0 bg-[url('/pattern.svg')] bg-repeat opacity-20"></div>
+                  </div>
+                )}
+              </div>
+              <div className="absolute inset-0 bg-black/20" />
+
+              <div className="container relative mx-auto px-4 py-12 sm:py-16 lg:py-20 lg:px-8 lg:py-32">
+                <div className="mx-auto max-w-4xl text-center">
+                  {panchayat?.logoUrl && (
+                    <div className="mb-4 sm:mb-6 lg:mb-8 flex justify-center">
+                      <div className="rounded-full bg-white/20 p-2 sm:p-3 lg:p-4 backdrop-blur-sm">
+                        <ImageWithFallback
+                          src={panchayat.logoUrl}
+                          alt={`${panchayat.name} Logo`}
+                          className="h-12 w-12 sm:h-16 sm:w-16 lg:h-20 lg:w-20 xl:h-24 xl:w-24 object-contain"
+                        />
+                      </div>
+                    </div>
+                  )}
+                  <h1 className="mb-3 sm:mb-4 lg:mb-6 text-2xl sm:text-3xl md:text-4xl lg:text-5xl xl:text-6xl font-bold text-white leading-tight px-2">
+                    {panchayat?.name || t('panchayatWebsite.gramPanchayat')}
+                  </h1>
+                  <p className="mb-2 sm:mb-3 lg:mb-4 text-base sm:text-lg md:text-xl lg:text-2xl text-white/90 px-2">
+                    {panchayat?.district || ''} {t('panchayatWebsite.district')}, {panchayat?.state || ''}
+                  </p>
+                  <p className="mb-4 sm:mb-6 lg:mb-8 text-sm sm:text-base lg:text-lg text-white/80 max-w-2xl mx-auto px-4">
+                    {panchayat?.aboutText || panchayat?.description || t('panchayatWebsite.defaultDescription')}
+                  </p>
+                  
+                  {/* Quick Stats */}
+                  <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3 lg:gap-4 mt-6 sm:mt-8 lg:mt-12 max-w-3xl mx-auto px-2">
+                    <div className="bg-white/10 backdrop-blur-sm rounded-lg p-2 sm:p-3 lg:p-4 border border-white/20">
+                      <Users className="h-5 w-5 sm:h-6 sm:w-6 lg:h-8 lg:w-8 mx-auto mb-1 sm:mb-2 text-white" />
+                      <p className="text-lg sm:text-xl md:text-2xl lg:text-3xl font-bold text-white">
+                        {panchayat?.population?.toLocaleString() || 'N/A'}
+                      </p>
+                      <p className="text-[10px] sm:text-xs lg:text-sm text-white/80">{t('panchayatWebsite.population')}</p>
+                </div>
+                    <div className="bg-white/10 backdrop-blur-sm rounded-lg p-2 sm:p-3 lg:p-4 border border-white/20">
+                      <MapPin className="h-5 w-5 sm:h-6 sm:w-6 lg:h-8 lg:w-8 mx-auto mb-1 sm:mb-2 text-white" />
+                      <p className="text-lg sm:text-xl md:text-2xl lg:text-3xl font-bold text-white">
+                        {panchayat?.area || 'N/A'}
+                      </p>
+                      <p className="text-[10px] sm:text-xs lg:text-sm text-white/80">{t('panchayatWebsite.area')}</p>
+                </div>
+                    <div className="bg-white/10 backdrop-blur-sm rounded-lg p-2 sm:p-3 lg:p-4 border border-white/20">
+                      <Building2 className="h-5 w-5 sm:h-6 sm:w-6 lg:h-8 lg:w-8 mx-auto mb-1 sm:mb-2 text-white" />
+                      <p className="text-lg sm:text-xl md:text-2xl lg:text-3xl font-bold text-white">
+                        {panchayat?.wards || 'N/A'}
+                      </p>
+                      <p className="text-[10px] sm:text-xs lg:text-sm text-white/80">{t('panchayatWebsite.wards')}</p>
+                </div>
+                    <div className="bg-white/10 backdrop-blur-sm rounded-lg p-2 sm:p-3 lg:p-4 border border-white/20">
+                      <Calendar className="h-5 w-5 sm:h-6 sm:w-6 lg:h-8 lg:w-8 mx-auto mb-1 sm:mb-2 text-white" />
+                      <p className="text-lg sm:text-xl md:text-2xl lg:text-3xl font-bold text-white">
+                        {panchayat?.established || 'N/A'}
+                      </p>
+                      <p className="text-[10px] sm:text-xs lg:text-sm text-white/80">{t('panchayatWebsite.established')}</p>
+                    </div>
+                  </div>
           </div>
         </div>
       </section>
 
-
-      {/* Quick Stats - Mobile Responsive Grid */}
-      <section
-        className="border-b border-[#E5E5E5] bg-white py-6 sm:py-8"
-        aria-label="Panchayat statistics"
-      >
-        <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid gap-3 sm:gap-4 md:gap-6 grid-cols-2 lg:grid-cols-4" role="list">
-            <Card role="listitem" className="transition-shadow hover:shadow-md">
-              <CardContent className="flex flex-col sm:flex-row items-center gap-2 sm:gap-4 p-3 sm:p-4 md:p-6">
-                <div className="flex h-10 w-10 sm:h-12 sm:w-12 items-center justify-center rounded-lg bg-[#FF9933]/10" aria-hidden="true">
-                  <Users className="h-5 w-5 sm:h-6 sm:w-6 text-[#FF9933]" />
-                </div>
-                <div className="text-center sm:text-left">
-                  <p className="text-muted-foreground text-xs sm:text-sm">Population</p>
-                  <p className="text-lg sm:text-xl md:text-2xl font-semibold" aria-label={`Population: ${panchayat?.population?.toLocaleString() || '5,200'}`}>
-                    {panchayat?.population?.toLocaleString() || '5,200'}
-                  </p>
-                </div>
-              </CardContent>
-            </Card>
-            <Card role="listitem" className="transition-shadow hover:shadow-md">
-              <CardContent className="flex flex-col sm:flex-row items-center gap-2 sm:gap-4 p-3 sm:p-4 md:p-6">
-                <div className="flex h-10 w-10 sm:h-12 sm:w-12 items-center justify-center rounded-lg bg-[#138808]/10" aria-hidden="true">
-                  <MapPin className="h-5 w-5 sm:h-6 sm:w-6 text-[#138808]" />
-                </div>
-                <div className="text-center sm:text-left">
-                  <p className="text-muted-foreground text-xs sm:text-sm">Area</p>
-                  <p className="text-lg sm:text-xl md:text-2xl font-semibold" aria-label={`Area: ${panchayat?.area || '12.5'} square kilometers`}>
-                    {panchayat?.area || '12.5'} km²
-                  </p>
-                </div>
-              </CardContent>
-            </Card>
-            <Card role="listitem" className="transition-shadow hover:shadow-md">
-              <CardContent className="flex flex-col sm:flex-row items-center gap-2 sm:gap-4 p-3 sm:p-4 md:p-6">
-                <div className="flex h-10 w-10 sm:h-12 sm:w-12 items-center justify-center rounded-lg bg-[#FF9933]/10" aria-hidden="true">
-                  <TrendingUp className="h-5 w-5 sm:h-6 sm:w-6 text-[#FF9933]" />
-                </div>
-                <div className="text-center sm:text-left">
-                  <p className="text-muted-foreground text-xs sm:text-sm">Wards</p>
-                  <p className="text-lg sm:text-xl md:text-2xl font-semibold" aria-label={`Number of wards: ${panchayat?.wards || '8'}`}>
-                    {panchayat?.wards || '8'}
-                  </p>
-                </div>
-              </CardContent>
-            </Card>
-            <Card role="listitem" className="transition-shadow hover:shadow-md">
-              <CardContent className="flex flex-col sm:flex-row items-center gap-2 sm:gap-4 p-3 sm:p-4 md:p-6">
-                <div className="flex h-10 w-10 sm:h-12 sm:w-12 items-center justify-center rounded-lg bg-[#138808]/10" aria-hidden="true">
-                  <Calendar className="h-5 w-5 sm:h-6 sm:w-6 text-[#138808]" />
-                </div>
-                <div className="text-center sm:text-left">
-                  <p className="text-muted-foreground text-xs sm:text-sm">Established</p>
-                  <p className="text-lg sm:text-xl md:text-2xl font-semibold" aria-label={`Established in year: ${panchayat?.established || '1995'}`}>
-                    {panchayat?.established || '1995'}
-                  </p>
-                </div>
-              </CardContent>
-            </Card>
+            {/* Dynamic Sections from Admin */}
+            {loadingSections ? (
+              <div className="py-16 text-center">
+                <Loader2 className="h-8 w-8 animate-spin mx-auto text-[#E31E24]" />
+                <p className="mt-2 text-[#666]">{t('panchayatWebsite.loadingSections')}</p>
           </div>
+            ) : (
+              <div className="bg-white">
+                {renderDynamicSections()}
         </div>
-      </section>
-
-
-      {/* Sticky Navigation Bar - Outside Tabs for proper sticky behavior */}
-      <div className="sticky top-0 z-50 bg-white border-b border-[#E5E5E5] shadow-sm">
-        <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="inline-flex sm:grid grid-cols-3 lg:grid-cols-6 w-full h-14 sm:h-16 overflow-x-auto overflow-y-hidden whitespace-nowrap scrollbar-hide gap-1 sm:gap-0">
-            <button
-              onClick={() => setActiveTab("home")}
-              className={`text-sm px-6 h-full rounded-t-lg transition-colors flex-shrink-0 flex items-center justify-center ${activeTab === "home"
-                  ? "bg-[#E31E24] text-white font-semibold"
-                  : "text-[#666] hover:text-[#1B2B5E]"
-                }`}
-            >
-              Home
-            </button>
-            <button
-              onClick={() => setActiveTab("about")}
-              className={`text-sm px-6 h-full rounded-t-lg transition-colors flex-shrink-0 flex items-center justify-center ${activeTab === "about"
-                  ? "bg-[#E31E24] text-white font-semibold"
-                  : "text-[#666] hover:text-[#1B2B5E]"
-                }`}
-            >
-              About
-            </button>
-            <button
-              onClick={() => setActiveTab("schemes")}
-              className={`text-sm px-6 h-full rounded-t-lg transition-colors flex-shrink-0 flex items-center justify-center ${activeTab === "schemes"
-                  ? "bg-[#E31E24] text-white font-semibold"
-                  : "text-[#666] hover:text-[#1B2B5E]"
-                }`}
-            >
-              Schemes
-            </button>
-            <button
-              onClick={() => setActiveTab("gallery")}
-              className={`text-sm px-6 h-full rounded-t-lg transition-colors flex-shrink-0 flex items-center justify-center ${activeTab === "gallery"
-                  ? "bg-[#E31E24] text-white font-semibold"
-                  : "text-[#666] hover:text-[#1B2B5E]"
-                }`}
-            >
-              Gallery
-            </button>
-            <button
-              onClick={() => setActiveTab("newsletters")}
-              className={`text-sm px-6 h-full rounded-t-lg transition-colors flex-shrink-0 flex items-center justify-center ${activeTab === "newsletters"
-                  ? "bg-[#E31E24] text-white font-semibold"
-                  : "text-[#666] hover:text-[#1B2B5E]"
-                }`}
-            >
-              Newsletter
-            </button>
-            <button
-              onClick={() => setActiveTab("contact")}
-              className={`text-sm px-6 h-full rounded-t-lg transition-colors flex-shrink-0 flex items-center justify-center ${activeTab === "contact"
-                  ? "bg-[#E31E24] text-white font-semibold"
-                  : "text-[#666] hover:text-[#1B2B5E]"
-                }`}
-            >
-              Contact
-            </button>
-          </div>
-        </div>
+            )}
       </div>
+        )}
 
-      {/* Main Content - Mobile Responsive */}
-      <main id="main-content" className="bg-[#F5F5F5]" role="main">
-        <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 md:py-12">
-            <div className="space-y-6 sm:space-y-8">
+        {/* Feed Page */}
+        {activePage === 'feed' && (
+          <div className="py-4 sm:py-6 lg:py-12 bg-[#F5F5F5] min-h-[calc(100vh-4rem)]">
+            <div className="container mx-auto px-4 sm:px-6 lg:px-8">
+              <div className="max-w-7xl mx-auto">
+                <div className="mb-6 sm:mb-8">
+                  <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-[#1B2B5E] mb-3 sm:mb-4">{t('panchayatWebsite.communityFeed')}</h2>
+                  <div className="w-16 sm:w-24 h-1 bg-[#E31E24]"></div>
+                </div>
 
-
-              {/* Home Tab */}
-              <TabsContent value="home" className="space-y-6 sm:space-y-8">
-                <div className="grid gap-6 sm:gap-8 lg:grid-cols-3">
-                  {/* Left Sidebar - Stack on mobile, sidebar on desktop */}
-                  <aside className="space-y-4 sm:space-y-6 lg:col-span-1 order-2 lg:order-1" aria-label="Sidebar content">
-                    {/* Latest Announcements */}
-                    <section>
-                      <h3 className="mb-3 sm:mb-4 text-lg sm:text-xl font-semibold">Latest Announcements</h3>
-                      <div className="space-y-3">
-                        {announcements.length === 0 ? (
-                          <Card>
-                            <CardContent className="p-3 sm:p-4">
-                              <p className="text-xs sm:text-sm text-muted-foreground text-center">
-                                No announcements available
-                              </p>
+                {/* Feed Layout - Main feed first on mobile, sidebar on desktop */}
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6 lg:gap-8">
+                  {/* Main Feed - Order 1 on mobile, order 2 on desktop */}
+                  <div className="lg:col-span-2 lg:order-2 space-y-4 sm:space-y-6">
+                    {loading ? (
+                      <div className="text-center py-8 sm:py-12">
+                        <Loader2 className="h-6 w-6 sm:h-8 sm:w-8 animate-spin mx-auto text-[#E31E24]" />
+                        <p className="mt-2 text-sm sm:text-base text-[#666]">{t('panchayatWebsite.loadingPosts')}</p>
+                      </div>
+                    ) : posts.length === 0 ? (
+                      <Card className="border-[#E5E5E5]">
+                        <CardContent className="p-8 sm:p-12 text-center">
+                          <Rss className="h-10 w-10 sm:h-12 sm:w-12 mx-auto mb-4 text-[#666] opacity-50" />
+                          <p className="text-sm sm:text-base text-[#666]">{t('panchayatWebsite.noPostsYet')}</p>
+                          <p className="text-xs sm:text-sm text-[#999] mt-2">{t('panchayatWebsite.checkBackLater')}</p>
                             </CardContent>
                           </Card>
                         ) : (
-                          announcements.slice(0, 3).map((announcement) => (
+                      posts.map((post) => (
+                        <PostCard
+                          key={post.id}
+                          post={{
+                            ...post,
+                            timestamp: formatTimeAgo(new Date(post.timestamp)),
+                          }}
+                        />
+                      ))
+                    )}
+                  </div>
+
+                  {/* Sidebar - Order 2 on mobile, order 1 on desktop */}
+                  <aside className="lg:col-span-1 lg:order-1 space-y-4 sm:space-y-6">
+                    <Card className="border-[#E5E5E5]">
+                      <CardHeader className="p-4 sm:p-6">
+                        <CardTitle className="text-base sm:text-lg">{t('panchayatWebsite.latestAnnouncements')}</CardTitle>
+                      </CardHeader>
+                      <CardContent className="p-4 sm:p-6 pt-0 space-y-2 sm:space-y-3">
+                        {announcements.length === 0 ? (
+                          <p className="text-xs sm:text-sm text-[#666] text-center py-4">{t('panchayatWebsite.noAnnouncements')}</p>
+                        ) : (
+                          announcements.slice(0, 5).map((announcement) => (
                             <Card key={announcement.id} className="border-l-4 border-l-[#FF9933]">
-                              <CardContent className="p-3 sm:p-4">
-                                <div className="mb-2 flex flex-wrap items-center gap-2">
-                                  <AlertCircle className="h-3 w-3 sm:h-4 sm:w-4 text-[#FF9933]" />
-                                  <Badge variant="secondary" className="text-xs">
+                              <CardContent className="p-2.5 sm:p-3">
+                                <div className="flex items-center gap-2 mb-1.5 sm:mb-2">
+                                  <AlertCircle className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-[#FF9933] flex-shrink-0" />
+                                  <Badge variant="secondary" className="text-[10px] sm:text-xs">
                                     {announcement.date}
                                   </Badge>
                                 </div>
-                                <h4 className="mb-2 text-sm sm:text-base">{announcement.title}</h4>
-                                <p className="text-xs sm:text-sm text-muted-foreground line-clamp-2">
-                                  {announcement.description}
-                                </p>
+                                <h4 className="text-xs sm:text-sm font-semibold mb-1 line-clamp-2">{announcement.title}</h4>
+                                <p className="text-[10px] sm:text-xs text-[#666] line-clamp-2">{announcement.description}</p>
                               </CardContent>
                             </Card>
                           ))
                         )}
-                      </div>
-                    </section>
-
-
-                    {/* Featured Schemes */}
-                    <section>
-                      <div className="mb-3 sm:mb-4 flex items-center justify-between">
-                        <h3 className="text-lg sm:text-xl font-semibold">Active Schemes</h3>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => setActiveTab("schemes")}
-                          className="text-xs sm:text-sm"
-                        >
-                          View All
-                        </Button>
-                      </div>
-                      <div className="space-y-3">
-                        {schemes.length === 0 ? (
-                          <Card>
-                            <CardContent className="p-3 sm:p-4">
-                              <p className="text-xs sm:text-sm text-muted-foreground text-center">
-                                No active schemes
-                              </p>
                             </CardContent>
                           </Card>
+
+                    <Card className="border-[#E5E5E5]">
+                      <CardHeader className="p-4 sm:p-6">
+                        <CardTitle className="text-base sm:text-lg">{t('panchayatWebsite.activeSchemes')}</CardTitle>
+                      </CardHeader>
+                      <CardContent className="p-4 sm:p-6 pt-0 space-y-2 sm:space-y-3">
+                        {schemes.length === 0 ? (
+                          <p className="text-xs sm:text-sm text-[#666] text-center py-4">{t('panchayatWebsite.noActiveSchemes')}</p>
                         ) : (
-                          schemes.slice(0, 2).map((scheme) => (
-                            <Card key={scheme.id}>
-                              <CardContent className="p-3 sm:p-4">
-                                <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
-                                  <Badge className="bg-[#138808] text-white text-xs">
-                                    {scheme.category}
-                                  </Badge>
-                                  <Badge variant="outline" className="text-xs">
-                                    {scheme.status}
-                                  </Badge>
+                          schemes.slice(0, 3).map((scheme) => (
+                            <Card key={scheme.id} className="border-[#E5E5E5]">
+                              <CardContent className="p-2.5 sm:p-3">
+                                <div className="flex items-center justify-between mb-1.5 sm:mb-2 flex-wrap gap-1">
+                                  <Badge className="bg-[#138808] text-white text-[10px] sm:text-xs">{scheme.category}</Badge>
+                                  <Badge variant="outline" className="text-[10px] sm:text-xs">{scheme.status}</Badge>
                                 </div>
-                                <h4 className="mb-2 text-sm sm:text-base">{scheme.name}</h4>
-                                <div className="mb-2">
-                                  <div className="mb-1 flex justify-between text-xs">
-                                    <span className="text-muted-foreground">Progress</span>
+                                <h4 className="text-xs sm:text-sm font-semibold mb-1.5 sm:mb-2 line-clamp-2">{scheme.name}</h4>
+                                <div className="mb-1.5 sm:mb-2">
+                                  <div className="mb-1 flex justify-between text-[10px] sm:text-xs">
+                                    <span className="text-[#666]">{t('panchayatWebsite.progress')}</span>
                                     <span>{scheme.progress}%</span>
                                   </div>
                                   <Progress value={scheme.progress} className="h-1" />
                                 </div>
-                                <p className="text-xs text-muted-foreground">
-                                  {scheme.beneficiaries} beneficiaries
-                                </p>
+                                <p className="text-[10px] sm:text-xs text-[#666]">{scheme.beneficiaries} {t('panchayatWebsite.beneficiaries')}</p>
                               </CardContent>
                             </Card>
                           ))
                         )}
-                      </div>
-                    </section>
+                      </CardContent>
+                    </Card>
                   </aside>
-
-
-                  {/* Main Feed */}
-                  <section className="space-y-4 sm:space-y-6 lg:col-span-2 order-1 lg:order-2" aria-label="Community feed">
-                    <div>
-                      <h2 className="mb-4 sm:mb-6 text-xl sm:text-2xl font-bold">Community Feed</h2>
-                      <div className="space-y-4 sm:space-y-6">
-                        {loading ? (
-                          <div className="text-center text-muted-foreground py-8 text-sm sm:text-base">Loading posts...</div>
-                        ) : posts.length === 0 ? (
-                          <div className="text-center text-muted-foreground py-8 text-sm sm:text-base">No posts yet</div>
-                        ) : (
-                          posts.map((post) => (
-                            <PostCard
-                              key={post.id}
-                              post={{
-                                ...post,
-                                timestamp: formatTimeAgo(new Date(post.timestamp)),
-                              }}
-                            />
-                          ))
-                        )}
                       </div>
                     </div>
-                  </section>
                 </div>
-              </TabsContent>
+          </div>
+        )}
 
+        {/* About Page */}
+        {activePage === 'about' && (
+          <div className="py-8 lg:py-16 bg-white min-h-[calc(100vh-4rem)]">
+            <div className="container mx-auto px-4 lg:px-8">
+              <div className="text-center mb-12">
+                <h2 className="text-3xl lg:text-4xl font-bold text-[#1B2B5E] mb-4">
+                  {t('panchayatWebsite.about')} <span className="text-[#E31E24]">{panchayat?.name || t('panchayatWebsite.ourPanchayat')}</span>
+                </h2>
+                <div className="w-24 h-1 bg-[#E31E24] mx-auto"></div>
+              </div>
 
-              {/* About Tab */}
-              <TabsContent value="about" className="space-y-6 sm:space-y-8">
-                <div className="grid gap-6 sm:gap-8 lg:grid-cols-2">
-                  <section>
-                    <h2 className="mb-3 sm:mb-4 text-xl sm:text-2xl font-bold">About {panchayat?.name || 'Ramnagar'}</h2>
+              <div className="grid lg:grid-cols-2 gap-12 items-start">
+                {/* About Text */}
+                <div>
+                  <h3 className="text-2xl font-semibold text-[#1B2B5E] mb-6">{t('panchayatWebsite.ourStory')}</h3>
                     {panchayat?.aboutText ? (
-                      <p className="mb-4 text-sm sm:text-base text-muted-foreground whitespace-pre-line">
+                    <div className="prose prose-lg max-w-none text-[#666] whitespace-pre-line">
                         {panchayat.aboutText}
-                      </p>
+                    </div>
                     ) : (
-                      <>
-                        <p className="mb-4 text-sm sm:text-base text-muted-foreground">
+                    <div className="space-y-4 text-[#666]">
+                      <p>
                           {panchayat?.name || 'Ramnagar'} Gram Panchayat is a vibrant rural community located in {panchayat?.district || 'Varanasi'}
-                          district. Established in {panchayat?.established || '1995'}, our village has a rich history and cultural
+                        district, {panchayat?.state || 'Uttar Pradesh'}. Established in {panchayat?.established || '1995'}, our village has a rich history and cultural
                           heritage spanning several centuries.
                         </p>
-                        <p className="mb-4 text-sm sm:text-base text-muted-foreground">
+                      <p>
                           With a population of over {panchayat?.population?.toLocaleString() || '5,200'} residents spread across {panchayat?.wards || '8'} wards, we are
                           committed to sustainable development, preserving our traditions while embracing
                           modern governance practices.
                         </p>
-                      </>
-                    )}
                     {panchayat?.features && panchayat.features.length > 0 && (
-                      <>
-                        <h3 className="mb-3 text-lg sm:text-xl">Key Features</h3>
-                        <ul className="space-y-2 text-sm sm:text-base text-muted-foreground">
+                        <div>
+                          <h4 className="text-lg font-semibold text-[#1B2B5E] mb-3">{t('panchayatWebsite.keyFeatures')}</h4>
+                          <ul className="space-y-2">
                           {panchayat.features.map((feature, index) => (
-                            <li key={index}>• {feature}</li>
+                              <li key={index} className="flex items-start gap-2">
+                                <Award className="h-5 w-5 text-[#FF9933] mt-0.5 flex-shrink-0" />
+                                <span>{feature}</span>
+                              </li>
                           ))}
                         </ul>
-                      </>
-                    )}
-                  </section>
-                  <section>
-                    <h3 className="mb-3 sm:mb-4 text-lg sm:text-xl font-semibold">Elected Members</h3>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Panchayat Details */}
+                  <div className="mt-8 grid grid-cols-2 gap-4">
+                    <Card className="border-[#E5E5E5]">
+                      <CardContent className="p-4">
+                        <div className="flex items-center gap-3 mb-2">
+                          <div className="p-2 bg-[#FF9933]/10 rounded-lg">
+                            <Users className="h-5 w-5 text-[#FF9933]" />
+                          </div>
+                          <div>
+                            <p className="text-sm text-[#666]">{t('panchayatWebsite.population')}</p>
+                            <p className="text-xl font-bold text-[#1B2B5E]">
+                              {panchayat?.population?.toLocaleString() || 'N/A'}
+                            </p>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                    <Card className="border-[#E5E5E5]">
+                      <CardContent className="p-4">
+                        <div className="flex items-center gap-3 mb-2">
+                          <div className="p-2 bg-[#138808]/10 rounded-lg">
+                            <MapPin className="h-5 w-5 text-[#138808]" />
+                          </div>
+                          <div>
+                            <p className="text-sm text-[#666]">{t('panchayatWebsite.area')}</p>
+                            <p className="text-xl font-bold text-[#1B2B5E]">
+                              {panchayat?.area || 'N/A'} km²
+                            </p>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                    <Card className="border-[#E5E5E5]">
+                      <CardContent className="p-4">
+                        <div className="flex items-center gap-3 mb-2">
+                          <div className="p-2 bg-[#E31E24]/10 rounded-lg">
+                            <Building2 className="h-5 w-5 text-[#E31E24]" />
+                          </div>
+                          <div>
+                            <p className="text-sm text-[#666]">{t('panchayatWebsite.wards')}</p>
+                            <p className="text-xl font-bold text-[#1B2B5E]">
+                              {panchayat?.wards || 'N/A'}
+                            </p>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                    <Card className="border-[#E5E5E5]">
+                      <CardContent className="p-4">
+                        <div className="flex items-center gap-3 mb-2">
+                          <div className="p-2 bg-[#6C5CE7]/10 rounded-lg">
+                            <Calendar className="h-5 w-5 text-[#6C5CE7]" />
+                          </div>
+                          <div>
+                            <p className="text-sm text-[#666]">{t('panchayatWebsite.established')}</p>
+                            <p className="text-xl font-bold text-[#1B2B5E]">
+                              {panchayat?.established || 'N/A'}
+                            </p>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </div>
+                </div>
+
+                {/* Members Section */}
+                <div>
+                  <h3 className="text-2xl font-semibold text-[#1B2B5E] mb-6">{t('panchayatWebsite.electedMembers')}</h3>
                     {loading ? (
-                      <div className="text-center text-muted-foreground py-8 text-sm sm:text-base">Loading members...</div>
+                    <div className="text-center py-12">
+                      <Loader2 className="h-8 w-8 animate-spin mx-auto text-[#E31E24]" />
+                      <p className="mt-2 text-[#666]">{t('panchayatWebsite.loadingMembers')}</p>
+                    </div>
                     ) : members.length === 0 ? (
-                      <div className="text-center text-muted-foreground py-8 text-sm sm:text-base">No members available</div>
+                    <Card>
+                      <CardContent className="p-12 text-center">
+                        <Users className="h-12 w-12 mx-auto mb-4 text-[#666] opacity-50" />
+                        <p className="text-[#666]">{t('panchayatWebsite.noMembersAvailable')}</p>
+                      </CardContent>
+                    </Card>
                     ) : (
                       <div className="space-y-4">
                         {members.map((member) => (
-                          <Card key={member.id}>
-                            <CardContent className="flex flex-col sm:flex-row items-center sm:items-start gap-3 sm:gap-4 p-3 sm:p-4">
-                              <Avatar className="h-12 w-12 sm:h-16 sm:w-16">
+                        <Card key={member.id} className="border-[#E5E5E5] hover:shadow-md transition-shadow">
+                          <CardContent className="p-4">
+                            <div className="flex items-center gap-4">
+                              <Avatar className="h-14 w-14">
                                 {member.hasImage && member.image ? (
                                   <TeamMemberImageWithRefresh src={member.image} alt={member.name} />
                                 ) : (
-                                  <AvatarFallback className="bg-[#FF9933]/10 text-[#FF9933]">
-                                    {member.initials || member.name
-                                      .split(" ")
-                                      .map((n) => n[0])
-                                      .join("")
-                                      .toUpperCase()
-                                      .substring(0, 2)}
+                                  <AvatarFallback className="bg-[#FF9933]/10 text-[#FF9933] text-lg">
+                                    {member.initials || member.name.split(" ").map((n) => n[0]).join("").toUpperCase().substring(0, 2)}
                                   </AvatarFallback>
                                 )}
                               </Avatar>
-                              <div className="flex-1 text-center sm:text-left">
-                                <h4 className="text-sm sm:text-base">{member.name}</h4>
-                                <p className="text-xs sm:text-sm text-muted-foreground">{member.designation}</p>
-                                <div className="mt-1 flex flex-col sm:flex-row items-center gap-2 sm:gap-4 text-xs sm:text-sm">
-                                  <span className="text-[#138808]">{member.ward}</span>
-                                  <span className="text-muted-foreground">{member.phone}</span>
+                              <div className="flex-1 min-w-0">
+                                <h4 className="font-semibold text-[#1B2B5E] truncate">{member.name}</h4>
+                                <p className="text-sm text-[#FF9933] font-medium">{member.role}</p>
+                                {member.designation && (
+                                  <p className="text-xs text-[#666] mt-1">{member.designation}</p>
+                                )}
+                                <div className="flex items-center gap-3 mt-2 text-xs text-[#666]">
+                                  <span className="flex items-center gap-1">
+                                    <Building2 className="h-3 w-3" />
+                                    {member.ward}
+                                  </span>
+                                  {member.phone && (
+                                    <span className="flex items-center gap-1">
+                                      <Phone className="h-3 w-3" />
+                                      {member.phone}
+                                    </span>
+                                  )}
+                                </div>
                                 </div>
                               </div>
                             </CardContent>
@@ -712,61 +993,29 @@ export function PanchayatWebsite() {
                         ))}
                       </div>
                     )}
-                  </section>
                 </div>
-              </TabsContent>
-
-
-              {/* Schemes Tab */}
-              <TabsContent value="schemes" className="space-y-6 sm:space-y-8">
-                <section>
-                  <h2 className="mb-4 sm:mb-6 text-xl sm:text-2xl font-bold">Government Schemes</h2>
-                  <div className="grid gap-4 sm:gap-6 md:grid-cols-2">
-                    {schemes.map((scheme) => (
-                      <Card key={scheme.id} className="transition-shadow hover:shadow-lg">
-                        <CardHeader className="p-4 sm:p-6">
-                          <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
-                            <Badge className="bg-[#138808] text-white text-xs">{scheme.category}</Badge>
-                            <Badge variant="outline" className="text-xs">{scheme.status}</Badge>
                           </div>
-                          <CardTitle className="text-base sm:text-lg">{scheme.name}</CardTitle>
-                          <CardDescription className="text-xs sm:text-sm">Allocated Budget: {scheme.budget}</CardDescription>
-                        </CardHeader>
-                        <CardContent className="p-4 sm:p-6 pt-0">
-                          <div className="space-y-4">
-                            <div>
-                              <div className="mb-2 flex justify-between text-xs sm:text-sm">
-                                <span className="text-muted-foreground">Implementation Progress</span>
-                                <span>{scheme.progress}%</span>
                               </div>
-                              <Progress value={scheme.progress} className="h-2" />
                             </div>
-                            <div className="flex items-center justify-between rounded-lg bg-muted/50 p-3">
-                              <span className="text-xs sm:text-sm text-muted-foreground">Beneficiaries</span>
-                              <span className="text-sm sm:text-base text-[#FF9933]">
-                                {scheme.beneficiaries} families
-                              </span>
+        )}
+
+        {/* Gallery Page */}
+        {activePage === 'gallery' && (
+          <div className="py-8 lg:py-16 bg-white min-h-[calc(100vh-4rem)]">
+            <div className="container mx-auto px-4 lg:px-8">
+              <div className="text-center mb-12">
+                <h2 className="text-3xl lg:text-4xl font-bold text-[#1B2B5E] mb-4">
+                  {t('panchayatWebsite.photoGallery')} <span className="text-[#E31E24]">{t('panchayatWebsite.gallery')}</span>
+                </h2>
+                <div className="w-24 h-1 bg-[#E31E24] mx-auto mb-4"></div>
+                <p className="text-[#666] max-w-2xl mx-auto">
+                  {t('panchayatWebsite.galleryDescription')}
+                </p>
                             </div>
-                            <Button variant="outline" className="w-full text-xs sm:text-sm">
-                              <Download className="mr-2 h-3 w-3 sm:h-4 sm:w-4" />
-                              Download Details
-                            </Button>
-                          </div>
-                        </CardContent>
-                      </Card>
-                    ))}
-                  </div>
-                </section>
-              </TabsContent>
 
-
-
-
-              {/* Gallery Tab */}
-              <TabsContent value="gallery" className="space-y-6 sm:space-y-8">
                 {selectedAlbum ? (
-                  <section>
-                    <div className="mb-4 sm:mb-6 flex flex-col sm:flex-row items-start sm:items-center gap-4">
+                <div>
+                  <div className="mb-6 flex items-center gap-4">
                       <Button 
                         variant="ghost" 
                         onClick={() => {
@@ -775,35 +1024,30 @@ export function PanchayatWebsite() {
                         }}
                         className="flex items-center gap-2"
                       >
-                        ← Back to Albums
+                      <ArrowRight className="h-4 w-4 rotate-180" />
+                      {t('panchayatWebsite.backToAlbums')}
                       </Button>
-                      <div className="flex-1">
-                        <h2 className="text-xl sm:text-2xl font-bold">{selectedAlbum.title}</h2>
+                    <div>
+                      <h3 className="text-2xl font-bold text-[#1B2B5E]">{selectedAlbum.title}</h3>
                         {selectedAlbum.description && (
-                          <p className="mt-1 text-sm text-muted-foreground">{selectedAlbum.description}</p>
-                        )}
-                        {albumImages.length > 0 && (
-                          <p className="mt-1 text-xs sm:text-sm text-muted-foreground">
-                            {albumImages.length} {albumImages.length === 1 ? 'image' : 'images'}
-                          </p>
+                        <p className="text-[#666] mt-1">{selectedAlbum.description}</p>
                         )}
                       </div>
                     </div>
                     {loadingAlbumImages ? (
-                      <div className="text-center text-muted-foreground py-12">
-                        <Loader2 className="h-8 w-8 animate-spin mx-auto mb-2 text-[#E31E24]" />
-                        <p className="text-sm sm:text-base">Loading images...</p>
+                    <div className="text-center py-12">
+                      <Loader2 className="h-8 w-8 animate-spin mx-auto text-[#E31E24]" />
+                      <p className="mt-2 text-[#666]">{t('panchayatWebsite.loadingImages')}</p>
                       </div>
-                    ) : (
-                      <>
-                        {albumImages.length === 0 ? (
+                  ) : albumImages.length === 0 ? (
                           <Card>
                             <CardContent className="p-12 text-center">
-                              <p className="text-muted-foreground text-sm sm:text-base">No images in this album</p>
+                        <ImageIcon className="h-12 w-12 mx-auto mb-4 text-[#666] opacity-50" />
+                        <p className="text-[#666]">{t('panchayatWebsite.noImagesInAlbum')}</p>
                             </CardContent>
                           </Card>
                         ) : (
-                          <div className="grid gap-3 sm:gap-4 md:gap-6 grid-cols-2 sm:grid-cols-3 lg:grid-cols-4">
+                    <div className="grid gap-4 grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
                             {albumImages.map((item, index) => (
                               <Card 
                                 key={item.id} 
@@ -817,17 +1061,19 @@ export function PanchayatWebsite() {
                                   setIsImageModalOpen(true);
                                 }}
                               >
-                                <div className="relative  overflow-hidden bg-muted">
+                          <div className="relative aspect-square overflow-hidden bg-muted">
                                   <AlbumImageWithRefresh 
                                     src={item.image} 
                                     alt={item.title}
                                     entityType="gallery"
                                     entityId={item.id}
                                   />
-                                  <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors" />
+                            <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-colors flex items-center justify-center">
+                              <span className="opacity-0 group-hover:opacity-100 text-white text-sm font-medium">View</span>
+                            </div>
                                   {item.title && (
-                                    <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/60 to-transparent p-2 sm:p-3 opacity-0 group-hover:opacity-100 transition-opacity">
-                                      <p className="text-white text-xs sm:text-sm font-medium line-clamp-2">{item.title}</p>
+                              <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/60 to-transparent p-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                <p className="text-white text-xs font-medium line-clamp-1">{item.title}</p>
                                     </div>
                                   )}
                                 </div>
@@ -835,27 +1081,14 @@ export function PanchayatWebsite() {
                             ))}
                           </div>
                         )}
-                      </>
-                    )}
-                  </section>
-                ) : (
-                  <section>
-                    <div className="mb-4 sm:mb-6">
-                      <h2 className="text-xl sm:text-2xl font-bold">Photo Gallery</h2>
-                      <p className="mt-1 text-sm text-muted-foreground">
-                        Browse through our collection of photos and albums
-                      </p>
                     </div>
-                    
+              ) : (
+                <>
+                  {/* Albums */}
                     {albums.length > 0 && (
-                      <div className="mb-8 sm:mb-10">
-                        <div className="mb-3 sm:mb-4 flex items-center justify-between">
-                          <h3 className="text-lg sm:text-xl font-semibold">Albums</h3>
-                          <Badge variant="secondary" className="text-xs sm:text-sm">
-                            {albums.length} {albums.length === 1 ? 'album' : 'albums'}
-                          </Badge>
-                        </div>
-                        <div className="grid gap-4 sm:gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
+                    <div className="mb-12">
+                      <h3 className="text-xl font-semibold text-[#1B2B5E] mb-6">{t('panchayatWebsite.albums')}</h3>
+                      <div className="grid gap-6 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
                           {albums.map((album) => (
                             <Card
                               key={album.id}
@@ -872,26 +1105,22 @@ export function PanchayatWebsite() {
                                   />
                                 ) : (
                                   <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-[#FF9933]/20 to-[#138808]/20">
-                                    <div className="text-center p-4">
-                                      <div className="text-4xl mb-2">📷</div>
-                                      <p className="text-xs text-muted-foreground">No cover image</p>
-                                    </div>
+                                  <ImageIcon className="h-12 w-12 text-[#666] opacity-50" />
                                   </div>
                                 )}
-                                <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-colors" />
-                                <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                                  <Badge className="bg-white/90 text-[#1B2B5E] hover:bg-white">
-                                    View Album
+                              <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-colors flex items-center justify-center">
+                                <Badge className="opacity-0 group-hover:opacity-100 bg-white/90 text-[#1B2B5E]">
+                                  {t('panchayatWebsite.viewAlbum')}
                                   </Badge>
                                 </div>
                               </div>
-                              <CardContent className="p-3 sm:p-4">
-                                <h4 className="font-semibold text-sm sm:text-base mb-1 line-clamp-1">{album.title}</h4>
+                            <CardContent className="p-4">
+                              <h4 className="font-semibold text-[#1B2B5E] mb-1 line-clamp-1">{album.title}</h4>
                                 {album.description && (
-                                  <p className="text-xs sm:text-sm text-muted-foreground line-clamp-2 mb-2">{album.description}</p>
+                                <p className="text-sm text-[#666] line-clamp-2 mb-2">{album.description}</p>
                                 )}
-                                <div className="flex items-center justify-between text-xs text-muted-foreground">
-                                  <span>{album.imageCount || 0} {album.imageCount === 1 ? 'image' : 'images'}</span>
+                              <div className="flex items-center justify-between text-xs text-[#999]">
+                                <span>{album.imageCount || 0} {album.imageCount === 1 ? t('panchayatWebsite.image') : t('panchayatWebsite.images')}</span>
                                   {album.createdAt && !isNaN(new Date(album.createdAt).getTime()) && (
                                     <span>{new Date(album.createdAt).toLocaleDateString('en-IN', { month: 'short', year: 'numeric' })}</span>
                                   )}
@@ -903,15 +1132,11 @@ export function PanchayatWebsite() {
                       </div>
                     )}
                     
+                  {/* All Images Grid */}
                     {gallery.length > 0 && (
                       <div>
-                        <div className="mb-3 sm:mb-4 flex items-center justify-between">
-                          <h3 className="text-lg sm:text-xl font-semibold">All Images</h3>
-                          <Badge variant="secondary" className="text-xs sm:text-sm">
-                            {gallery.length} {gallery.length === 1 ? 'image' : 'images'}
-                          </Badge>
-                        </div>
-                        <div className="grid gap-3 sm:gap-4 md:gap-6 grid-cols-2 sm:grid-cols-3 lg:grid-cols-4">
+                      <h3 className="text-xl font-semibold text-[#1B2B5E] mb-6">{t('panchayatWebsite.allPhotos')}</h3>
+                      <div className="grid gap-4 grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
                           {gallery.map((item, index) => (
                             <Card 
                               key={item.id} 
@@ -925,17 +1150,19 @@ export function PanchayatWebsite() {
                                 setIsImageModalOpen(true);
                               }}
                             >
-                              <div className="relative overflow-hidden bg-muted">
+                            <div className="relative aspect-square overflow-hidden bg-muted">
                                 <AlbumImageWithRefresh 
                                   src={item.image} 
                                   alt={item.title}
                                   entityType="gallery"
                                   entityId={item.id}
                                 />
-                                <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors" />
+                              <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-colors flex items-center justify-center">
+                                <span className="opacity-0 group-hover:opacity-100 text-white text-sm font-medium">{t('panchayatWebsite.view')}</span>
+                              </div>
                                 {item.title && (
-                                  <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/60 to-transparent p-2 sm:p-3 opacity-0 group-hover:opacity-100 transition-opacity">
-                                    <p className="text-white text-xs sm:text-sm font-medium line-clamp-2">{item.title}</p>
+                                <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/60 to-transparent p-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                  <p className="text-white text-xs font-medium line-clamp-1">{item.title}</p>
                                     {item.date && (
                                       <p className="text-white/80 text-xs mt-1">{item.date}</p>
                                     )}
@@ -951,18 +1178,32 @@ export function PanchayatWebsite() {
                     {albums.length === 0 && gallery.length === 0 && !loading && (
                       <Card>
                         <CardContent className="p-12 text-center">
-                          <div className="text-5xl mb-4">📸</div>
-                          <p className="text-muted-foreground text-sm sm:text-base mb-2">No gallery items available</p>
-                          <p className="text-muted-foreground text-xs">Check back later for updates</p>
+                        <ImageIcon className="h-12 w-12 mx-auto mb-4 text-[#666] opacity-50" />
+                        <p className="text-[#666]">{t('panchayatWebsite.noGalleryItems')}</p>
+                        <p className="text-sm text-[#999] mt-2">{t('panchayatWebsite.checkBackLater')}</p>
                         </CardContent>
                       </Card>
                     )}
-                  </section>
-                )}
-              </TabsContent>
+                </>
+              )}
+            </div>
+          </div>
+        )}
 
-              {/* Newsletter Tab */}
-              <TabsContent value="newsletters" className="space-y-6 sm:space-y-8">
+        {/* Newsletter Page */}
+        {activePage === 'newsletter' && (
+          <div className="py-8 lg:py-16 bg-gradient-to-br from-[#F5F5F5] to-white min-h-[calc(100vh-4rem)]">
+            <div className="container mx-auto px-4 lg:px-8">
+              <div className="text-center mb-12">
+                <h2 className="text-3xl lg:text-4xl font-bold text-[#1B2B5E] mb-4">
+                  {t('panchayatWebsite.newsletters')} & <span className="text-[#E31E24]">{t('panchayatWebsite.updates')}</span>
+                </h2>
+                <div className="w-24 h-1 bg-[#E31E24] mx-auto mb-4"></div>
+                <p className="text-[#666] max-w-2xl mx-auto">
+                  {t('panchayatWebsite.newsletterDescription')}
+                </p>
+              </div>
+
                 {selectedNewsletter ? (
                   <NewsletterDetailView 
                     newsletter={selectedNewsletter} 
@@ -973,23 +1214,31 @@ export function PanchayatWebsite() {
                     }}
                   />
                 ) : (
-                  <section>
-                    <h2 className="mb-4 sm:mb-6 text-xl sm:text-2xl font-bold">Newsletters</h2>
+                <>
                     {loading ? (
-                      <div className="text-center text-muted-foreground py-8 text-sm sm:text-base">Loading newsletters...</div>
+                    <div className="text-center py-12">
+                      <Loader2 className="h-8 w-8 animate-spin mx-auto text-[#E31E24]" />
+                      <p className="mt-2 text-[#666]">{t('panchayatWebsite.loadingNewsletters')}</p>
+                    </div>
                     ) : newsletters.length === 0 ? (
-                      <div className="text-center text-muted-foreground py-8 text-sm sm:text-base">No newsletters available</div>
-                    ) : (
-                      <div className="grid gap-4 sm:gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
+                    <Card>
+                      <CardContent className="p-12 text-center">
+                        <Newspaper className="h-12 w-12 mx-auto mb-4 text-[#666] opacity-50" />
+                        <p className="text-[#666]">{t('panchayatWebsite.noNewslettersAvailable')}</p>
+                        <p className="text-sm text-[#999] mt-2">{t('panchayatWebsite.checkBackLater')}</p>
+                      </CardContent>
+                    </Card>
+                  ) : (
+                    <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
                         {newsletters.map((newsletter) => (
                           <Card
                             key={newsletter.id}
-                            className="overflow-hidden transition-transform hover:scale-105 cursor-pointer"
+                          className="overflow-hidden transition-all hover:shadow-lg hover:scale-[1.02] cursor-pointer border-[#E5E5E5]"
                             onClick={() => setSelectedNewsletter(newsletter)}
                           >
                             {newsletter.coverImageUrl && (
                               <div 
-                                className="h-48 w-full overflow-hidden cursor-pointer"
+                              className="h-48 w-full overflow-hidden cursor-pointer relative group"
                                 onClick={(e) => {
                                   e.stopPropagation();
                                   setSelectedNewsletterImageUrl(newsletter.coverImageUrl || "");
@@ -997,274 +1246,308 @@ export function PanchayatWebsite() {
                                 }}
                               >
                                 <NewsletterCoverImage fileKey={newsletter.coverImageFileKey} url={newsletter.coverImageUrl} />
+                              <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-center justify-center">
+                                <span className="opacity-0 group-hover:opacity-100 text-white text-sm font-medium">{t('panchayatWebsite.clickToView')}</span>
+                              </div>
                               </div>
                             )}
-                            <CardContent className="p-4 sm:p-6">
-                              <h3 className="font-semibold text-base sm:text-lg mb-2">{newsletter.title}</h3>
+                          <CardContent className="p-6">
+                            <div className="flex items-center gap-2 mb-2">
+                              <Badge variant="secondary" className="text-xs">
+                                {newsletter.publishedOn ? new Date(newsletter.publishedOn).toLocaleDateString('en-IN', { month: 'short', year: 'numeric' }) : "Draft"}
+                              </Badge>
+                            </div>
+                            <h3 className="font-semibold text-lg text-[#1B2B5E] mb-2 line-clamp-2">{newsletter.title}</h3>
                               {newsletter.subtitle && (
-                                <p className="text-sm text-muted-foreground mb-3 line-clamp-2">{newsletter.subtitle}</p>
-                              )}
-                              <div className="flex items-center justify-between text-xs text-muted-foreground">
-                                <span>{newsletter.publishedOn ? new Date(newsletter.publishedOn).toLocaleDateString() : "Draft"}</span>
-                                {newsletter.authorName && <span>By {newsletter.authorName}</span>}
+                              <p className="text-sm text-[#666] mb-4 line-clamp-2">{newsletter.subtitle}</p>
+                            )}
+                            <div className="flex items-center justify-between text-xs text-[#999]">
+                              {newsletter.authorName && <span>{t('panchayatWebsite.by')} {newsletter.authorName}</span>}
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="text-[#E31E24] hover:text-[#C91A20]"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setSelectedNewsletter(newsletter);
+                                }}
+                              >
+                                {t('panchayatWebsite.readMore')} <ArrowRight className="ml-1 h-3 w-3" />
+                              </Button>
                               </div>
                             </CardContent>
                           </Card>
                         ))}
                       </div>
                     )}
-                  </section>
-                )}
-              </TabsContent>
-
-
-              {/* Contact Tab */}
-              <TabsContent value="contact" className="space-y-6 sm:space-y-8">
-                <div className="grid gap-6 sm:gap-8 lg:grid-cols-2">
-                  <section>
-                    <h2 className="mb-4 sm:mb-6 text-xl sm:text-2xl font-bold">Contact Information</h2>
-                    {(panchayat?.mapCoordinates) && (
-                      <div className="mb-6 relative z-0">
-                      <h3 className="mb-2 sm:mb-4 text-base sm:text-lg font-semibold">Location</h3>
-                      <div style={{ height: '300px', width: '100%' }} className="sm:h-96 lg:h-[400px] rounded-lg overflow-hidden border border-[#E5E5E5]">
-                        <MapContainer
-                        center={parseCoordinates(panchayat.mapCoordinates || '') as LatLngExpression}
-                        zoom={15}
-                        style={{ height: '100%', width: '100%' }}
-                        scrollWheelZoom={false}
-                        >
-                        <TileLayer
-                        url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-                        attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-                        />
-                        <Marker position={parseCoordinates(panchayat.mapCoordinates || '')}>
-                        <Popup>
-                        <strong>{panchayat?.name}</strong><br />
-                        Gram Panchayat Office
-                        </Popup>
-                        </Marker>
-                        </MapContainer>
+                </>
+              )}
                       </div>
                       </div>
                     )}
-                    <Card>
-                      <CardContent className="space-y-4 sm:space-y-6 p-4 sm:p-6">
-                        {panchayat?.contactInfo && (
-                          panchayat.contactInfo.address || panchayat.contactInfo.phone || panchayat.contactInfo.email ? (
-                            <>
-                              {panchayat.contactInfo.address && (
-                                <div className="flex items-start gap-3">
-                                  <MapPin className="mt-1 h-4 w-4 sm:h-5 sm:w-5 flex-shrink-0 text-[#FF9933]" />
-                                  <div>
-                                    <h4 className="text-sm sm:text-base font-semibold">Address</h4>
-                                    <p className="text-xs sm:text-sm text-muted-foreground whitespace-pre-line">
-                                      {panchayat.contactInfo.address}
+
+        {/* Contact Page */}
+        {activePage === 'contact' && (
+          <div className="py-8 lg:py-16 bg-gradient-to-br from-[#F5F5F5] to-white min-h-[calc(100vh-4rem)]">
+            <div className="container mx-auto px-4 lg:px-8">
+              <div className="text-center mb-12">
+                <h2 className="text-3xl lg:text-4xl font-bold text-[#1B2B5E] mb-4">
+                  {t('panchayatWebsite.getInTouch')} <span className="text-[#E31E24]">{t('panchayatWebsite.touch')}</span>
+                </h2>
+                <div className="w-24 h-1 bg-[#E31E24] mx-auto mb-4"></div>
+                <p className="text-[#666] max-w-2xl mx-auto">
+                  {t('panchayatWebsite.contactDescription')}
                                     </p>
                                   </div>
+
+              <div className="grid lg:grid-cols-2 gap-12">
+                {/* Contact Information */}
+                <div className="space-y-6">
+                  <Card className="border-[#E5E5E5]">
+                    <CardContent className="p-6">
+                      <h3 className="text-xl font-semibold text-[#1B2B5E] mb-6">{t('panchayatWebsite.contactInformation')}</h3>
+                      <div className="space-y-6">
+                        {panchayat?.contactInfo?.address && (
+                          <div className="flex items-start gap-4">
+                            <div className="p-3 bg-[#FF9933]/10 rounded-lg">
+                              <MapPin className="h-6 w-6 text-[#FF9933]" />
                                 </div>
-                              )}
-                              {panchayat.contactInfo.phone && (
-                                <div className="flex items-start gap-3">
-                                  <Phone className="mt-1 h-4 w-4 sm:h-5 sm:w-5 flex-shrink-0 text-[#FF9933]" />
                                   <div>
-                                    <h4 className="text-sm sm:text-base font-semibold">Phone</h4>
-                                    <p className="text-xs sm:text-sm text-muted-foreground break-all">{panchayat.contactInfo.phone}</p>
+                              <h4 className="font-semibold text-[#1B2B5E] mb-1">{t('panchayatWebsite.address')}</h4>
+                              <p className="text-[#666] whitespace-pre-line">{panchayat.contactInfo.address}</p>
                                   </div>
                                 </div>
                               )}
-                              {panchayat.contactInfo.email && (
-                                <div className="flex items-start gap-3">
-                                  <Mail className="mt-1 h-4 w-4 sm:h-5 sm:w-5 flex-shrink-0 text-[#FF9933]" />
+                        {panchayat?.contactInfo?.phone && (
+                          <div className="flex items-start gap-4">
+                            <div className="p-3 bg-[#138808]/10 rounded-lg">
+                              <Phone className="h-6 w-6 text-[#138808]" />
+                            </div>
                                   <div>
-                                    <h4 className="text-sm sm:text-base font-semibold">Email</h4>
-                                    <p className="text-xs sm:text-sm text-muted-foreground break-all">{panchayat.contactInfo.email}</p>
+                              <h4 className="font-semibold text-[#1B2B5E] mb-1">{t('panchayatWebsite.phone')}</h4>
+                              <a href={`tel:${panchayat.contactInfo.phone}`} className="text-[#E31E24] hover:underline">
+                                {panchayat.contactInfo.phone}
+                              </a>
                                   </div>
                                 </div>
                               )}
-                              {panchayat.contactInfo.officeHours && (
-                                <div className="flex items-start gap-3">
-                                  <Calendar className="mt-1 h-4 w-4 sm:h-5 sm:w-5 flex-shrink-0 text-[#FF9933]" />
+                        {panchayat?.contactInfo?.email && (
+                          <div className="flex items-start gap-4">
+                            <div className="p-3 bg-[#E31E24]/10 rounded-lg">
+                              <Mail className="h-6 w-6 text-[#E31E24]" />
+                            </div>
                                   <div>
-                                    <h4 className="text-sm sm:text-base font-semibold">Office Hours</h4>
-                                    <p className="text-xs sm:text-sm text-muted-foreground whitespace-pre-line">
-                                      {panchayat.contactInfo.officeHours}
-                                    </p>
+                              <h4 className="font-semibold text-[#1B2B5E] mb-1">{t('panchayatWebsite.email')}</h4>
+                              <a href={`mailto:${panchayat.contactInfo.email}`} className="text-[#E31E24] hover:underline break-all">
+                                {panchayat.contactInfo.email}
+                              </a>
                                   </div>
                                 </div>
                               )}
-                            </>
-                          ) : null
+                        {panchayat?.contactInfo?.officeHours && (
+                          <div className="flex items-start gap-4">
+                            <div className="p-3 bg-[#6C5CE7]/10 rounded-lg">
+                              <Clock className="h-6 w-6 text-[#6C5CE7]" />
+                              </div>
+                              <div>
+                              <h4 className="font-semibold text-[#1B2B5E] mb-1">{t('panchayatWebsite.officeHours')}</h4>
+                              <p className="text-[#666] whitespace-pre-line">{panchayat.contactInfo.officeHours}</p>
+                              </div>
+                            </div>
                         )}
                         {(!panchayat?.contactInfo || (!panchayat.contactInfo.address && !panchayat.contactInfo.phone && !panchayat.contactInfo.email)) && (
-                          <>
-                            <div className="flex items-start gap-3">
-                              <MapPin className="mt-1 h-4 w-4 sm:h-5 sm:w-5 flex-shrink-0 text-[#FF9933]" />
-                              <div>
-                                <h4 className="text-sm sm:text-base font-semibold">Address</h4>
-                                <p className="text-xs sm:text-sm text-muted-foreground">
-                                  {panchayat?.name || 'Ramnagar'} Gram Panchayat Bhawan
-                                  <br />
-                                  {panchayat?.district || 'Varanasi'}, {panchayat?.state || 'Uttar Pradesh'} - 221001
-                                </p>
+                          <div className="text-center py-8 text-[#666]">
+                            <p>{t('panchayatWebsite.contactInfoWillBeUpdated')}</p>
                               </div>
-                            </div>
-                            <div className="flex items-start gap-3">
-                              <Phone className="mt-1 h-4 w-4 sm:h-5 sm:w-5 flex-shrink-0 text-[#FF9933]" />
-                              <div>
-                                <h4 className="text-sm sm:text-base font-semibold">Phone</h4>
-                                <p className="text-xs sm:text-sm text-muted-foreground">+91 542-XXXXXX</p>
-                              </div>
-                            </div>
-                            <div className="flex items-start gap-3">
-                              <Mail className="mt-1 h-4 w-4 sm:h-5 sm:w-5 flex-shrink-0 text-[#FF9933]" />
-                              <div>
-                                <h4 className="text-sm sm:text-base font-semibold">Email</h4>
-                                <p className="text-xs sm:text-sm text-muted-foreground break-all">
-                                  {panchayat?.subdomain || 'ramnagar'}@egramseva.gov.in
-                                </p>
-                              </div>
-                            </div>
-                            <div className="flex items-start gap-3">
-                              <Calendar className="mt-1 h-4 w-4 sm:h-5 sm:w-5 flex-shrink-0 text-[#FF9933]" />
-                              <div>
-                                <h4 className="text-sm sm:text-base font-semibold">Office Hours</h4>
-                                <p className="text-xs sm:text-sm text-muted-foreground">
-                                  Monday - Friday: 10:00 AM - 5:00 PM
-                                  <br />
-                                  Saturday: 10:00 AM - 2:00 PM
-                                </p>
-                              </div>
-                            </div>
-                          </>
                         )}
+                            </div>
+                    </CardContent>
+                  </Card>
+
+                  {/* Map */}
+                  {panchayat?.mapCoordinates && (
+                    <Card className="border-[#E5E5E5] overflow-hidden">
+                      <CardContent className="p-0">
+                        <div className="h-64 lg:h-80 w-full">
+                          <MapContainer
+                            center={parseCoordinates(panchayat.mapCoordinates || '') as LatLngExpression}
+                            zoom={15}
+                            style={{ height: '100%', width: '100%' }}
+                            scrollWheelZoom={false}
+                          >
+                            <TileLayer
+                              url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                              attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+                            />
+                            <Marker position={parseCoordinates(panchayat.mapCoordinates || '')}>
+                              <Popup>
+                                <strong>{panchayat?.name}</strong><br />
+                                {t('panchayatWebsite.gramPanchayatOffice')}
+                              </Popup>
+                            </Marker>
+                          </MapContainer>
+                              </div>
                       </CardContent>
                     </Card>
-                  </section>
-                  <section>
-                    <h2 className="mb-4 sm:mb-6 text-xl sm:text-2xl font-bold">Send us a Message</h2>
-                    <Card>
-                      <CardContent className="space-y-3 sm:space-y-4 p-4 sm:p-6">
+                  )}
+                </div>
+
+                {/* Contact Form */}
+                <Card className="border-[#E5E5E5]">
+                  <CardContent className="p-6">
+                    <h3 className="text-xl font-semibold text-[#1B2B5E] mb-6">{t('panchayatWebsite.sendUsMessage')}</h3>
                         {formSubmitted && (
-                          <div className="rounded-lg bg-[#138808]/10 border border-[#138808] p-3 text-sm text-[#138808]">
-                            Thank you! Your message has been sent successfully. We will get back to you soon.
+                      <div className="mb-6 rounded-lg bg-[#138808]/10 border border-[#138808] p-4 text-sm text-[#138808]">
+                            {t('panchayatWebsite.messageSentSuccess')}
                           </div>
                         )}
-                        <form onSubmit={handleContactSubmit} noValidate>
-                          <div className="space-y-3 sm:space-y-4">
-                            <div className="space-y-2">
-                              <Label htmlFor="name" className="text-xs sm:text-sm">
-                                Name <span className="text-destructive" aria-label="required">*</span>
+                    <form onSubmit={handleContactSubmit} noValidate className="space-y-4">
+                      <div>
+                        <Label htmlFor="name" className="text-[#1B2B5E]">
+                          {t('panchayatWebsite.name')} <span className="text-[#E31E24]">*</span>
                               </Label>
                               <Input
                                 id="name"
-                                placeholder="Your name"
-                                className={`text-sm ${formErrors.name ? 'border-destructive' : ''}`}
+                                placeholder={t('panchayatWebsite.namePlaceholder')}
+                          className={`mt-1 ${formErrors.name ? 'border-[#E31E24]' : ''}`}
                                 value={contactForm.name}
                                 onChange={(e) => {
                                   setContactForm({ ...contactForm, name: e.target.value });
                                   if (formErrors.name) setFormErrors({ ...formErrors, name: '' });
                                 }}
-                                aria-invalid={!!formErrors.name}
-                                aria-describedby={formErrors.name ? 'name-error' : undefined}
-                                required
                               />
                               {formErrors.name && (
-                                <p id="name-error" className="text-xs text-destructive" role="alert">
-                                  {formErrors.name}
-                                </p>
+                          <p className="text-xs text-[#E31E24] mt-1">{formErrors.name}</p>
                               )}
                             </div>
-                            <div className="space-y-2">
-                              <Label htmlFor="email" className="text-xs sm:text-sm">
-                                Email <span className="text-destructive" aria-label="required">*</span>
+                      <div>
+                        <Label htmlFor="email" className="text-[#1B2B5E]">
+                          {t('panchayatWebsite.email')} <span className="text-[#E31E24]">*</span>
                               </Label>
                               <Input
                                 id="email"
                                 type="email"
-                                placeholder="your@email.com"
-                                className={`text-sm ${formErrors.email ? 'border-destructive' : ''}`}
+                                placeholder={t('panchayatWebsite.emailPlaceholder')}
+                          className={`mt-1 ${formErrors.email ? 'border-[#E31E24]' : ''}`}
                                 value={contactForm.email}
                                 onChange={(e) => {
                                   setContactForm({ ...contactForm, email: e.target.value });
                                   if (formErrors.email) setFormErrors({ ...formErrors, email: '' });
                                 }}
-                                aria-invalid={!!formErrors.email}
-                                aria-describedby={formErrors.email ? 'email-error' : undefined}
-                                required
                               />
                               {formErrors.email && (
-                                <p id="email-error" className="text-xs text-destructive" role="alert">
-                                  {formErrors.email}
-                                </p>
+                          <p className="text-xs text-[#E31E24] mt-1">{formErrors.email}</p>
                               )}
                             </div>
-                            <div className="space-y-2">
-                              <Label htmlFor="subject" className="text-xs sm:text-sm">
-                                Subject <span className="text-destructive" aria-label="required">*</span>
+                      <div>
+                        <Label htmlFor="subject" className="text-[#1B2B5E]">
+                          {t('panchayatWebsite.subject')} <span className="text-[#E31E24]">*</span>
                               </Label>
                               <Input
                                 id="subject"
-                                placeholder="What is this about?"
-                                className={`text-sm ${formErrors.subject ? 'border-destructive' : ''}`}
+                                placeholder={t('panchayatWebsite.subjectPlaceholder')}
+                          className={`mt-1 ${formErrors.subject ? 'border-[#E31E24]' : ''}`}
                                 value={contactForm.subject}
                                 onChange={(e) => {
                                   setContactForm({ ...contactForm, subject: e.target.value });
                                   if (formErrors.subject) setFormErrors({ ...formErrors, subject: '' });
                                 }}
-                                aria-invalid={!!formErrors.subject}
-                                aria-describedby={formErrors.subject ? 'subject-error' : undefined}
-                                required
                               />
                               {formErrors.subject && (
-                                <p id="subject-error" className="text-xs text-destructive" role="alert">
-                                  {formErrors.subject}
-                                </p>
+                          <p className="text-xs text-[#E31E24] mt-1">{formErrors.subject}</p>
                               )}
                             </div>
-                            <div className="space-y-2">
-                              <Label htmlFor="message" className="text-xs sm:text-sm">
-                                Message <span className="text-destructive" aria-label="required">*</span>
+                      <div>
+                        <Label htmlFor="message" className="text-[#1B2B5E]">
+                          {t('panchayatWebsite.message')} <span className="text-[#E31E24]">*</span>
                               </Label>
                               <Textarea
                                 id="message"
-                                placeholder="Your message..."
+                                placeholder={t('panchayatWebsite.messagePlaceholder')}
                                 rows={5}
-                                className={`text-sm ${formErrors.message ? 'border-destructive' : ''}`}
+                          className={`mt-1 ${formErrors.message ? 'border-[#E31E24]' : ''}`}
                                 value={contactForm.message}
                                 onChange={(e) => {
                                   setContactForm({ ...contactForm, message: e.target.value });
                                   if (formErrors.message) setFormErrors({ ...formErrors, message: '' });
                                 }}
-                                aria-invalid={!!formErrors.message}
-                                aria-describedby={formErrors.message ? 'message-error' : undefined}
-                                required
                               />
                               {formErrors.message && (
-                                <p id="message-error" className="text-xs text-destructive" role="alert">
-                                  {formErrors.message}
-                                </p>
+                          <p className="text-xs text-[#E31E24] mt-1">{formErrors.message}</p>
                               )}
                             </div>
-                            <Button
-                              type="submit"
-                              className="w-full bg-[#FF9933] hover:bg-[#FF9933]/90 text-sm sm:text-base"
-                              aria-label="Submit contact form"
-                            >
-                              Send Message
-                            </Button>
-                          </div>
+                      <Button
+                        type="submit"
+                        className="w-full bg-[#E31E24] hover:bg-[#C91A20] text-white"
+                      >
+                        {t('panchayatWebsite.sendMessage')}
+                        <MessageCircle className="ml-2 h-4 w-4" />
+                      </Button>
                         </form>
                       </CardContent>
                     </Card>
-                  </section>
                 </div>
-              </TabsContent>
             </div>
           </div>
-        </Tabs>
+        )}
       </main>
 
-      {/* Image Modal for Gallery/Album Images */}
+      {/* Footer */}
+      <footer className="bg-[#1B2B5E] text-white py-12">
+        <div className="container mx-auto px-4 lg:px-8">
+          <div className="grid md:grid-cols-3 gap-8 mb-8">
+            <div>
+              <h3 className="text-xl font-bold mb-4">{panchayat?.name || t('panchayatWebsite.gramPanchayat')}</h3>
+              <p className="text-white/80 text-sm">
+                {panchayat?.district || ''} {t('panchayatWebsite.district')}, {panchayat?.state || ''}
+              </p>
+              {panchayat?.contactInfo?.address && (
+                <p className="text-white/80 text-sm mt-2">{panchayat.contactInfo.address}</p>
+              )}
+            </div>
+            <div>
+              <h4 className="font-semibold mb-4">{t('panchayatWebsite.quickLinks')}</h4>
+              <div className="space-y-2">
+                {navItems.map((item) => (
+                  <button
+                    key={item.id}
+                    onClick={() => setActivePage(item.id)}
+                    className="block text-white/80 hover:text-white text-sm transition-colors"
+                  >
+                    {item.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div>
+              <h4 className="font-semibold mb-4">{t('panchayatWebsite.contact')}</h4>
+              <div className="space-y-2 text-sm text-white/80">
+                {panchayat?.contactInfo?.phone && (
+                  <div className="flex items-center gap-2">
+                    <Phone className="h-4 w-4" />
+                    <a href={`tel:${panchayat.contactInfo.phone}`} className="hover:text-white transition-colors">
+                      {panchayat.contactInfo.phone}
+                    </a>
+                  </div>
+                )}
+                {panchayat?.contactInfo?.email && (
+                  <div className="flex items-center gap-2">
+                    <Mail className="h-4 w-4" />
+                    <a href={`mailto:${panchayat.contactInfo.email}`} className="hover:text-white transition-colors break-all">
+                      {panchayat.contactInfo.email}
+                    </a>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+          <div className="border-t border-white/20 pt-8 text-center text-sm text-white/60">
+            <p>© {new Date().getFullYear()} {panchayat?.name || t('panchayatWebsite.gramPanchayat')}. {t('panchayatWebsite.allRightsReserved')}</p>
+          </div>
+        </div>
+      </footer>
+
+      {/* Image Modals */}
       <ImageModal
         isOpen={isImageModalOpen}
         onClose={() => {
@@ -1283,7 +1566,6 @@ export function PanchayatWebsite() {
         }}
       />
 
-      {/* Image Modal for Newsletter Cover Images */}
       <ImageModal
         isOpen={isNewsletterImageModalOpen}
         onClose={() => setIsNewsletterImageModalOpen(false)}
@@ -1355,7 +1637,7 @@ function AlbumImageWithRefresh({
 
   if (!presignedUrl) {
     return (
-      <div className="h-40 sm:h-48 w-full bg-muted flex items-center justify-center">
+      <div className="h-full w-full bg-muted flex items-center justify-center">
         <span className="text-muted-foreground text-sm">No image</span>
       </div>
     );
@@ -1365,7 +1647,7 @@ function AlbumImageWithRefresh({
     <ImageWithFallback
       src={presignedUrl}
       alt={alt}
-      className="h-40 sm:h-48 w-full object-cover"
+      className="h-full w-full object-cover"
       entityType={entityType}
       entityId={entityId}
     />
@@ -1382,15 +1664,17 @@ function NewsletterDetailView({
   onBack: () => void;
   onImageClick: (imageUrl: string) => void;
 }) {
+  const { t } = useTranslation();
   return (
-    <article className="max-w-4xl mx-auto space-y-6 sm:space-y-8">
+    <article className="max-w-4xl mx-auto space-y-6">
       <Button variant="ghost" onClick={onBack} className="mb-4">
-        ← Back to Newsletters
+        <ArrowRight className="h-4 w-4 mr-2 rotate-180" />
+        {t('panchayatWebsite.backToNewsletters')}
       </Button>
 
       {newsletter.coverImageUrl && (
         <div 
-          className="w-full h-64 sm:h-96 rounded-lg overflow-hidden cursor-pointer transition-transform hover:scale-[1.02]"
+          className="w-full h-64 sm:h-96 rounded-lg overflow-hidden cursor-pointer transition-transform hover:scale-[1.01]"
           onClick={() => onImageClick(newsletter.coverImageUrl || "")}
         >
           <NewsletterCoverImage fileKey={newsletter.coverImageFileKey} url={newsletter.coverImageUrl} />
@@ -1399,12 +1683,12 @@ function NewsletterDetailView({
 
       <div className="space-y-4">
         <div>
-          <h1 className="text-2xl sm:text-3xl font-bold mb-2">{newsletter.title}</h1>
+          <h1 className="text-3xl font-bold text-[#1B2B5E] mb-2">{newsletter.title}</h1>
           {newsletter.subtitle && (
-            <p className="text-lg text-muted-foreground mb-4">{newsletter.subtitle}</p>
+            <p className="text-xl text-[#666] mb-4">{newsletter.subtitle}</p>
           )}
-          <div className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground">
-            {newsletter.authorName && <span>By {newsletter.authorName}</span>}
+          <div className="flex flex-wrap items-center gap-4 text-sm text-[#666]">
+            {newsletter.authorName && <span>{t('panchayatWebsite.by')} {newsletter.authorName}</span>}
             {newsletter.publishedOn && (
               <span>{new Date(newsletter.publishedOn).toLocaleDateString('en-IN', { year: 'numeric', month: 'long', day: 'numeric' })}</span>
             )}
@@ -1413,17 +1697,17 @@ function NewsletterDetailView({
 
         {newsletter.content && (
           <div
-            className="prose prose-sm sm:prose-base max-w-none"
+            className="prose prose-lg max-w-none"
             dangerouslySetInnerHTML={{ __html: newsletter.content }}
           />
         )}
 
         {newsletter.bulletPoints && newsletter.bulletPoints.length > 0 && (
           <div>
-            <h2 className="text-xl font-semibold mb-3">Key Points</h2>
-            <ul className="list-disc list-inside space-y-2">
+            <h2 className="text-2xl font-semibold text-[#1B2B5E] mb-3">{t('panchayatWebsite.keyPoints')}</h2>
+            <ul className="list-disc list-inside space-y-2 text-[#666]">
               {newsletter.bulletPoints.map((point: string, index: number) => (
-                <li key={index} className="text-sm sm:text-base">{point}</li>
+                <li key={index}>{point}</li>
               ))}
             </ul>
           </div>
@@ -1431,13 +1715,13 @@ function NewsletterDetailView({
 
         {newsletter.attachments && newsletter.attachments.length > 0 && (
           <div>
-            <h2 className="text-xl font-semibold mb-3">Attachments</h2>
+            <h2 className="text-2xl font-semibold text-[#1B2B5E] mb-3">{t('panchayatWebsite.attachments')}</h2>
             <div className="space-y-2">
               {newsletter.attachments.map((attachment: string, index: number) => (
                 <Button key={index} variant="outline" asChild>
                   <a href={attachment} target="_blank" rel="noopener noreferrer">
                     <Download className="mr-2 h-4 w-4" />
-                    Download Attachment {index + 1}
+                    {t('panchayatWebsite.downloadAttachment')} {index + 1}
                   </a>
                 </Button>
               ))}

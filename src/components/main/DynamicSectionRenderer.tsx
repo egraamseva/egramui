@@ -1,0 +1,778 @@
+import React, { useState, useEffect } from 'react';
+import type { PlatformSection, PanchayatWebsiteSection, LayoutType, ContentItem, BackgroundConfig, AnimationConfig, CTAConfig, FormField } from '../../types';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';
+import { ImageWithFallback } from '../figma/ImageWithFallback';
+import { Button } from '../ui/button';
+import { Badge } from '../ui/badge';
+import { Progress } from '../ui/progress';
+import { Input } from '../ui/input';
+import { Textarea } from '../ui/textarea';
+import { Label } from '../ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
+import { Checkbox } from '../ui/checkbox';
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '../ui/accordion';
+import { usePresignedUrlRefresh } from '../../hooks/usePresignedUrlRefresh';
+import { 
+  ChevronLeft, ChevronRight, Star, MapPin, Phone, Mail, 
+  Calendar, Users, Building2, TrendingUp, Award, Clock,
+  Play, ExternalLink
+} from 'lucide-react';
+import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
+import { LatLngExpression } from 'leaflet';
+import 'leaflet/dist/leaflet.css';
+
+interface DynamicSectionRendererProps {
+  section: PlatformSection | PanchayatWebsiteSection;
+  children?: React.ReactNode;
+}
+
+export function DynamicSectionRenderer({ section, children }: DynamicSectionRendererProps) {
+  const { presignedUrl: imageUrl } = usePresignedUrlRefresh({
+    fileKey: section.imageKey || null,
+    initialPresignedUrl: section.imageUrl || null,
+  });
+
+  const content = typeof section.content === 'object' ? section.content : {};
+  const background = content.background || { type: 'color', value: section.backgroundColor || '#ffffff' };
+  const spacing = content.spacing || {};
+  const animation = content.animation || { type: 'none' };
+
+  // Build section style
+  const sectionStyle: React.CSSProperties = {
+    backgroundColor: background.type === 'color' ? background.value : undefined,
+    backgroundImage: background.type === 'gradient' ? background.value : 
+                     background.type === 'image' ? `url(${background.value})` : undefined,
+    backgroundSize: background.type === 'image' ? 'cover' : undefined,
+    backgroundPosition: background.type === 'image' ? 'center' : undefined,
+    backgroundAttachment: background.parallax ? 'fixed' : undefined,
+    color: section.textColor || undefined,
+    paddingTop: spacing.top || spacing.padding ? `${spacing.top || spacing.padding}px` : undefined,
+    paddingBottom: spacing.bottom || spacing.padding ? `${spacing.bottom || spacing.padding}px` : undefined,
+    paddingLeft: spacing.left ? `${spacing.left}px` : undefined,
+    paddingRight: spacing.right ? `${spacing.right}px` : undefined,
+    marginTop: spacing.margin ? `${spacing.margin}px` : undefined,
+    marginBottom: spacing.margin ? `${spacing.margin}px` : undefined,
+  };
+
+  // Animation classes
+  const animationClass = animation.type === 'fade-in' ? 'animate-fade-in' :
+                         animation.type === 'slide-in' ? 'animate-slide-in' :
+                         animation.type === 'zoom' ? 'animate-zoom' : '';
+
+  const renderContent = () => {
+    if (children) {
+      return children;
+    }
+
+    // Render based on section type first, then layout
+    switch (section.sectionType) {
+      case 'HERO':
+        return renderHeroSection(content);
+      case 'STATS':
+        return renderStatsSection(content, section.layoutType);
+      case 'FAQ':
+        return renderFAQSection(content);
+      case 'FORM':
+        return renderFormSection(content);
+      case 'VIDEO':
+        return renderVideoSection(content);
+      case 'TIMELINE':
+        return renderTimelineSection(content);
+      case 'TESTIMONIALS':
+        return renderTestimonialsSection(content, section.layoutType);
+      case 'RICH_TEXT':
+        return renderRichTextSection(content);
+      case 'MAP':
+        return renderMapSection(content);
+      default:
+        // Use layout-based rendering for other types
+        return renderByLayout(content, section.layoutType, section.sectionType);
+    }
+  };
+
+  const renderHeroSection = (content: any) => {
+    const cta = content.cta || { text: 'Learn More', link: '#', style: 'primary', size: 'md' };
+    return (
+      <div className="relative min-h-[400px] flex items-center justify-center text-center">
+        {background.overlay && (
+          <div 
+            className="absolute inset-0 z-0"
+            style={{ backgroundColor: background.overlay }}
+          />
+        )}
+        <div className="relative z-10 max-w-4xl mx-auto px-4">
+          {section.title && <h1 className="text-4xl md:text-6xl font-bold mb-4">{section.title}</h1>}
+          {section.subtitle && <p className="text-xl md:text-2xl mb-8 opacity-90">{section.subtitle}</p>}
+          {cta && (
+            <Button
+              size={cta.size as any}
+              variant={cta.style === 'primary' ? 'default' : cta.style === 'secondary' ? 'secondary' : 'outline'}
+              onClick={() => window.location.href = cta.link}
+            >
+              {cta.text}
+              {cta.icon && <ExternalLink className="ml-2 h-4 w-4" />}
+            </Button>
+          )}
+        </div>
+      </div>
+    );
+  };
+
+  const renderStatsSection = (content: any, layoutType: LayoutType) => {
+    const items = content.items || [];
+    
+    if (layoutType === 'GRID') {
+      const columns = content.columns || 4;
+      return (
+        <div className={`grid gap-6 grid-cols-1 md:grid-cols-2 lg:grid-cols-${columns}`}>
+          {items.map((item: ContentItem, index: number) => (
+            <Card key={index} className="text-center">
+              <CardContent className="p-6">
+                {item.icon && <div className="text-4xl mb-4">{getIconComponent(item.icon)}</div>}
+                <div className="text-4xl font-bold mb-2">{item.value || '0'}</div>
+                <div className="text-sm opacity-80">{item.label || item.title}</div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      );
+    }
+    
+    return renderByLayout(content, layoutType, 'STATS');
+  };
+
+  const renderFAQSection = (content: any) => {
+    const items = content.items || [];
+    return (
+      <Accordion type="single" collapsible className="w-full">
+        {items.map((item: ContentItem, index: number) => (
+          <AccordionItem key={index} value={`item-${index}`}>
+            <AccordionTrigger className="text-left">{item.title || 'Question'}</AccordionTrigger>
+            <AccordionContent>
+              <p className="text-muted-foreground">{item.description || 'Answer'}</p>
+            </AccordionContent>
+          </AccordionItem>
+        ))}
+      </Accordion>
+    );
+  };
+
+  const renderFormSection = (content: any) => {
+    const fields = content.formFields || [];
+    const [formData, setFormData] = useState<Record<string, any>>({});
+
+    const handleSubmit = (e: React.FormEvent) => {
+      e.preventDefault();
+      // Form submission logic would go here
+      console.log('Form submitted:', formData);
+    };
+
+    return (
+      <form onSubmit={handleSubmit} className="space-y-4 max-w-2xl mx-auto">
+        {fields.map((field: FormField) => (
+          <div key={field.id} className="space-y-2">
+            <Label htmlFor={field.id}>
+              {field.label} {field.required && <span className="text-destructive">*</span>}
+            </Label>
+            {field.type === 'textarea' ? (
+              <Textarea
+                id={field.id}
+                placeholder={field.placeholder}
+                required={field.required}
+                value={formData[field.id] || ''}
+                onChange={(e) => setFormData({ ...formData, [field.id]: e.target.value })}
+              />
+            ) : field.type === 'select' ? (
+              <Select
+                value={formData[field.id] || ''}
+                onValueChange={(value) => setFormData({ ...formData, [field.id]: value })}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder={field.placeholder} />
+                </SelectTrigger>
+                <SelectContent>
+                  {field.options?.map((option) => (
+                    <SelectItem key={option} value={option}>{option}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            ) : field.type === 'checkbox' ? (
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id={field.id}
+                  checked={formData[field.id] || false}
+                  onCheckedChange={(checked) => setFormData({ ...formData, [field.id]: checked })}
+                />
+                <Label htmlFor={field.id} className="cursor-pointer">{field.label}</Label>
+              </div>
+            ) : (
+              <Input
+                id={field.id}
+                type={field.type === 'email' ? 'email' : field.type === 'phone' ? 'tel' : field.type === 'date' ? 'date' : 'text'}
+                placeholder={field.placeholder}
+                required={field.required}
+                value={formData[field.id] || ''}
+                onChange={(e) => setFormData({ ...formData, [field.id]: e.target.value })}
+              />
+            )}
+          </div>
+        ))}
+        <Button type="submit" className="w-full">Submit</Button>
+      </form>
+    );
+  };
+
+  const renderVideoSection = (content: any) => {
+    const media = content.media || {};
+    const videoUrl = media.url || '';
+    
+    if (!videoUrl) return null;
+
+    // Extract video ID from YouTube/Vimeo URLs
+    const getVideoEmbedUrl = (url: string) => {
+      if (url.includes('youtube.com/watch') || url.includes('youtu.be/')) {
+        const videoId = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([^&\n?#]+)/)?.[1];
+        return videoId ? `https://www.youtube.com/embed/${videoId}` : null;
+      }
+      if (url.includes('vimeo.com/')) {
+        const videoId = url.match(/vimeo\.com\/(\d+)/)?.[1];
+        return videoId ? `https://player.vimeo.com/video/${videoId}` : null;
+      }
+      return url; // Direct video URL
+    };
+
+    const embedUrl = getVideoEmbedUrl(videoUrl);
+    if (!embedUrl) return null;
+
+    return (
+      <div className="relative aspect-video w-full">
+        {embedUrl.includes('youtube.com/embed') || embedUrl.includes('vimeo.com') ? (
+          <iframe
+            src={embedUrl}
+            className="w-full h-full rounded-lg"
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+            allowFullScreen
+            autoPlay={media.autoplay}
+            loop={media.loop}
+            controls={media.controls !== false}
+          />
+        ) : (
+          <video
+            src={embedUrl}
+            className="w-full h-full rounded-lg"
+            controls={media.controls !== false}
+            autoPlay={media.autoplay}
+            loop={media.loop}
+          />
+        )}
+      </div>
+    );
+  };
+
+  const renderTimelineSection = (content: any) => {
+    const items = content.items || [];
+    return (
+      <div className="relative">
+        <div className="absolute left-4 md:left-1/2 top-0 bottom-0 w-0.5 bg-border transform md:-translate-x-1/2" />
+        <div className="space-y-8">
+          {items.map((item: ContentItem, index: number) => (
+            <div key={index} className="relative flex items-start gap-4">
+              <div className="relative z-10 flex-shrink-0 w-8 h-8 rounded-full bg-primary flex items-center justify-center">
+                <div className="w-3 h-3 rounded-full bg-white" />
+              </div>
+              <div className="flex-1 pb-8">
+                <Card>
+                  <CardHeader>
+                    <div className="flex items-center justify-between">
+                      <CardTitle>{item.title || 'Event'}</CardTitle>
+                      {item.subtitle && (
+                        <Badge variant="secondary">{item.subtitle}</Badge>
+                      )}
+                    </div>
+                  </CardHeader>
+                  {item.description && (
+                    <CardContent>
+                      <p className="text-muted-foreground">{item.description}</p>
+                    </CardContent>
+                  )}
+                </Card>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  };
+
+  const renderTestimonialsSection = (content: any, layoutType: LayoutType) => {
+    const items = content.items || [];
+    
+    if (layoutType === 'CAROUSEL') {
+      return renderCarouselLayout(content, 'TESTIMONIALS');
+    }
+
+    const columns = content.columns || 3;
+    return (
+      <div className={`grid gap-6 grid-cols-1 md:grid-cols-2 lg:grid-cols-${columns}`}>
+        {items.map((item: ContentItem, index: number) => (
+          <Card key={index}>
+            <CardHeader>
+              <div className="flex items-center gap-1 mb-2">
+                {Array.from({ length: parseInt(item.value || '5') }).map((_, i) => (
+                  <Star key={i} className="h-4 w-4 fill-yellow-400 text-yellow-400" />
+                ))}
+              </div>
+              <CardDescription className="text-base">{item.description || 'Testimonial text'}</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="flex items-center gap-3">
+                {item.image && (
+                  <ImageWithFallback
+                    src={item.image}
+                    alt={item.title || ''}
+                    className="w-12 h-12 rounded-full"
+                  />
+                )}
+                <div>
+                  <div className="font-semibold">{item.title || 'Citizen'}</div>
+                  {item.subtitle && <div className="text-sm text-muted-foreground">{item.subtitle}</div>}
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+    );
+  };
+
+  const renderRichTextSection = (content: any) => {
+    return (
+      <div 
+        className="prose prose-lg max-w-none"
+        dangerouslySetInnerHTML={{ __html: content.richText || '' }}
+      />
+    );
+  };
+
+  const renderMapSection = (content: any) => {
+    const coordinates = content.customSettings?.coordinates || '';
+    const zoom = content.customSettings?.zoom || 15;
+
+    if (!coordinates) return null;
+
+    const parseCoordinates = (coordString: string): [number, number] => {
+      const [latStr, lngStr] = coordString.split(',');
+      const lat = Number(latStr.trim());
+      const lng = Number(lngStr.trim());
+      if (isNaN(lat) || isNaN(lng)) return [22.9734, 78.6569];
+      return [lat, lng];
+    };
+
+    const coords = parseCoordinates(coordinates);
+
+    return (
+      <div className="h-96 w-full rounded-lg overflow-hidden border">
+        <MapContainer
+          center={coords as LatLngExpression}
+          zoom={zoom}
+          style={{ height: '100%', width: '100%' }}
+          scrollWheelZoom={false}
+        >
+          <TileLayer
+            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+            attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+          />
+          <Marker position={coords}>
+            <Popup>
+              <strong>{section.title || 'Location'}</strong>
+            </Popup>
+          </Marker>
+        </MapContainer>
+      </div>
+    );
+  };
+
+  const renderByLayout = (content: any, layoutType: LayoutType, sectionType?: string) => {
+    const items = content.items || [];
+    
+    switch (layoutType) {
+      case 'GRID':
+        return renderGridLayout(content, sectionType);
+      case 'ROW':
+        return renderRowLayout(content, sectionType);
+      case 'SCROLLING_ROW':
+        return renderScrollingRowLayout(content, sectionType);
+      case 'CAROUSEL':
+        return renderCarouselLayout(content, sectionType);
+      case 'MASONRY':
+        return renderMasonryLayout(content, sectionType);
+      case 'LIST':
+        return renderListLayout(content, sectionType);
+      case 'SPLIT':
+        return renderSplitLayout(content, sectionType);
+      case 'FULL_WIDTH':
+        return renderFullWidthLayout(content, sectionType);
+      case 'CONTAINED':
+        return renderContainedLayout(content, sectionType);
+      default:
+        return renderDefaultLayout(content);
+    }
+  };
+
+  const renderGridLayout = (content: any, sectionType?: string) => {
+    const items = content.items || [];
+    const columns = content.columns || 3;
+    
+    return (
+      <div className={`grid gap-6 grid-cols-1 md:grid-cols-2 lg:grid-cols-${columns}`}>
+        {items.map((item: ContentItem, index: number) => renderItemCard(item, index, sectionType))}
+      </div>
+    );
+  };
+
+  const renderRowLayout = (content: any, sectionType?: string) => {
+    const items = content.items || [];
+    
+    return (
+      <div className="flex flex-wrap gap-6">
+        {items.map((item: ContentItem, index: number) => (
+          <div key={index} className="flex-1 min-w-[200px]">
+            {renderItemCard(item, index, sectionType)}
+          </div>
+        ))}
+      </div>
+    );
+  };
+
+  const renderScrollingRowLayout = (content: any, sectionType?: string) => {
+    const items = content.items || [];
+    
+    return (
+      <div className="flex gap-6 overflow-x-auto pb-4 scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
+        {items.map((item: ContentItem, index: number) => (
+          <div key={index} className="flex-shrink-0 w-[300px]">
+            {renderItemCard(item, index, sectionType)}
+          </div>
+        ))}
+      </div>
+    );
+  };
+
+  const renderCarouselLayout = (content: any, sectionType?: string) => {
+    const items = content.items || [];
+    const [currentIndex, setCurrentIndex] = useState(0);
+    const autoPlay = content.autoPlay || false;
+    const interval = content.interval || 5000;
+
+    useEffect(() => {
+      if (autoPlay && items.length > 1) {
+        const timer = setInterval(() => {
+          setCurrentIndex((prev) => (prev + 1) % items.length);
+        }, interval);
+        return () => clearInterval(timer);
+      }
+    }, [autoPlay, interval, items.length]);
+
+    if (items.length === 0) return null;
+
+    const nextSlide = () => {
+      setCurrentIndex((prev) => (prev + 1) % items.length);
+    };
+
+    const prevSlide = () => {
+      setCurrentIndex((prev) => (prev - 1 + items.length) % items.length);
+    };
+
+    return (
+      <div className="relative">
+        <div className="relative overflow-hidden rounded-lg">
+          {items.map((item: ContentItem, index: number) => (
+            <div
+              key={index}
+              className={`transition-opacity duration-500 ${
+                index === currentIndex ? 'opacity-100' : 'opacity-0 absolute inset-0'
+              }`}
+            >
+              {sectionType === 'TESTIMONIALS' ? (
+                <Card className="h-full">
+                  <CardContent className="p-8">
+                    <div className="flex items-center gap-1 mb-4">
+                      {Array.from({ length: parseInt(item.value || '5') }).map((_, i) => (
+                        <Star key={i} className="h-5 w-5 fill-yellow-400 text-yellow-400" />
+                      ))}
+                    </div>
+                    <p className="text-lg mb-4">{item.description}</p>
+                    <div className="flex items-center gap-3">
+                      {item.image && (
+                        <ImageWithFallback src={item.image} alt={item.title || ''} className="w-12 h-12 rounded-full" />
+                      )}
+                      <div>
+                        <div className="font-semibold">{item.title}</div>
+                        {item.subtitle && <div className="text-sm text-muted-foreground">{item.subtitle}</div>}
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ) : item.image ? (
+                <div className="aspect-video w-full">
+                  <ImageWithFallback
+                    src={item.image}
+                    alt={item.title || ''}
+                    className="h-full w-full object-cover"
+                  />
+                </div>
+              ) : (
+                <Card className="h-full">
+                  <CardContent className="p-8">
+                    {item.title && <h3 className="text-2xl font-bold mb-2">{item.title}</h3>}
+                    {item.description && <p>{item.description}</p>}
+                  </CardContent>
+                </Card>
+              )}
+            </div>
+          ))}
+        </div>
+        
+        {items.length > 1 && (
+          <>
+            <button
+              onClick={prevSlide}
+              className="absolute left-4 top-1/2 -translate-y-1/2 bg-white/80 hover:bg-white rounded-full p-2 shadow-lg z-10"
+              aria-label="Previous slide"
+            >
+              <ChevronLeft className="h-5 w-5" />
+            </button>
+            <button
+              onClick={nextSlide}
+              className="absolute right-4 top-1/2 -translate-y-1/2 bg-white/80 hover:bg-white rounded-full p-2 shadow-lg z-10"
+              aria-label="Next slide"
+            >
+              <ChevronRight className="h-5 w-5" />
+            </button>
+            
+            <div className="flex justify-center gap-2 mt-4">
+              {items.map((_, index) => (
+                <button
+                  key={index}
+                  onClick={() => setCurrentIndex(index)}
+                  className={`w-2 h-2 rounded-full transition-colors ${
+                    index === currentIndex ? 'bg-primary' : 'bg-gray-300'
+                  }`}
+                  aria-label={`Go to slide ${index + 1}`}
+                />
+              ))}
+            </div>
+          </>
+        )}
+      </div>
+    );
+  };
+
+  const renderMasonryLayout = (content: any, sectionType?: string) => {
+    const items = content.items || [];
+    // Simple masonry using CSS columns
+    return (
+      <div className="columns-1 md:columns-2 lg:columns-3 gap-6">
+        {items.map((item: ContentItem, index: number) => (
+          <div key={index} className="break-inside-avoid mb-6">
+            {renderItemCard(item, index, sectionType)}
+          </div>
+        ))}
+      </div>
+    );
+  };
+
+  const renderListLayout = (content: any, sectionType?: string) => {
+    const items = content.items || [];
+    return (
+      <div className="space-y-4">
+        {items.map((item: ContentItem, index: number) => (
+          <Card key={index}>
+            <CardContent className="p-4">
+              <div className="flex items-start gap-4">
+                {item.image && (
+                  <ImageWithFallback
+                    src={item.image}
+                    alt={item.title || ''}
+                    className="w-20 h-20 object-cover rounded"
+                  />
+                )}
+                <div className="flex-1">
+                  {item.title && <h3 className="font-semibold mb-1">{item.title}</h3>}
+                  {item.subtitle && <p className="text-sm text-muted-foreground mb-2">{item.subtitle}</p>}
+                  {item.description && <p className="text-sm">{item.description}</p>}
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+    );
+  };
+
+  const renderSplitLayout = (content: any, sectionType?: string) => {
+    const items = content.items || [];
+    if (items.length === 0) return null;
+    
+    const firstItem = items[0];
+    return (
+      <div className="grid md:grid-cols-2 gap-8 items-center">
+        <div>
+          {firstItem.image && (
+            <ImageWithFallback
+              src={firstItem.image}
+              alt={firstItem.title || ''}
+              className="w-full h-auto rounded-lg"
+            />
+          )}
+        </div>
+        <div>
+          {firstItem.title && <h3 className="text-2xl font-bold mb-4">{firstItem.title}</h3>}
+          {firstItem.description && <p className="text-muted-foreground mb-4">{firstItem.description}</p>}
+          {firstItem.link && (
+            <Button asChild>
+              <a href={firstItem.link}>Learn More</a>
+            </Button>
+          )}
+        </div>
+      </div>
+    );
+  };
+
+  const renderFullWidthLayout = (content: any, sectionType?: string) => {
+    const items = content.items || [];
+    return (
+      <div className="w-full">
+        {items.map((item: ContentItem, index: number) => renderItemCard(item, index, sectionType))}
+      </div>
+    );
+  };
+
+  const renderContainedLayout = (content: any, sectionType?: string) => {
+    const items = content.items || [];
+    return (
+      <div className="max-w-4xl mx-auto">
+        {items.map((item: ContentItem, index: number) => renderItemCard(item, index, sectionType))}
+      </div>
+    );
+  };
+
+  const renderItemCard = (item: ContentItem, index: number, sectionType?: string) => {
+    const ItemImage = ({ src, alt }: { src: string; alt: string }) => {
+      const { presignedUrl } = usePresignedUrlRefresh({
+        fileKey: item.imageKey || null,
+        initialPresignedUrl: src || null,
+      });
+      return <ImageWithFallback src={presignedUrl || src} alt={alt} className="h-full w-full object-cover" />;
+    };
+
+    if (sectionType === 'STATS') {
+      return (
+        <Card key={index} className="text-center">
+          <CardContent className="p-6">
+            {item.icon && <div className="text-4xl mb-4">{getIconComponent(item.icon)}</div>}
+            <div className="text-4xl font-bold mb-2">{item.value || '0'}</div>
+            <div className="text-sm opacity-80">{item.label || item.title}</div>
+          </CardContent>
+        </Card>
+      );
+    }
+
+    return (
+      <Card key={index} className="h-full transition-all hover:shadow-lg">
+        {item.image && (
+          <div className="aspect-video w-full overflow-hidden rounded-t-lg">
+            <ItemImage src={item.image} alt={item.title || ''} />
+          </div>
+        )}
+        <CardHeader>
+          {item.title && <CardTitle>{item.title}</CardTitle>}
+          {item.subtitle && <CardDescription>{item.subtitle}</CardDescription>}
+        </CardHeader>
+        {item.description && (
+          <CardContent>
+            <p>{item.description}</p>
+            {item.link && (
+              <Button variant="link" className="mt-4 p-0" asChild>
+                <a href={item.link}>Learn More <ExternalLink className="ml-1 h-3 w-3" /></a>
+              </Button>
+            )}
+          </CardContent>
+        )}
+      </Card>
+    );
+  };
+
+  const renderDefaultLayout = (content: any) => {
+    return (
+      <div>
+        {content.html && (
+          <div dangerouslySetInnerHTML={{ __html: content.html }} />
+        )}
+        {content.text && <p>{content.text}</p>}
+        {!content.html && !content.text && content.items && (
+          <div className="space-y-4">
+            {content.items.map((item: any, index: number) => (
+              <div key={index}>
+                {item.title && <h3>{item.title}</h3>}
+                {item.description && <p>{item.description}</p>}
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  const getIconComponent = (iconName: string) => {
+    const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
+      'users': Users,
+      'building': Building2,
+      'trending-up': TrendingUp,
+      'award': Award,
+      'calendar': Calendar,
+      'map-pin': MapPin,
+      'phone': Phone,
+      'mail': Mail,
+      'clock': Clock,
+    };
+    const Icon = iconMap[iconName.toLowerCase()] || TrendingUp;
+    return <Icon className="h-8 w-8" />;
+  };
+
+  const containerClass = section.layoutType === 'FULL_WIDTH' ? 'w-full' : 
+                         section.layoutType === 'CONTAINED' ? 'max-w-4xl mx-auto' : 
+                         'container mx-auto px-4';
+
+  return (
+    <section
+      className={`py-12 ${animationClass} ${section.backgroundColor ? '' : 'bg-white'}`}
+      style={sectionStyle}
+    >
+      <div className={containerClass}>
+        {(section.title || section.subtitle) && (
+          <div className="mb-8 text-center">
+            {section.title && (
+              <h2 className="text-3xl font-bold mb-4">{section.title}</h2>
+            )}
+            {section.subtitle && (
+              <p className="text-lg opacity-90">{section.subtitle}</p>
+            )}
+          </div>
+        )}
+        
+        {imageUrl && !section.content?.items && (
+          <div className="mb-8">
+            <ImageWithFallback
+              src={imageUrl}
+              alt={section.title || 'Section image'}
+              className="w-full h-auto rounded-lg"
+            />
+          </div>
+        )}
+
+        {renderContent()}
+      </div>
+    </section>
+  );
+}

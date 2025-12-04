@@ -12,14 +12,17 @@ import { Input } from "../ui/input";
 import { ImageWithFallback } from "../figma/ImageWithFallback";
 import { ImageModal } from "../ui/image-modal";
 import { panchayatAPI } from "../../services/api";
+import { publicPlatformLandingPageApi } from "../../routes/api";
 import { toast } from "sonner";
-import type { ActivePanchayat } from "../../types";
+import type { ActivePanchayat, PlatformSection } from "../../types";
 import { useTranslation } from "react-i18next";
+import { DynamicSectionRenderer } from "./DynamicSectionRenderer";
 
 export function LandingPage() {
   const navigate = useNavigate();
   const { t } = useTranslation();
   const [activePanchayats, setActivePanchayats] = useState<ActivePanchayat[]>([]);
+  const [sections, setSections] = useState<PlatformSection[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [isImageModalOpen, setIsImageModalOpen] = useState(false);
@@ -31,22 +34,34 @@ export function LandingPage() {
   }, []);
 
   useEffect(() => {
-    const fetchPanchayats = async () => {
+    const fetchData = async () => {
       try {
         setLoading(true);
+        // Fetch dynamic sections
+        const sectionsData = await publicPlatformLandingPageApi.getSections();
+        setSections(sectionsData);
+        
+        // Fetch panchayats for ACTIVE_PANCHAYATS section if needed
         const data = await panchayatAPI.getAll();
-        // Filter only ACTIVE panchayats and show first 4
         const active = data.filter(p => p.status === 'ACTIVE' || !p.status).slice(0, 4);
         setActivePanchayats(active);
       } catch (error) {
-        console.error("Error fetching panchayats:", error);
-        toast.error("Failed to load panchayats. Please try again later.");
-        setActivePanchayats([]);
+        console.error("Error fetching data:", error);
+        // Don't show error toast for sections - fallback to default content
+        setSections([]);
+        try {
+          const data = await panchayatAPI.getAll();
+          const active = data.filter(p => p.status === 'ACTIVE' || !p.status).slice(0, 4);
+          setActivePanchayats(active);
+        } catch (panchayatError) {
+          toast.error("Failed to load panchayats. Please try again later.");
+          setActivePanchayats([]);
+        }
       } finally {
         setLoading(false);
       }
     };
-    fetchPanchayats();
+    fetchData();
   }, []);
 
   const handleSearch = () => {
@@ -160,7 +175,7 @@ export function LandingPage() {
         </div>
       </section>
 
-      {/* Stats Section with Icon Cards */}
+      {/* Always show hardcoded Stats Section */}
       <section className="relative -mt-12">
         <div className="container mx-auto px-4 lg:px-8">
           <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
@@ -189,7 +204,7 @@ export function LandingPage() {
         </div>
       </section>
 
-      {/* Features Section */}
+      {/* Always show hardcoded Features Section */}
       <section className="bg-white py-16 lg:py-24" id="features">
         <div className="container mx-auto px-4 lg:px-8">
           <div className="mb-12 text-center">
@@ -217,6 +232,32 @@ export function LandingPage() {
           </div>
         </div>
       </section>
+
+      {/* Dynamic Sections - Added after hardcoded sections */}
+      {sections.length > 0 && (
+        sections.map((section) => {
+          // Handle ACTIVE_PANCHAYATS section specially to inject panchayat data
+          if (section.sectionType === 'ACTIVE_PANCHAYATS' && activePanchayats.length > 0) {
+            const panchayatItems = activePanchayats.map((p) => ({
+              title: p.name,
+              subtitle: `${p.district}, ${p.state || ''}`,
+              description: `${p.schemes || 0} active schemes`,
+              image: undefined,
+            }));
+            const contentWithPanchayats = {
+              ...section.content,
+              items: panchayatItems,
+            };
+            return (
+              <DynamicSectionRenderer
+                key={section.id}
+                section={{ ...section, content: contentWithPanchayats }}
+              />
+            );
+          }
+          return <DynamicSectionRenderer key={section.id} section={section} />;
+        })
+      )}
 
       {/* Government Schemes Section - Red Background */}
       {/* <section className="bg-[#DC143C] py-16 text-white lg:py-24" style={{ backgroundColor: '#DC143C' }}>
@@ -294,119 +335,78 @@ export function LandingPage() {
         </div>
       </section> */}
 
-      {/* Active Panchayats */}
+      {/* Always show Active Panchayats Section */}
       <section className="bg-[#F5F5F5] py-16 lg:py-24" >
-        <div className="container mx-auto px-4 lg:px-8">
-          <div className="mb-12 text-center">
-            <h2 className="section-title inline-block">
-              {t('activePanchayats.title')} <span className="text-[#FF9933]">{t('activePanchayats.titleHighlight')}</span>
-            </h2>
-            <p className="mx-auto max-w-2xl text-[#666]">
-              {t('activePanchayats.subtitle')}
-            </p>
-          </div>
-          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
-            {loading ? (
-              <div className="col-span-4 text-center py-8">
-                <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-[#E31E24] border-r-transparent"></div>
-                <p className="mt-2 text-[#666]">{t('activePanchayats.loading')}</p>
-              </div>
-            ) : activePanchayats.length === 0 ? (
-              <div className="col-span-4 text-center py-8">
-                <Building2 className="mx-auto h-12 w-12 text-[#666] mb-3 opacity-50" />
-                <p className="text-[#666]">{t('activePanchayats.noData')}</p>
-                <p className="mt-1 text-sm text-[#999]">{t('activePanchayats.checkBack')}</p>
-              </div>
-            ) : (
-              activePanchayats.map((panchayat, index) => (
-                <Card
-                  key={panchayat.subdomain || index}
-                  className="border border-[#E5E5E5] bg-white shadow-sm transition-all hover:shadow-md hover:scale-105 cursor-pointer"
-                  onClick={() => navigate(`/panchayat/${panchayat.subdomain}`)}
-                >
-                  <CardHeader>
-                    <div className="mb-2 flex items-center gap-2">
-                      <MapPin className="h-4 w-4 text-[#FF9933]" />
-                      <Badge variant="secondary" className="bg-[#F5F5F5] text-[#666]">{panchayat.district}</Badge>
-                    </div>
-                    <CardTitle className="text-[#1B2B5E]">{panchayat.name}</CardTitle>
-                    <CardDescription className="text-[#666]">{t('activePanchayats.gramPanchayat')}</CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="flex justify-between text-sm">
-                      <div>
-                        <p className="text-[#666]">{t('activePanchayats.activeSchemes')}</p>
-                        <p className="font-semibold text-[#138808]">{panchayat.schemes || 0}</p>
-                      </div>
-                      <div className="text-right">
-                        <p className="text-[#666]">{t('activePanchayats.population')}</p>
-                        <p className="font-semibold text-[#138808]">
-                          {panchayat.population > 0 ? panchayat.population.toLocaleString() : 'N/A'}
-                        </p>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))
-            )}
-          </div>
-          <div className="mt-12 text-center">
-            <Button
-              variant="outline"
-              size="lg"
-              className="border-[#E5E5E5] text-[#1B2B5E] hover:bg-[#F5F5F5]"
-              onClick={() => {
-                window.scrollTo({ top: 0, behavior: 'smooth' });
-                navigate("/panchayats");
-              }}
-            >
-              {t('activePanchayats.viewAll')}
-            </Button>
-          </div>
-        </div>
-      </section>
-
-
-      <section className="bg-white py-16 lg:py-24" id="news">
-        <div className="container mx-auto px-4 lg:px-8">
-          <div className="mb-12">
-            <h2 className="section-title inline-block">{t('news.title')}</h2>
-            <p className="text-[#666]">{t('news.subtitle')}</p>
-          </div>
-          <div className="grid gap-6 md:grid-cols-3">
-            {[1, 2, 3].map((item) => (
-              <Card key={item} className="border border-[#E5E5E5] bg-white shadow-sm transition-all hover:shadow-md">
-                <div 
-                  className="aspect-video overflow-hidden rounded-t-lg bg-[#F5F5F5] cursor-pointer"
-                  onClick={() => {
-                    setSelectedImageUrl("https://images.unsplash.com/photo-1736914319111-d54ada582633?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxpbmRpYW4lMjB2aWxsYWdlJTIwcGFuY2hheWF0fGVufDF8fHx8MTc2Mjc1MjM1N3ww&ixlib=rb-4.1.0&q=80&w=1080&utm_source=figma&utm_medium=referral");
-                    setIsImageModalOpen(true);
-                  }}
-                >
-                  <ImageWithFallback
-                    src="https://images.unsplash.com/photo-1736914319111-d54ada582633?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxpbmRpYW4lMjB2aWxsYWdlJTIwcGFuY2hheWF0fGVufDF8fHx8MTc2Mjc1MjM1N3ww&ixlib=rb-4.1.0&q=80&w=1080&utm_source=figma&utm_medium=referral"
-                    alt="News"
-                    className="h-full w-full object-cover"
-                  />
+          <div className="container mx-auto px-4 lg:px-8">
+            <div className="mb-12 text-center">
+              <h2 className="section-title inline-block">
+                {t('activePanchayats.title')} <span className="text-[#FF9933]">{t('activePanchayats.titleHighlight')}</span>
+              </h2>
+              <p className="mx-auto max-w-2xl text-[#666]">
+                {t('activePanchayats.subtitle')}
+              </p>
+            </div>
+            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
+              {loading ? (
+                <div className="col-span-4 text-center py-8">
+                  <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-[#E31E24] border-r-transparent"></div>
+                  <p className="mt-2 text-[#666]">{t('activePanchayats.loading')}</p>
                 </div>
-                <CardHeader>
-                  <Badge className="w-fit bg-[#E31E24] text-white">{t('news.pressRelease')}</Badge>
-                  <CardTitle className="text-[#1B2B5E]">{t('news.newsTitle')}</CardTitle>
-                  <CardDescription className="text-[#666]">
-                    {t('news.newsDescription')}
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="flex items-center gap-2 text-sm text-[#666]">
-                    <Calendar className="h-4 w-4" />
-                    <span>{t('news.date')}</span>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
+              ) : activePanchayats.length === 0 ? (
+                <div className="col-span-4 text-center py-8">
+                  <Building2 className="mx-auto h-12 w-12 text-[#666] mb-3 opacity-50" />
+                  <p className="text-[#666]">{t('activePanchayats.noData')}</p>
+                  <p className="mt-1 text-sm text-[#999]">{t('activePanchayats.checkBack')}</p>
+                </div>
+              ) : (
+                activePanchayats.map((panchayat, index) => (
+                  <Card
+                    key={panchayat.subdomain || index}
+                    className="border border-[#E5E5E5] bg-white shadow-sm transition-all hover:shadow-md hover:scale-105 cursor-pointer"
+                    onClick={() => navigate(`/panchayat/${panchayat.subdomain}`)}
+                  >
+                    <CardHeader>
+                      <div className="mb-2 flex items-center gap-2">
+                        <MapPin className="h-4 w-4 text-[#FF9933]" />
+                        <Badge variant="secondary" className="bg-[#F5F5F5] text-[#666]">{panchayat.district}</Badge>
+                      </div>
+                      <CardTitle className="text-[#1B2B5E]">{panchayat.name}</CardTitle>
+                      <CardDescription className="text-[#666]">{t('activePanchayats.gramPanchayat')}</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="flex justify-between text-sm">
+                        <div>
+                          <p className="text-[#666]">{t('activePanchayats.activeSchemes')}</p>
+                          <p className="font-semibold text-[#138808]">{panchayat.schemes || 0}</p>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-[#666]">{t('activePanchayats.population')}</p>
+                          <p className="font-semibold text-[#138808]">
+                            {panchayat.population > 0 ? panchayat.population.toLocaleString() : 'N/A'}
+                          </p>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))
+              )}
+            </div>
+            <div className="mt-12 text-center">
+              <Button
+                variant="outline"
+                size="lg"
+                className="border-[#E5E5E5] text-[#1B2B5E] hover:bg-[#F5F5F5]"
+                onClick={() => {
+                  window.scrollTo({ top: 0, behavior: 'smooth' });
+                  navigate("/panchayats");
+                }}
+              >
+                {t('activePanchayats.viewAll')}
+              </Button>
+            </div>
           </div>
-        </div>
-      </section>
+        </section>
+
       {/* Explore India Section - Purple Gradient */}
       {/* <section className="bg-gradient-to-br from-[#6C5CE7] to-[#5B4B9D] py-16 text-white lg:py-24">
         <div className="container mx-auto px-4 lg:px-8">
@@ -463,7 +463,7 @@ export function LandingPage() {
         </div>
       </section> */}
 
-      {/* CTA Section */}
+      {/* Always show CTA Section */}
       <section id="contact" className="bg-[#F5F5F5] py-16">
         <div className="container mx-auto px-4 text-center lg:px-8">
           <h2 className="mb-4 text-3xl font-bold text-[#1B2B5E]">

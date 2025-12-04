@@ -6,7 +6,14 @@ import type {
   Comment,
   EngagementStats,
   GalleryItem,
+  LayoutType,
   PageView,
+  PanchayatSectionType,
+  PanchayatWebsiteConfig,
+  PanchayatWebsiteSection,
+  PlatformLandingPageConfig,
+  PlatformSection,
+  PlatformSectionType,
   PopularPost,
   Post,
   Scheme,
@@ -124,8 +131,18 @@ class HttpClient {
   }
 
   async request<T>(config: AxiosRequestConfig): Promise<T> {
+    // Increase timeout for file uploads (multipart/form-data)
+    const isFileUpload = config.data instanceof FormData || 
+                        (config.headers && config.headers['Content-Type'] === 'multipart/form-data');
+    const timeout = isFileUpload ? 120000 : (config.timeout || 15000); // 2 minutes for uploads, 15s default
+    
+    const requestConfig: AxiosRequestConfig = {
+      ...config,
+      timeout,
+    };
+    
     try {
-      const response = await this.client.request<ApiResponse<T>>(config);
+      const response = await this.client.request<ApiResponse<T>>(requestConfig);
       const payload = response.data;
 
       if (payload?.success === false) {
@@ -1624,5 +1641,425 @@ export const adminPanchayatApi = new AdminPanchayatApi(httpClient);
 export const adminUserApi = new AdminUserApi(httpClient);
 export const adminAnalyticsApi = new AdminAnalyticsApi(httpClient);
 export const adminAuditLogApi = new AdminAuditLogApi(httpClient);
+
+/**
+ * Platform Landing Page API
+ */
+class PlatformLandingPageApi {
+  constructor(private http: HttpClient) {}
+
+  async getSections(): Promise<PlatformSection[]> {
+    const data = await this.http.get<{ sections: any[] }>("/admin/platform/landing-page");
+    return data.sections.map(this.mapSection);
+  }
+
+  async createSection(payload: {
+    sectionType: PlatformSectionType;
+    title?: string;
+    subtitle?: string;
+    content?: any;
+    layoutType: LayoutType;
+    displayOrder?: number;
+    isVisible?: boolean;
+    backgroundColor?: string;
+    textColor?: string;
+    imageUrl?: string;
+    imageKey?: string;
+    metadata?: Record<string, any>;
+    imageFile?: File;
+    compressionQuality?: string;
+  }): Promise<PlatformSection> {
+    const anyPayload: any = payload as any;
+    if (anyPayload.imageFile instanceof File) {
+      const formData = new FormData();
+      formData.append('sectionType', payload.sectionType);
+      if (payload.title) formData.append('title', payload.title);
+      if (payload.subtitle) formData.append('subtitle', payload.subtitle);
+      if (payload.content) formData.append('content', typeof payload.content === 'string' ? payload.content : JSON.stringify(payload.content));
+      formData.append('layoutType', payload.layoutType);
+      if (payload.displayOrder !== undefined) formData.append('displayOrder', String(payload.displayOrder));
+      if (payload.isVisible !== undefined) formData.append('isVisible', String(payload.isVisible));
+      if (payload.backgroundColor) formData.append('backgroundColor', payload.backgroundColor);
+      if (payload.textColor) formData.append('textColor', payload.textColor);
+      if (payload.imageUrl) formData.append('imageUrl', payload.imageUrl);
+      if (payload.imageKey) formData.append('imageKey', payload.imageKey);
+      if (payload.metadata) formData.append('metadata', JSON.stringify(payload.metadata));
+      formData.append('imageFile', anyPayload.imageFile);
+      formData.append('compressionQuality', payload.compressionQuality || 'HIGH');
+      
+      const data = await this.http.post<any>("/admin/platform/landing-page/sections", formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      });
+      return this.mapSection(data);
+    }
+
+    const jsonPayload: any = {
+      sectionType: payload.sectionType,
+      title: payload.title,
+      subtitle: payload.subtitle,
+      content: typeof payload.content === 'string' ? payload.content : JSON.stringify(payload.content),
+      layoutType: payload.layoutType,
+      displayOrder: payload.displayOrder,
+      isVisible: payload.isVisible,
+      backgroundColor: payload.backgroundColor,
+      textColor: payload.textColor,
+      imageUrl: payload.imageUrl,
+      imageKey: payload.imageKey,
+      metadata: payload.metadata ? JSON.stringify(payload.metadata) : undefined,
+    };
+    const data = await this.http.post<any>("/admin/platform/landing-page/sections", jsonPayload);
+    return this.mapSection(data);
+  }
+
+  async updateSection(id: string | number, payload: Partial<{
+    sectionType: PlatformSectionType;
+    title?: string;
+    subtitle?: string;
+    content?: any;
+    layoutType: LayoutType;
+    displayOrder?: number;
+    isVisible?: boolean;
+    backgroundColor?: string;
+    textColor?: string;
+    imageUrl?: string;
+    imageKey?: string;
+    metadata?: Record<string, any>;
+    imageFile?: File;
+  }>): Promise<PlatformSection> {
+    const anyPayload: any = payload as any;
+    if (anyPayload.imageFile instanceof File) {
+      const formData = new FormData();
+      if (anyPayload.sectionType !== undefined) formData.append('sectionType', anyPayload.sectionType);
+      if (anyPayload.title !== undefined) formData.append('title', anyPayload.title);
+      if (anyPayload.subtitle !== undefined) formData.append('subtitle', anyPayload.subtitle);
+      if (anyPayload.content !== undefined) formData.append('content', typeof anyPayload.content === 'string' ? anyPayload.content : JSON.stringify(anyPayload.content));
+      if (anyPayload.layoutType !== undefined) formData.append('layoutType', anyPayload.layoutType);
+      if (anyPayload.displayOrder !== undefined) formData.append('displayOrder', String(anyPayload.displayOrder));
+      if (anyPayload.isVisible !== undefined) formData.append('isVisible', String(anyPayload.isVisible));
+      if (anyPayload.backgroundColor !== undefined) formData.append('backgroundColor', anyPayload.backgroundColor);
+      if (anyPayload.textColor !== undefined) formData.append('textColor', anyPayload.textColor);
+      if (anyPayload.imageUrl !== undefined) formData.append('imageUrl', anyPayload.imageUrl);
+      if (anyPayload.imageKey !== undefined) formData.append('imageKey', anyPayload.imageKey);
+      if (anyPayload.metadata !== undefined) formData.append('metadata', JSON.stringify(anyPayload.metadata));
+      formData.append('imageFile', anyPayload.imageFile);
+      
+      const data = await this.http.put<any>(`/admin/platform/landing-page/sections/${id}`, formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      });
+      return this.mapSection(data);
+    }
+
+    const updatePayload: any = {};
+    if (payload.sectionType !== undefined) updatePayload.sectionType = payload.sectionType;
+    if (payload.title !== undefined) updatePayload.title = payload.title;
+    if (payload.subtitle !== undefined) updatePayload.subtitle = payload.subtitle;
+    if (payload.content !== undefined) updatePayload.content = typeof payload.content === 'string' ? payload.content : JSON.stringify(payload.content);
+    if (payload.layoutType !== undefined) updatePayload.layoutType = payload.layoutType;
+    if (payload.displayOrder !== undefined) updatePayload.displayOrder = payload.displayOrder;
+    if (payload.isVisible !== undefined) updatePayload.isVisible = payload.isVisible;
+    if (payload.backgroundColor !== undefined) updatePayload.backgroundColor = payload.backgroundColor;
+    if (payload.textColor !== undefined) updatePayload.textColor = payload.textColor;
+    if (payload.imageUrl !== undefined) updatePayload.imageUrl = payload.imageUrl;
+    if (payload.imageKey !== undefined) updatePayload.imageKey = payload.imageKey;
+    if (payload.metadata !== undefined) updatePayload.metadata = JSON.stringify(payload.metadata);
+
+    const data = await this.http.put<any>(`/admin/platform/landing-page/sections/${id}`, updatePayload);
+    return this.mapSection(data);
+  }
+
+  async deleteSection(id: string | number): Promise<void> {
+    await this.http.delete(`/admin/platform/landing-page/sections/${id}`);
+  }
+
+  async updateOrder(id: string | number, newOrder: number): Promise<void> {
+    await this.http.patch(`/admin/platform/landing-page/sections/${id}/order`, { displayOrder: newOrder });
+  }
+
+  async toggleVisibility(id: string | number, currentVisibility?: boolean): Promise<void> {
+    // If currentVisibility is provided, use it; otherwise fetch all sections to find the current state
+    let isVisible = currentVisibility;
+    if (isVisible === undefined) {
+      const sections = await this.getSections();
+      const section = sections.find(s => s.id === String(id));
+      if (!section) {
+        throw new Error('Section not found');
+      }
+      isVisible = section.isVisible;
+    }
+    await this.http.patch(`/admin/platform/landing-page/sections/${id}/visibility`, { isVisible: !isVisible });
+  }
+
+  async uploadImage(id: string | number, file: File, compressionQuality: string = 'HIGH'): Promise<{ imageUrl: string }> {
+    const formData = new FormData();
+    formData.append('imageFile', file);
+    formData.append('compressionQuality', compressionQuality);
+    const data = await this.http.post<any>(`/admin/platform/landing-page/sections/${id}/upload-image`, formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+    return { imageUrl: data.imageUrl };
+  }
+
+  private mapSection(section: any): PlatformSection {
+    return {
+      id: String(section.id),
+      sectionType: section.sectionType,
+      title: section.title,
+      subtitle: section.subtitle,
+      content: typeof section.content === 'string' ? (section.content ? JSON.parse(section.content) : {}) : section.content,
+      layoutType: section.layoutType,
+      displayOrder: section.displayOrder,
+      isVisible: section.isVisible,
+      backgroundColor: section.backgroundColor,
+      textColor: section.textColor,
+      imageUrl: section.imageUrl,
+      imageKey: section.imageKey,
+      metadata: typeof section.metadata === 'string' ? (section.metadata ? JSON.parse(section.metadata) : {}) : section.metadata,
+      createdAt: section.createdAt,
+      updatedAt: section.updatedAt,
+    };
+  }
+}
+
+/**
+ * Panchayat Website API
+ */
+class PanchayatWebsiteApi {
+  constructor(private http: HttpClient) {}
+
+  async getSections(): Promise<PanchayatWebsiteSection[]> {
+    const data = await this.http.get<{ sections: any[] }>("/panchayat/website/sections");
+    return data.sections.map(this.mapSection);
+  }
+
+  async createSection(payload: {
+    sectionType: PanchayatSectionType;
+    title?: string;
+    subtitle?: string;
+    content?: any;
+    layoutType: LayoutType;
+    displayOrder?: number;
+    isVisible?: boolean;
+    backgroundColor?: string;
+    textColor?: string;
+    imageUrl?: string;
+    imageKey?: string;
+    metadata?: Record<string, any>;
+    imageFile?: File;
+    compressionQuality?: string;
+  }): Promise<PanchayatWebsiteSection> {
+    const anyPayload: any = payload as any;
+    if (anyPayload.imageFile instanceof File) {
+      const formData = new FormData();
+      formData.append('sectionType', payload.sectionType);
+      if (payload.title) formData.append('title', payload.title);
+      if (payload.subtitle) formData.append('subtitle', payload.subtitle);
+      if (payload.content) formData.append('content', typeof payload.content === 'string' ? payload.content : JSON.stringify(payload.content));
+      formData.append('layoutType', payload.layoutType);
+      if (payload.displayOrder !== undefined) formData.append('displayOrder', String(payload.displayOrder));
+      if (payload.isVisible !== undefined) formData.append('isVisible', String(payload.isVisible));
+      if (payload.backgroundColor) formData.append('backgroundColor', payload.backgroundColor);
+      if (payload.textColor) formData.append('textColor', payload.textColor);
+      if (payload.imageUrl) formData.append('imageUrl', payload.imageUrl);
+      if (payload.imageKey) formData.append('imageKey', payload.imageKey);
+      if (payload.metadata) formData.append('metadata', JSON.stringify(payload.metadata));
+      formData.append('imageFile', anyPayload.imageFile);
+      formData.append('compressionQuality', payload.compressionQuality || 'HIGH');
+      
+      const data = await this.http.post<any>("/panchayat/website/sections", formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      });
+      return this.mapSection(data);
+    }
+
+    const jsonPayload: any = {
+      sectionType: payload.sectionType,
+      title: payload.title,
+      subtitle: payload.subtitle,
+      content: typeof payload.content === 'string' ? payload.content : JSON.stringify(payload.content),
+      layoutType: payload.layoutType,
+      displayOrder: payload.displayOrder,
+      isVisible: payload.isVisible,
+      backgroundColor: payload.backgroundColor,
+      textColor: payload.textColor,
+      imageUrl: payload.imageUrl,
+      imageKey: payload.imageKey,
+      metadata: payload.metadata ? JSON.stringify(payload.metadata) : undefined,
+    };
+    const data = await this.http.post<any>("/panchayat/website/sections", jsonPayload);
+    return this.mapSection(data);
+  }
+
+  async updateSection(id: string | number, payload: Partial<{
+    sectionType: PanchayatSectionType;
+    title?: string;
+    subtitle?: string;
+    content?: any;
+    layoutType: LayoutType;
+    displayOrder?: number;
+    isVisible?: boolean;
+    backgroundColor?: string;
+    textColor?: string;
+    imageUrl?: string;
+    imageKey?: string;
+    metadata?: Record<string, any>;
+    imageFile?: File;
+  }>): Promise<PanchayatWebsiteSection> {
+    const anyPayload: any = payload as any;
+    if (anyPayload.imageFile instanceof File) {
+      const formData = new FormData();
+      if (anyPayload.sectionType !== undefined) formData.append('sectionType', anyPayload.sectionType);
+      if (anyPayload.title !== undefined) formData.append('title', anyPayload.title);
+      if (anyPayload.subtitle !== undefined) formData.append('subtitle', anyPayload.subtitle);
+      if (anyPayload.content !== undefined) formData.append('content', typeof anyPayload.content === 'string' ? anyPayload.content : JSON.stringify(anyPayload.content));
+      if (anyPayload.layoutType !== undefined) formData.append('layoutType', anyPayload.layoutType);
+      if (anyPayload.displayOrder !== undefined) formData.append('displayOrder', String(anyPayload.displayOrder));
+      if (anyPayload.isVisible !== undefined) formData.append('isVisible', String(anyPayload.isVisible));
+      if (anyPayload.backgroundColor !== undefined) formData.append('backgroundColor', anyPayload.backgroundColor);
+      if (anyPayload.textColor !== undefined) formData.append('textColor', anyPayload.textColor);
+      if (anyPayload.imageUrl !== undefined) formData.append('imageUrl', anyPayload.imageUrl);
+      if (anyPayload.imageKey !== undefined) formData.append('imageKey', anyPayload.imageKey);
+      if (anyPayload.metadata !== undefined) formData.append('metadata', JSON.stringify(anyPayload.metadata));
+      formData.append('imageFile', anyPayload.imageFile);
+      
+      const data = await this.http.put<any>(`/panchayat/website/sections/${id}`, formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      });
+      return this.mapSection(data);
+    }
+
+    const updatePayload: any = {};
+    if (payload.sectionType !== undefined) updatePayload.sectionType = payload.sectionType;
+    if (payload.title !== undefined) updatePayload.title = payload.title;
+    if (payload.subtitle !== undefined) updatePayload.subtitle = payload.subtitle;
+    if (payload.content !== undefined) updatePayload.content = typeof payload.content === 'string' ? payload.content : JSON.stringify(payload.content);
+    if (payload.layoutType !== undefined) updatePayload.layoutType = payload.layoutType;
+    if (payload.displayOrder !== undefined) updatePayload.displayOrder = payload.displayOrder;
+    if (payload.isVisible !== undefined) updatePayload.isVisible = payload.isVisible;
+    if (payload.backgroundColor !== undefined) updatePayload.backgroundColor = payload.backgroundColor;
+    if (payload.textColor !== undefined) updatePayload.textColor = payload.textColor;
+    if (payload.imageUrl !== undefined) updatePayload.imageUrl = payload.imageUrl;
+    if (payload.imageKey !== undefined) updatePayload.imageKey = payload.imageKey;
+    if (payload.metadata !== undefined) updatePayload.metadata = JSON.stringify(payload.metadata);
+
+    const data = await this.http.put<any>(`/panchayat/website/sections/${id}`, updatePayload);
+    return this.mapSection(data);
+  }
+
+  async deleteSection(id: string | number): Promise<void> {
+    await this.http.delete(`/panchayat/website/sections/${id}`);
+  }
+
+  async updateOrder(id: string | number, newOrder: number): Promise<void> {
+    await this.http.patch(`/panchayat/website/sections/${id}/order`, { displayOrder: newOrder });
+  }
+
+  async toggleVisibility(id: string | number, currentVisibility?: boolean): Promise<void> {
+    // If currentVisibility is provided, use it; otherwise fetch all sections to find the current state
+    let isVisible = currentVisibility;
+    if (isVisible === undefined) {
+      const sections = await this.getSections();
+      const section = sections.find(s => s.id === String(id));
+      if (!section) {
+        throw new Error('Section not found');
+      }
+      isVisible = section.isVisible;
+    }
+    await this.http.patch(`/panchayat/website/sections/${id}/visibility`, { isVisible: !isVisible });
+  }
+
+  async uploadImage(id: string | number, file: File, compressionQuality: string = 'HIGH'): Promise<{ imageUrl: string }> {
+    const formData = new FormData();
+    formData.append('imageFile', file);
+    formData.append('compressionQuality', compressionQuality);
+    const data = await this.http.post<any>(`/panchayat/website/sections/${id}/upload-image`, formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+    return { imageUrl: data.imageUrl };
+  }
+
+  private mapSection(section: any): PanchayatWebsiteSection {
+    return {
+      id: String(section.id),
+      panchayatId: String(section.panchayatId),
+      sectionType: section.sectionType,
+      title: section.title,
+      subtitle: section.subtitle,
+      content: typeof section.content === 'string' ? (section.content ? JSON.parse(section.content) : {}) : section.content,
+      layoutType: section.layoutType,
+      displayOrder: section.displayOrder,
+      isVisible: section.isVisible,
+      backgroundColor: section.backgroundColor,
+      textColor: section.textColor,
+      imageUrl: section.imageUrl,
+      imageKey: section.imageKey,
+      metadata: typeof section.metadata === 'string' ? (section.metadata ? JSON.parse(section.metadata) : {}) : section.metadata,
+      createdAt: section.createdAt,
+      updatedAt: section.updatedAt,
+    };
+  }
+}
+
+/**
+ * Public Platform Landing Page API
+ */
+class PublicPlatformLandingPageApi {
+  constructor(private http: HttpClient) {}
+
+  async getSections(): Promise<PlatformSection[]> {
+    const data = await this.http.get<{ sections: any[] }>("/public/platform/landing-page");
+    return data.sections.map((section: any) => ({
+      id: String(section.id),
+      sectionType: section.sectionType,
+      title: section.title,
+      subtitle: section.subtitle,
+      content: typeof section.content === 'string' ? (section.content ? JSON.parse(section.content) : {}) : section.content,
+      layoutType: section.layoutType,
+      displayOrder: section.displayOrder,
+      isVisible: section.isVisible,
+      backgroundColor: section.backgroundColor,
+      textColor: section.textColor,
+      imageUrl: section.imageUrl,
+      imageKey: section.imageKey,
+      metadata: typeof section.metadata === 'string' ? (section.metadata ? JSON.parse(section.metadata) : {}) : section.metadata,
+      createdAt: section.createdAt,
+      updatedAt: section.updatedAt,
+    }));
+  }
+}
+
+/**
+ * Public Panchayat Website API
+ */
+class PublicPanchayatWebsiteApi {
+  constructor(private http: HttpClient) {}
+
+  async getSections(slug: string): Promise<PanchayatWebsiteSection[]> {
+    const data = await this.http.get<{ sections: any[] }>(`/public/${slug}/website`);
+    return data.sections.map((section: any) => ({
+      id: String(section.id),
+      panchayatId: String(section.panchayatId),
+      sectionType: section.sectionType,
+      title: section.title,
+      subtitle: section.subtitle,
+      content: typeof section.content === 'string' ? (section.content ? JSON.parse(section.content) : {}) : section.content,
+      layoutType: section.layoutType,
+      displayOrder: section.displayOrder,
+      isVisible: section.isVisible,
+      backgroundColor: section.backgroundColor,
+      textColor: section.textColor,
+      imageUrl: section.imageUrl,
+      imageKey: section.imageKey,
+      metadata: typeof section.metadata === 'string' ? (section.metadata ? JSON.parse(section.metadata) : {}) : section.metadata,
+      createdAt: section.createdAt,
+      updatedAt: section.updatedAt,
+    }));
+  }
+}
+
+export const platformLandingPageApi = new PlatformLandingPageApi(httpClient);
+export const panchayatWebsiteApi = new PanchayatWebsiteApi(httpClient);
+export const publicPlatformLandingPageApi = new PublicPlatformLandingPageApi(httpClient);
+export const publicPanchayatWebsiteApi = new PublicPanchayatWebsiteApi(httpClient);
+
 export type AuthUserDTO = ServerUser;
 

@@ -40,6 +40,7 @@ const CommentsPage = lazy(() => import('@/components/sachiv/pages/CommentsPage')
 const TeamPage = lazy(() => import('@/components/sachiv/pages/TeamPage').then(m => ({ default: m.TeamPage })));
 const AnalyticsPage = lazy(() => import('@/components/sachiv/pages/AnalyticsPage').then(m => ({ default: m.AnalyticsPage })));
 const SettingsPage = lazy(() => import('@/components/sachiv/pages/SettingsPage').then(m => ({ default: m.SettingsPage })));
+const WebsitePage = lazy(() => import('@/components/sachiv/PanchayatWebsiteManager').then(m => ({ default: m.PanchayatWebsiteManager })));
 const SuperAdminDashboard = lazy(() => import('@/components/admin/SuperAdminDashboard').then(m => ({ default: m.SuperAdminDashboard })));
 
 export function AppRoutes() {
@@ -78,6 +79,7 @@ export function AppRoutes() {
           <Route path="comments" element={<CommentsPage />} />
           <Route path="team" element={<TeamPage />} />
           <Route path="analytics" element={<AnalyticsPage />} />
+          <Route path="website" element={<WebsitePage />} />
           <Route path="settings" element={<SettingsPage />} />
         </Route>
         <Route

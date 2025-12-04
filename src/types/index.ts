@@ -345,3 +345,140 @@ export interface PostWithStatus extends Post {
   status?: PostStatus;
 }
 
+// Section Management Types
+export type LayoutType = 'GRID' | 'ROW' | 'SCROLLING_ROW' | 'CAROUSEL' | 'MASONRY' | 'LIST' | 'SPLIT' | 'FULL_WIDTH' | 'CONTAINED';
+export type PlatformSectionType = 'HERO' | 'STATS' | 'FEATURES' | 'ACTIVE_PANCHAYATS' | 'NEWS' | 'CTA' | 'GALLERY' | 'CARDS' | 'FAQ' | 'FORM' | 'VIDEO' | 'TIMELINE' | 'TESTIMONIALS' | 'RICH_TEXT' | 'MAP';
+export type PanchayatSectionType = 'HERO' | 'STATS' | 'ANNOUNCEMENTS' | 'SCHEMES' | 'GALLERY' | 'MEMBERS' | 'CONTACT' | 'CARDS' | 'FAQ' | 'FORM' | 'VIDEO' | 'TIMELINE' | 'TESTIMONIALS' | 'RICH_TEXT' | 'MAP';
+
+// Enhanced content structures
+export interface ContentItem {
+  id?: string;
+  type?: 'image' | 'card' | 'testimonial' | 'accordion_item' | 'timeline_item' | 'stat' | 'feature' | 'gallery_item';
+  title?: string;
+  subtitle?: string;
+  description?: string;
+  image?: string;
+  imageKey?: string;
+  link?: string;
+  icon?: string;
+  value?: string;
+  label?: string;
+  order?: number;
+  metadata?: Record<string, any>;
+  [key: string]: any;
+}
+
+export interface BackgroundConfig {
+  type: 'color' | 'gradient' | 'image' | 'video';
+  value: string; // Color hex, gradient CSS, image URL, video URL
+  overlay?: string; // Overlay color with opacity
+  parallax?: boolean;
+  imageKey?: string;
+}
+
+export interface SpacingConfig {
+  top?: number;
+  bottom?: number;
+  left?: number;
+  right?: number;
+  padding?: number;
+  margin?: number;
+}
+
+export interface AnimationConfig {
+  type?: 'fade-in' | 'slide-in' | 'zoom' | 'none';
+  delay?: number;
+  duration?: number;
+}
+
+export interface CTAConfig {
+  text: string;
+  link: string;
+  style?: 'primary' | 'secondary' | 'outline';
+  size?: 'sm' | 'md' | 'lg';
+  icon?: string;
+}
+
+export interface MediaConfig {
+  type: 'image' | 'video';
+  url: string;
+  thumbnail?: string;
+  alt?: string;
+  caption?: string;
+  autoplay?: boolean;
+  loop?: boolean;
+  controls?: boolean;
+}
+
+export interface FormField {
+  id: string;
+  type: 'text' | 'email' | 'phone' | 'textarea' | 'select' | 'checkbox' | 'radio' | 'date';
+  label: string;
+  placeholder?: string;
+  required?: boolean;
+  options?: string[]; // For select, radio
+  validation?: Record<string, any>;
+}
+
+export interface SectionContent {
+  items?: ContentItem[];
+  background?: BackgroundConfig;
+  spacing?: SpacingConfig;
+  animation?: AnimationConfig;
+  cta?: CTAConfig;
+  richText?: string; // HTML content for text sections
+  media?: MediaConfig;
+  formFields?: FormField[];
+  columns?: number;
+  autoPlay?: boolean;
+  interval?: number;
+  limit?: number;
+  customSettings?: Record<string, any>;
+  [key: string]: any;
+}
+
+export interface PlatformSection {
+  id: string;
+  sectionType: PlatformSectionType;
+  title?: string;
+  subtitle?: string;
+  content: any; // JSON
+  layoutType: LayoutType;
+  displayOrder: number;
+  isVisible: boolean;
+  backgroundColor?: string;
+  textColor?: string;
+  imageUrl?: string;
+  imageKey?: string;
+  metadata?: Record<string, any>;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface PanchayatWebsiteSection {
+  id: string;
+  panchayatId: string;
+  sectionType: PanchayatSectionType;
+  title?: string;
+  subtitle?: string;
+  content: any; // JSON
+  layoutType: LayoutType;
+  displayOrder: number;
+  isVisible: boolean;
+  backgroundColor?: string;
+  textColor?: string;
+  imageUrl?: string;
+  imageKey?: string;
+  metadata?: Record<string, any>;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface PlatformLandingPageConfig {
+  sections: PlatformSection[];
+}
+
+export interface PanchayatWebsiteConfig {
+  sections: PanchayatWebsiteSection[];
+}
+

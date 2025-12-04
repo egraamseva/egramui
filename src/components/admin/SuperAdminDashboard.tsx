@@ -5,6 +5,7 @@
 
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import {
   LayoutDashboard,
   Users,
@@ -17,11 +18,17 @@ import {
   MoreVertical,
   Edit,
   Trash2,
-  
+  Globe,
   LogOut,
   Menu,
   X,
 } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "../ui/dropdown-menu";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../ui/card";
 import { Button } from "../ui/button";
 import { Input } from "../ui/input";
@@ -37,12 +44,6 @@ import {
 } from "../ui/table";
 import { Badge } from "../ui/badge";
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "../ui/dropdown-menu";
-import {
   Dialog,
   DialogContent,
   DialogDescription,
@@ -56,10 +57,12 @@ import { useAuth } from "../../contexts/AuthContext";
 import type { SuperAdminPanchayat, AdminUser, AuditLog, PanchayatStatus } from "../../types";
 import { formatTimeAgo } from "../../utils/format";
 import { superAdminAPI } from "@/services/api";
+import { PlatformLandingPageManager } from "./PlatformLandingPageManager";
 
 export function SuperAdminDashboard() {
   const navigate = useNavigate();
   const { user, logout } = useAuth();
+  const { i18n } = useTranslation();
   const [activeSection, setActiveSection] = useState("dashboard");
   const [panchayats, setPanchayats] = useState<SuperAdminPanchayat[]>([]);
   const [users, setUsers] = useState<AdminUser[]>([]);
@@ -319,6 +322,7 @@ export function SuperAdminDashboard() {
     { id: "dashboard", label: "Dashboard", icon: LayoutDashboard },
     { id: "panchayats", label: "Panchayats", icon: Building2 },
     { id: "users", label: "Users", icon: Users },
+    { id: "landing-page", label: "Landing Page", icon: Globe },
     { id: "analytics", label: "Analytics", icon: BarChart3 },
     { id: "audit-logs", label: "Audit Logs", icon: FileText },
   ];
@@ -462,9 +466,32 @@ export function SuperAdminDashboard() {
                 >
                   {mobileMenuOpen ? <X /> : <Menu />}
                 </Button>
-                <h1 className="text-xl font-bold text-[#1B2B5E]">Super Admin Dashboard</h1>
+                <h1 className="text-sm md:text-xl font-bold text-[#1B2B5E]">Super Admin Dashboard</h1>
               </div>
-              <div className="flex items-center gap-4">
+              <div className="flex items-center gap-2 sm:gap-4">
+                {/* Language Selector */}
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" size="icon" className="h-9 w-9">
+                      <Globe className="h-5 w-5 text-[#666]" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem onClick={() => i18n.changeLanguage("en")}>
+                      English
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => i18n.changeLanguage("mr")}>
+                      मराठी
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => i18n.changeLanguage("hi")}>
+                      हिंदी
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => i18n.changeLanguage("regional")}>
+                      Regional
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+
                 <span className="hidden text-sm text-[#666] sm:inline">{user?.name}</span>
                 <Button variant="outline" size="sm" onClick={handleLogout} className="border-[#E5E5E5] text-[#666] hover:bg-[#F5F5F5]">
                   <LogOut className="h-4 w-4 mr-2" />
@@ -504,18 +531,18 @@ export function SuperAdminDashboard() {
 
                 <Card>
                   <CardHeader>
-                    <CardTitle>Recent Activity</CardTitle>
-                    <CardDescription>Latest system activities and changes</CardDescription>
+                    <CardTitle className="text-base sm:text-lg">Recent Activity</CardTitle>
+                    <CardDescription className="text-xs sm:text-sm">Latest system activities and changes</CardDescription>
                   </CardHeader>
                   <CardContent>
-                    <div className="space-y-4">
+                    <div className="space-y-3 sm:space-y-4">
                       {auditLogs.slice(0, 10).map((log) => (
-                        <div key={log.id} className="flex items-center justify-between py-2 border-b last:border-0">
-                          <div>
-                            <p className="font-medium">{log.userName}</p>
-                            <p className="text-sm text-[#666]">{log.action} {log.resource}</p>
+                        <div key={log.id} className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1 sm:gap-0 py-2 border-b last:border-0">
+                          <div className="min-w-0 flex-1">
+                            <p className="text-sm sm:text-base font-medium truncate">{log.userName}</p>
+                            <p className="text-xs sm:text-sm text-[#666] truncate">{log.action} {log.resource}</p>
                           </div>
-                          <span className="text-sm text-[#666]">{formatTimeAgo(log.createdAt)}</span>
+                          <span className="text-xs sm:text-sm text-[#666] flex-shrink-0">{formatTimeAgo(log.createdAt)}</span>
                         </div>
                       ))}
                     </div>
@@ -799,6 +826,12 @@ export function SuperAdminDashboard() {
               </div>
             )}
 
+            {activeSection === "landing-page" && (
+              <div className="space-y-4 sm:space-y-6">
+                <PlatformLandingPageManager />
+              </div>
+            )}
+
             {activeSection === "analytics" && (
               <div className="space-y-4 sm:space-y-6">
                 <div>
@@ -907,7 +940,7 @@ export function SuperAdminDashboard() {
 
       {/* Panchayat Create/Edit Dialog */}
       <Dialog open={isPanchayatDialogOpen} onOpenChange={setIsPanchayatDialogOpen}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto p-4 sm:p-6">
+        <DialogContent className="max-w-[95vw] sm:max-w-2xl max-h-[90vh] overflow-y-auto p-4 sm:p-6">
           <DialogHeader>
             <DialogTitle>
               {editingPanchayat ? "Edit Panchayat" : "Create New Panchayat"}
@@ -920,89 +953,97 @@ export function SuperAdminDashboard() {
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div className="space-y-2">
-              <Label htmlFor="panchayatName">Panchayat Name *</Label>
+              <Label htmlFor="panchayatName" className="text-sm sm:text-base">Panchayat Name *</Label>
               <Input
                 id="panchayatName"
                 placeholder="Enter panchayat name"
                 value={panchayatFormData.panchayatName}
                 onChange={(e) => setPanchayatFormData({ ...panchayatFormData, panchayatName: e.target.value })}
+                className="text-sm sm:text-base"
                 required
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="slug">Subdomain/Slug *</Label>
+              <Label htmlFor="slug" className="text-sm sm:text-base">Subdomain/Slug *</Label>
               <Input
                 id="slug"
                 placeholder="e.g., ramnagar"
                 value={panchayatFormData.slug}
                 onChange={(e) => setPanchayatFormData({ ...panchayatFormData, slug: e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '') })}
+                className="text-sm sm:text-base"
                 required
               />
-              <p className="text-xs text-muted-foreground">
+              <p className="text-xs sm:text-sm text-muted-foreground">
                 Only lowercase letters, numbers, and hyphens allowed
               </p>
             </div>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="district">District *</Label>
+                <Label htmlFor="district" className="text-sm sm:text-base">District *</Label>
                 <Input
                   id="district"
                   placeholder="Enter district"
                   value={panchayatFormData.district}
                   onChange={(e) => setPanchayatFormData({ ...panchayatFormData, district: e.target.value })}
+                  className="text-sm sm:text-base"
                   required
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="state">State *</Label>
+                <Label htmlFor="state" className="text-sm sm:text-base">State *</Label>
                 <Input
                   id="state"
                   placeholder="Enter state"
                   value={panchayatFormData.state}
                   onChange={(e) => setPanchayatFormData({ ...panchayatFormData, state: e.target.value })}
+                  className="text-sm sm:text-base"
                   required
                 />
               </div>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="address">Address</Label>
+              <Label htmlFor="address" className="text-sm sm:text-base">Address</Label>
               <Textarea
                 id="address"
                 placeholder="Enter panchayat address"
                 value={panchayatFormData.address}
                 onChange={(e) => setPanchayatFormData({ ...panchayatFormData, address: e.target.value })}
+                className="text-sm sm:text-base"
                 rows={2}
               />
             </div>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="contactPhone">Contact Phone</Label>
+                <Label htmlFor="contactPhone" className="text-sm sm:text-base">Contact Phone</Label>
                 <Input
                   id="contactPhone"
                   placeholder="10-digit phone number"
                   value={panchayatFormData.contactPhone}
                   onChange={(e) => setPanchayatFormData({ ...panchayatFormData, contactPhone: e.target.value.replace(/\D/g, '').substring(0, 10) })}
+                  className="text-sm sm:text-base"
                   maxLength={10}
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="contactEmail">Contact Email</Label>
+                <Label htmlFor="contactEmail" className="text-sm sm:text-base">Contact Email</Label>
                 <Input
                   id="contactEmail"
                   type="email"
                   placeholder="contact@example.com"
                   value={panchayatFormData.contactEmail}
                   onChange={(e) => setPanchayatFormData({ ...panchayatFormData, contactEmail: e.target.value })}
+                  className="text-sm sm:text-base"
                 />
               </div>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="description">Description</Label>
+              <Label htmlFor="description" className="text-sm sm:text-base">Description</Label>
               <Textarea
                 id="description"
                 placeholder="Enter panchayat description"
                 value={panchayatFormData.description}
                 onChange={(e) => setPanchayatFormData({ ...panchayatFormData, description: e.target.value })}
+                className="text-sm sm:text-base"
                 rows={4}
               />
             </div>

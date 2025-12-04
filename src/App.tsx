@@ -23,12 +23,13 @@ function AppContent() {
                      location.pathname === "/forgot-password" ||
                      location.pathname === "/reset-password";
 
-  // Public panchayat website routes (header SHOULD show here)
-  const isPanchayatWebsite = location.pathname.startsWith("/panchayat/") ||
+  // Public panchayat website routes (header should NOT show here - independent site)
+  const isPanchayatWebsite = (location.pathname.startsWith("/panchayat/") && 
+                              !location.pathname.startsWith("/panchayat/dashboard")) ||
                              location.pathname === "/panchayat-demo";
 
   // Determine if header should be shown
-  const shouldShowHeader = !isDashboard && !isAdmin && !isAuthPage;
+  const shouldShowHeader = !isDashboard && !isAdmin && !isAuthPage && !isPanchayatWebsite;
 
   const handleLanguageChange = (lang: Language) => {
     i18n.changeLanguage(lang);
@@ -40,8 +41,7 @@ function AppContent() {
         {/* Render header based on current route */}
         {shouldShowHeader && (
           <Header
-            variant={isPanchayatWebsite ? "panchayat" : "platform"}
-            panchayatName={isPanchayatWebsite ? "eGramSeva" : undefined}
+            variant="platform"
             onLanguageChange={handleLanguageChange}
           />
         )}
@@ -53,7 +53,7 @@ function AppContent() {
 
         {/* Render footer based on current route */}
         {shouldShowHeader && (
-          <Footer variant={isPanchayatWebsite ? "panchayat" : "platform"} />
+          <Footer variant="platform" />
         )}
 
         {/* Toast notifications */}

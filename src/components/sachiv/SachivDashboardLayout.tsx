@@ -18,11 +18,19 @@ import {
   Menu,
   X,
   MessageSquare,
+  Globe,
 } from "lucide-react";
 import { Button } from "../ui/button";
 import { Avatar, AvatarFallback } from "../ui/avatar";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "../ui/dropdown-menu";
 import { useAuth } from "../../contexts/AuthContext";
 import { useTranslation } from "react-i18next";
+import type { Language } from "../../types";
 
 interface SidebarItem {
   id: string;
@@ -43,6 +51,7 @@ const sidebarItems: SidebarItem[] = [
   { id: "comments", translationKey: "sidebar.comments", icon: MessageSquare, path: "/panchayat/dashboard/comments" },
   { id: "team", translationKey: "sidebar.team", icon: Users, path: "/panchayat/dashboard/team" },
   { id: "analytics", translationKey: "sidebar.analytics", icon: BarChart3, path: "/panchayat/dashboard/analytics" },
+  { id: "website", translationKey: "sidebar.website", icon: Globe, path: "/panchayat/dashboard/website" },
   { id: "settings", translationKey: "sidebar.settings", icon: Settings, path: "/panchayat/dashboard/settings" },
 ];
 
@@ -50,7 +59,7 @@ export function SachivDashboardLayout() {
   const navigate = useNavigate();
   const location = useLocation();
   const { user, logout } = useAuth();
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   // Close mobile menu when route changes
@@ -202,6 +211,29 @@ export function SachivDashboardLayout() {
             </div>
           </div>
           <div className="flex items-center gap-1 sm:gap-3 flex-shrink-0">
+            {/* Language Selector */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="icon" className="h-9 w-9">
+                  <Globe className="h-5 w-5 text-[#666]" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={() => i18n.changeLanguage("en")}>
+                  English
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => i18n.changeLanguage("mr")}>
+                  मराठी
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => i18n.changeLanguage("hi")}>
+                  हिंदी
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => i18n.changeLanguage("regional")}>
+                  Regional
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+
             <Button
               variant="outline"
               size="sm"

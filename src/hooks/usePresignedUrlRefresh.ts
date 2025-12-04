@@ -97,8 +97,8 @@ export function usePresignedUrlRefresh({
   const currentFileKeyRef = useRef<string | null>(null);
 
   // Extract file key from URL if needed
-  const extractFileKey = useCallback((urlOrKey: string): string | null => {
-    if (!urlOrKey) return null;
+  const extractFileKey = useCallback((urlOrKey: string | null | undefined): string | null => {
+    if (!urlOrKey || typeof urlOrKey !== 'string') return null;
     
     // If it's not a URL (doesn't start with http:// or https://), assume it's already a file key
     if (!urlOrKey.startsWith('http://') && !urlOrKey.startsWith('https://')) {
