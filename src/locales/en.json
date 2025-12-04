@@ -359,36 +359,6 @@
     "population": "Population",
     "visit": "Visit"
   },
-  "panchayatWebsite": {
-    "home": "Home",
-    "about": "About",
-    "schemes": "Schemes",
-    "gallery": "Gallery",
-    "newsletters": "Newsletter",
-    "contact": "Contact",
-    "announcements": "Announcements",
-    "latestNews": "Latest News",
-    "upcomingEvents": "Upcoming Events",
-    "quickLinks": "Quick Links",
-    "contactUs": "Contact Us",
-    "address": "Address",
-    "phone": "Phone",
-    "email": "Email",
-    "followUs": "Follow Us",
-    "viewDetails": "View Details",
-    "applyNow": "Apply Now",
-    "downloadForm": "Download Form",
-    "noAnnouncements": "No announcements yet",
-    "noSchemes": "No schemes available",
-    "noGallery": "No photos yet",
-    "albums": "Albums",
-    "allImages": "All Images",
-    "loadingNewsletters": "Loading newsletters...",
-    "noNewslettersAvailable": "No newsletters available",
-    "backToNewsletters": "Back to Newsletters",
-    "keyPoints": "Key Points",
-    "attachments": "Attachments"
-  },
   "dashboard": {
     "welcome": "Welcome back",
     "welcomeMessage": "Here's what's happening with your Panchayat today",
@@ -558,10 +528,7 @@
     "publishStatusUpdated": "Newsletter publish status updated",
     "backToNewsletters": "Back to Newsletters",
     "keyPoints": "Key Points",
-    "downloadAttachment": "Download Attachment",
-    "by": "By",
-    "loadingNewsletters": "Loading newsletters...",
-    "noNewslettersAvailable": "No newsletters available"
+    "downloadAttachment": "Download Attachment"
   },
   "panchayatWebsite": {
     "home": "Home",
@@ -592,7 +559,7 @@
     "pleaseWait": "Please wait while we fetch the data...",
     "gramPanchayat": "Gram Panchayat",
     "district": "District",
-    "mainPlatform": "Main Platform",
+    "mainPlatform": "egramseva.in",
     "goToMainPlatform": "Go to Main Platform",
     "loadingSections": "Loading sections...",
     "defaultDescription": "Empowering rural governance through digital transformation",
@@ -660,7 +627,48 @@
     "backToNewsletters": "Back to Newsletters",
     "keyPoints": "Key Points",
     "attachments": "Attachments",
-    "downloadAttachment": "Download Attachment"
+    "downloadAttachment": "Download Attachment",
+    "status": {
+      "active": "Active",
+      "completed": "Completed",
+      "pending": "Pending",
+      "published": "Published",
+      "draft": "Draft"
+    },
+    "common": {
+      "na": "N/A",
+      "unknown": "Unknown",
+      "notAvailable": "Not available",
+      "general": "General",
+      "ward": "Ward",
+      "untitledScheme": "Untitled Scheme",
+      "noDescriptionAvailable": "No description available"
+    },
+    "languages": {
+      "english": "English",
+      "marathi": "मराठी",
+      "hindi": "हिंदी",
+      "regional": "Regional"
+    },
+    "statsLabels": {
+      "population": "Population",
+      "area": "Area",
+      "wards": "Wards",
+      "established": "Established"
+    },
+    "contactLabels": {
+      "address": "Address",
+      "phone": "Phone",
+      "email": "Email"
+    },
+    "aboutText": {
+      "vibrantCommunity": "is a vibrant rural community located in",
+      "establishedIn": "Established in",
+      "richHistory": "our village has a rich history and cultural heritage spanning several centuries.",
+      "withPopulation": "With a population of over",
+      "spreadAcross": "residents spread across",
+      "committedTo": "we are committed to sustainable development, preserving our traditions while embracing modern governance practices."
+    }
   },
   "documents": {
     "title": "Documents",

@@ -859,7 +859,48 @@
       "backToNewsletters": "न्यूझलेटरवर परत जा",
       "keyPoints": "मुख्य मुद्दे",
       "attachments": "अटॅचमेंट",
-      "downloadAttachment": "अटॅचमेंट डाउनलोड करा"
+      "downloadAttachment": "अटॅचमेंट डाउनलोड करा",
+      "status": {
+        "active": "सक्रिय",
+        "completed": "पूर्ण",
+        "pending": "प्रलंबित",
+        "published": "प्रकाशित",
+        "draft": "मसौदा"
+      },
+      "common": {
+        "na": "N/A",
+        "unknown": "अज्ञात",
+        "notAvailable": "उपलब्ध नाही",
+        "general": "सामान्य",
+        "ward": "वार्ड",
+        "untitledScheme": "शीर्षक नसलेली योजना",
+        "noDescriptionAvailable": "वर्णन उपलब्ध नाही"
+      },
+      "languages": {
+        "english": "English",
+        "marathi": "मराठी",
+        "hindi": "हिंदी",
+        "regional": "Regional"
+      },
+      "statsLabels": {
+        "population": "लोकसंख्या",
+        "area": "क्षेत्र",
+        "wards": "वार्ड",
+        "established": "स्थापना"
+      },
+      "contactLabels": {
+        "address": "पत्ता",
+        "phone": "फोन",
+        "email": "ईमेल"
+      },
+      "aboutText": {
+        "vibrantCommunity": "एक जीवंत ग्रामीण समुदाय आहे जो येथे स्थित आहे",
+        "establishedIn": "मध्ये स्थापना",
+        "richHistory": "आमच्या गावाला अनेक शतकांचा समृद्ध इतिहास आणि सांस्कृतिक वारसा आहे.",
+        "withPopulation": "पेक्षा जास्त लोकसंख्येसह",
+        "spreadAcross": "रहिवासी",
+        "committedTo": "आम्ही शाश्वत विकासासाठी वचनबद्ध आहोत, आधुनिक शासन पद्धती स्वीकारताना आमच्या परंपरांचे संरक्षण करत आहोत."
+      }
     }
   }
 }

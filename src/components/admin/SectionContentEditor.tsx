@@ -144,6 +144,7 @@ export function SectionContentEditor({
       case 'ANNOUNCEMENTS':
         return { type: 'card', title: 'News Title', subtitle: 'Date', description: 'News description' };
       case 'GALLERY':
+      case 'IMAGE_GALLERY':
         return { type: 'gallery_item', title: 'Image Title', description: 'Image description' };
       case 'MEMBERS':
         return { type: 'card', title: 'Member Name', subtitle: 'Position', description: 'Member bio' };
@@ -363,9 +364,10 @@ export function SectionContentEditor({
 
             {/* Image upload for items that support images */}
             {(sectionType === 'FEATURES' || sectionType === 'NEWS' || sectionType === 'ANNOUNCEMENTS' ||
-              sectionType === 'SCHEMES' || sectionType === 'GALLERY' || sectionType === 'MEMBERS' ||
-              sectionType === 'CARDS' || sectionType === 'TESTIMONIALS' || sectionType === 'TIMELINE' ||
-              (!sectionType)) && sectionType !== 'CONTACT' && sectionType !== 'STATS' && sectionType !== 'FAQ' && (
+              sectionType === 'SCHEMES' || sectionType === 'GALLERY' || sectionType === 'IMAGE_GALLERY' || 
+              sectionType === 'MEMBERS' || sectionType === 'CARDS' || sectionType === 'TESTIMONIALS' || 
+              sectionType === 'TIMELINE' || (!sectionType)) && 
+              sectionType !== 'CONTACT' && sectionType !== 'STATS' && sectionType !== 'FAQ' && (
               <div className="space-y-2">
                 <Label>Image</Label>
                 {item.image ? (

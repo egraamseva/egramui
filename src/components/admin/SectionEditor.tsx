@@ -10,7 +10,8 @@ import { ImageWithFallback } from '../figma/ImageWithFallback';
 import { Upload, X } from 'lucide-react';
 import { toast } from 'sonner';
 import type { PlatformSection, PanchayatWebsiteSection, PlatformSectionType, PanchayatSectionType, LayoutType } from '../../types';
-import { getSectionTypeConfig, mapOldSectionType } from '../../utils/sectionTypeConfig';
+import { getSectionTypeConfig, mapOldSectionType, mapToBackendSectionType } from '../../utils/sectionTypeConfig';
+import { panchayatWebsiteApi } from '../../routes/api';
 
 interface SectionEditorProps {
   section?: PlatformSection | PanchayatWebsiteSection | null;
@@ -173,19 +174,21 @@ export  function SectionEditor({
         }
       }
 
+      // Handle multiple images uploaded via the "Multiple Images" section
+      // These create new items automatically
       if (imageFiles.length > 0) {
         if (!parsedContent.items || !Array.isArray(parsedContent.items)) {
           parsedContent.items = [];
         }
-        imageFiles.forEach((_, index) => {
-          const existingItem = parsedContent.items[index];
-          if (!existingItem) {
-            parsedContent.items.push({
-              title: `Item ${parsedContent.items.length + 1}`,
-              description: '',
-              image: null,
-            });
-          }
+        // Add new items for each uploaded image
+        imageFiles.forEach((file, index) => {
+          const previewUrl = imagePreviews[index];
+          parsedContent.items.push({
+            id: `item-${Date.now()}-${index}`,
+            title: `Image ${parsedContent.items.length + 1}`,
+            description: '',
+            image: previewUrl, // Use preview URL temporarily, will be replaced with actual URL after upload
+          });
         });
       }
 
@@ -198,6 +201,7 @@ export  function SectionEditor({
         }
       }
 
+      // Use section type directly (database constraint now supports both legacy and new types)
       const sectionData: any = {
         sectionType: formData.sectionType || (section?.sectionType as any),
         layoutType: formData.layoutType || (section?.layoutType as any),
@@ -221,14 +225,60 @@ export  function SectionEditor({
 
       const savedSection = await onSave(sectionData);
       
+      // Upload multiple images (from "Multiple Images" section) if any
       const totalImagesToUpload = imageFiles.length + contentItemImages.size;
       if (totalImagesToUpload > 0 && savedSection) {
         const uploadToastId = toast.loading(`Uploading ${totalImagesToUpload} image(s)...`);
         try {
-          // Mock API calls - replace with actual implementation
-          console.log('Uploading images...');
+          // Upload multiple images and create items for them
+          if (imageFiles.length > 0) {
+            const uploadPromises = imageFiles.map(async (file, index) => {
+              try {
+                const result = await panchayatWebsiteApi.uploadImage(savedSection.id, file);
+                // Update the corresponding item's image URL
+                if (parsedContent.items && parsedContent.items[parsedContent.items.length - imageFiles.length + index]) {
+                  parsedContent.items[parsedContent.items.length - imageFiles.length + index].image = result.imageUrl;
+                }
+              } catch (error) {
+                console.error(`Error uploading image ${index + 1}:`, error);
+                throw error;
+              }
+            });
+            await Promise.all(uploadPromises);
+          }
+          
+          // Upload content item images
+          if (contentItemImages.size > 0) {
+            const uploadPromises: Promise<void>[] = [];
+            contentItemImages.forEach((file, itemIndex) => {
+              const uploadPromise = (async () => {
+                try {
+                  const result = await panchayatWebsiteApi.uploadImage(savedSection.id, file);
+                  // Update the item's image URL in the content
+                  if (parsedContent.items && parsedContent.items[itemIndex]) {
+                    parsedContent.items[itemIndex].image = result.imageUrl;
+                  }
+                } catch (error) {
+                  console.error(`Error uploading image for item ${itemIndex}:`, error);
+                  throw error;
+                }
+              })();
+              uploadPromises.push(uploadPromise);
+            });
+            await Promise.all(uploadPromises);
+          }
+          
+          // Update section with final image URLs
+          if (imageFiles.length > 0 || contentItemImages.size > 0) {
+            await panchayatWebsiteApi.updateSection(savedSection.id, {
+              content: parsedContent,
+            });
+          }
+          
+          toast.dismiss(uploadToastId);
           toast.success(`Successfully uploaded ${totalImagesToUpload} image(s)`);
         } catch (error: any) {
+          toast.dismiss(uploadToastId);
           console.error('Error uploading images:', error);
           toast.error(`Failed to upload images: ${error.message || 'Unknown error'}`);
         }
@@ -301,12 +351,21 @@ export  function SectionEditor({
               isPlatform={isPlatform}
               onContentChange={(newContent: any) => setFormData({ ...formData, content: newContent })}
               onImageUpload={async (file: File, itemIndex: number) => {
-                setContentItemImages(prev => {
-                  const newMap = new Map(prev);
-                  newMap.set(itemIndex, file);
-                  return newMap;
-                });
-                return null;
+                try {
+                  // Store file temporarily for upload on save
+                  setContentItemImages(prev => {
+                    const newMap = new Map(prev);
+                    newMap.set(itemIndex, file);
+                    return newMap;
+                  });
+                  
+                  // Create a preview URL for immediate display
+                  const previewUrl = URL.createObjectURL(file);
+                  return previewUrl;
+                } catch (error) {
+                  console.error('Error preparing image upload:', error);
+                  return null;
+                }
               }}
               onImageRemove={(itemIndex: number) => {
                 setContentItemImages(prev => {
@@ -407,11 +466,14 @@ export  function SectionEditor({
         </div>
       )}
 
-      {sectionConfig && sectionConfig.supportsMultipleImages && (
+      {/* Multiple Images section - Only show for sections that support it but don't have item-level image uploads */}
+      {sectionConfig && sectionConfig.supportsMultipleImages && 
+       formData.sectionType !== 'IMAGE_GALLERY' && 
+       formData.sectionType !== 'GALLERY' && (
         <div>
           <Label>Multiple Images (for Content Items)</Label>
           <p className="text-xs text-gray-500 mb-2">
-            Upload multiple images for content items
+            Upload multiple images for content items. These will be added as new items.
           </p>
           {imagePreviews.length > 0 && (
             <div className="mb-4">

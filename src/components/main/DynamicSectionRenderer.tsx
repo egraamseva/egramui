@@ -415,11 +415,71 @@ export function DynamicSectionRenderer({ section, children }: DynamicSectionRend
   };
 
   const renderRichTextSection = (content: any) => {
+    const items = content.items || [];
+    const richText = content.richText || '';
+    
+    // If richText exists, render it (and items if they exist)
+    if (richText) {
+      return (
+        <div className="space-y-6">
+          <div 
+            className="prose prose-lg max-w-none"
+            dangerouslySetInnerHTML={{ __html: richText }}
+          />
+          {/* Render items after richText if they exist */}
+          {items.length > 0 && (
+            <div className="space-y-6 mt-8">
+              {items.map((item: ContentItem, index: number) => (
+                <div key={index} className="prose prose-lg max-w-none">
+                  {item.title && (
+                    <h3 className="text-2xl font-bold mb-3">{item.title}</h3>
+                  )}
+                  {item.subtitle && (
+                    <p className="text-lg text-muted-foreground mb-4">{item.subtitle}</p>
+                  )}
+                  {item.description && (
+                    <div 
+                      className="text-base leading-relaxed whitespace-pre-line"
+                      dangerouslySetInnerHTML={{ __html: item.description.replace(/\n/g, '<br />') }}
+                    />
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      );
+    }
+    
+    // If items exist, render them as content blocks
+    if (items.length > 0) {
+      return (
+        <div className="space-y-6">
+          {items.map((item: ContentItem, index: number) => (
+            <div key={item.id || index} className="prose prose-lg max-w-none">
+              {item.title && (
+                <h3 className="text-2xl font-bold mb-3">{item.title}</h3>
+              )}
+              {item.subtitle && (
+                <p className="text-lg text-muted-foreground mb-4">{item.subtitle}</p>
+              )}
+              {item.description && (
+                <div 
+                  className="text-base leading-relaxed whitespace-pre-line"
+                  dangerouslySetInnerHTML={{ __html: item.description.replace(/\n/g, '<br />') }}
+                />
+              )}
+            </div>
+          ))}
+        </div>
+      );
+    }
+    
+    // Fallback: render a message if neither richText nor items exist
     return (
-      <div 
-        className="prose prose-lg max-w-none"
-        dangerouslySetInnerHTML={{ __html: content.richText || '' }}
-      />
+      <div className="text-center text-muted-foreground py-8">
+        <p>No content available for this section.</p>
+      </div>
     );
   };
 
@@ -932,6 +992,14 @@ export function DynamicSectionRenderer({ section, children }: DynamicSectionRend
                          section.layoutType === 'CONTAINED' ? 'max-w-4xl mx-auto' : 
                          'container mx-auto px-4';
 
+  const renderedContent = renderContent();
+  
+  // Don't render section if there's no content, title, subtitle, or image
+  // But always render if there's a title or subtitle (even if content is empty)
+  if (!renderedContent && !section.title && !section.subtitle && !imageUrl) {
+    return null;
+  }
+
   return (
     <section
       className={`py-12 ${animationClass} ${section.backgroundColor ? '' : 'bg-white'}`}
@@ -959,7 +1027,7 @@ export function DynamicSectionRenderer({ section, children }: DynamicSectionRend
           </div>
         )}
 
-        {renderContent()}
+        {renderedContent}
       </div>
     </section>
   );

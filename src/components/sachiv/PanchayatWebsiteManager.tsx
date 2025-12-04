@@ -42,12 +42,23 @@ function SectionItem({
   const getSectionTypeColor = (type: string) => {
     const colors: Record<string, string> = {
       'HERO': 'bg-blue-100 text-blue-800',
+      'HERO_BANNER': 'bg-blue-100 text-blue-800',
       'STATS': 'bg-green-100 text-green-800',
+      'STATISTICS_SECTION': 'bg-green-100 text-green-800',
       'GALLERY': 'bg-purple-100 text-purple-800',
+      'IMAGE_GALLERY': 'bg-purple-100 text-purple-800',
       'FAQ': 'bg-orange-100 text-orange-800',
+      'FAQ_SECTION': 'bg-orange-100 text-orange-800',
       'FORM': 'bg-pink-100 text-pink-800',
+      'FORM_SECTION': 'bg-pink-100 text-pink-800',
       'VIDEO': 'bg-red-100 text-red-800',
+      'VIDEO_SECTION': 'bg-red-100 text-red-800',
       'TESTIMONIALS': 'bg-yellow-100 text-yellow-800',
+      'TESTIMONIALS_SECTION': 'bg-yellow-100 text-yellow-800',
+      'FEATURES': 'bg-indigo-100 text-indigo-800',
+      'FEATURES_GRID': 'bg-indigo-100 text-indigo-800',
+      'CARDS': 'bg-teal-100 text-teal-800',
+      'CARD_SECTION': 'bg-teal-100 text-teal-800',
     };
     return colors[type] || 'bg-gray-100 text-gray-800';
   };

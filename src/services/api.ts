@@ -533,6 +533,7 @@ export const panchayatAPI = {
       description: description,
       heroImage: panchayat.heroImageUrl || undefined,
       mapCoordinates: panchayat.mapCoordinates || '',
+      themeId: panchayat.themeId || undefined,
       contactInfo: {
         address: contactAddress,
         phone: contactPhone,
@@ -777,12 +778,18 @@ export const settingsAPI = {
         mapCoordinates: data.mapCoordinates || '',
       },
       logo: data.logoUrl,
+      themeId: data.themeId,
       updatedAt: data.updatedAt || new Date().toISOString(),
     };
   },
   update: async ( updates: Partial<PanchayatSettings>): Promise<PanchayatSettings> => {
     const { settingsApi } = await import('@/routes/api');
     const payload: any = {};
+    
+    // Handle themeId update
+    if (updates.themeId !== undefined) {
+      payload.themeId = updates.themeId || null;
+    }
     
     if (updates.hero) {
       if (updates.hero.title !== undefined) payload.heroTitle = updates.hero.title || null;

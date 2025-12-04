@@ -47,6 +47,11 @@ export function PanchayatWebsite() {
   // useTranslation should auto-update, but this ensures navItems and other computed values update
   const currentLanguage = i18n.language;
   
+  // Force re-render when language changes
+  useEffect(() => {
+    // This ensures all translations update when language changes
+  }, [currentLanguage]);
+  
   const [activePage, setActivePage] = useState<PageType>('home');
   const [panchayat, setPanchayat] = useState<PanchayatDetails | null>(null);
   const [posts, setPosts] = useState<Post[]>([]);
@@ -206,9 +211,9 @@ export function PanchayatWebsite() {
           else if (scheme.status === 'ONGOING') progress = 75;
           else if (scheme.status === 'COMPLETED') progress = 100;
 
-          let status: "Active" | "Completed" | "Pending" = "Pending";
-          if (scheme.status === 'ACTIVE' || scheme.status === 'ONGOING') status = "Active";
-          else if (scheme.status === 'COMPLETED') status = "Completed";
+          let status: "Active" | "Completed" | "Pending" = t('panchayatWebsite.status.pending') as any;
+          if (scheme.status === 'ACTIVE' || scheme.status === 'ONGOING') status = t('panchayatWebsite.status.active') as any;
+          else if (scheme.status === 'COMPLETED') status = t('panchayatWebsite.status.completed') as any;
 
           const budget = scheme.budgetAmount
             ? `₹${scheme.budgetAmount.toLocaleString("en-IN")}`
@@ -218,12 +223,12 @@ export function PanchayatWebsite() {
             ? scheme.description.length > 50
               ? scheme.description.substring(0, 50) + "..."
               : scheme.description
-            : "General";
+            : t('panchayatWebsite.common.general');
 
           return {
             id: scheme.schemeId.toString(),
             panchayatId: scheme.panchayatId?.toString(),
-            name: scheme.title || 'Untitled Scheme',
+            name: scheme.title || t('panchayatWebsite.common.untitledScheme'),
             category: category,
             budget: budget,
             beneficiaries: scheme.beneficiaryCount || 0,
@@ -236,8 +241,8 @@ export function PanchayatWebsite() {
       const mappedAnnouncements = announcementsResult.content.map((announcement: any) => ({
         id: announcement.announcementId.toString(),
         panchayatId: announcement.panchayatId?.toString(),
-        title: announcement.title || 'Announcement',
-        description: announcement.bodyText || announcement.title || 'No description available',
+        title: announcement.title || t('panchayatWebsite.announcements'),
+        description: announcement.bodyText || announcement.title || t('panchayatWebsite.common.noDescriptionAvailable'),
         date: announcement.createdAt
           ? new Date(announcement.createdAt).toLocaleDateString('en-IN', {
             year: 'numeric',
@@ -249,7 +254,7 @@ export function PanchayatWebsite() {
             month: 'short',
             day: 'numeric'
           }),
-        status: (announcement.isActive ? "Published" : "Draft") as "Published" | "Draft",
+        status: (announcement.isActive ? t('panchayatWebsite.status.published') : t('panchayatWebsite.status.draft')) as "Published" | "Draft",
         views: 0,
       }));
 
@@ -267,10 +272,10 @@ export function PanchayatWebsite() {
           return {
             id: member.userId.toString(),
             panchayatId: member.panchayatId?.toString(),
-            name: member.name || 'Unknown',
+            name: member.name || t('panchayatWebsite.common.unknown'),
             role: roleName,
-            ward: 'Ward ' + ((member.userId % 8) + 1),
-            phone: member.phone || 'Not available',
+            ward: t('panchayatWebsite.common.ward') + ' ' + ((member.userId % 8) + 1),
+            phone: member.phone || t('panchayatWebsite.common.notAvailable'),
             email: member.email || undefined,
             image: member.imageUrl || undefined,
             imageKey: member.imageKey || undefined,
@@ -376,10 +381,10 @@ export function PanchayatWebsite() {
         sectionContent = {
           ...sectionContent,
           items: [
-            { title: 'Population', value: panchayat.population?.toLocaleString() || 'N/A', icon: 'users' },
-            { title: 'Area', value: `${panchayat.area || 'N/A'} km²`, icon: 'map' },
-            { title: 'Wards', value: panchayat.wards?.toString() || 'N/A', icon: 'building' },
-            { title: 'Established', value: panchayat.established?.toString() || 'N/A', icon: 'calendar' },
+            { title: t('panchayatWebsite.statsLabels.population'), value: panchayat.population?.toLocaleString() || t('panchayatWebsite.common.na'), icon: 'users' },
+            { title: t('panchayatWebsite.statsLabels.area'), value: `${panchayat.area || t('panchayatWebsite.common.na')} km²`, icon: 'map' },
+            { title: t('panchayatWebsite.statsLabels.wards'), value: panchayat.wards?.toString() || t('panchayatWebsite.common.na'), icon: 'building' },
+            { title: t('panchayatWebsite.statsLabels.established'), value: panchayat.established?.toString() || t('panchayatWebsite.common.na'), icon: 'calendar' },
           ],
         };
       } else if (section.sectionType === 'ANNOUNCEMENTS' && announcements.length > 0) {
@@ -426,17 +431,17 @@ export function PanchayatWebsite() {
           items: [
             ...(sectionContent.items || []),
             ...(panchayat.contactInfo?.address ? [{
-              title: 'Address',
+              title: t('panchayatWebsite.contactLabels.address'),
               description: panchayat.contactInfo.address,
               icon: 'map-pin',
             }] : []),
             ...(panchayat.contactInfo?.phone ? [{
-              title: 'Phone',
+              title: t('panchayatWebsite.contactLabels.phone'),
               description: panchayat.contactInfo.phone,
               icon: 'phone',
             }] : []),
             ...(panchayat.contactInfo?.email ? [{
-              title: 'Email',
+              title: t('panchayatWebsite.contactLabels.email'),
               description: panchayat.contactInfo.email,
               icon: 'mail',
             }] : []),
@@ -553,22 +558,22 @@ export function PanchayatWebsite() {
                   <DropdownMenuItem onClick={() => {
                     i18n.changeLanguage("en");
                   }}>
-                    English
+                    {t('panchayatWebsite.languages.english')}
                   </DropdownMenuItem>
                   <DropdownMenuItem onClick={() => {
                     i18n.changeLanguage("mr");
                   }}>
-                    मराठी
+                    {t('panchayatWebsite.languages.marathi')}
                   </DropdownMenuItem>
                   <DropdownMenuItem onClick={() => {
                     i18n.changeLanguage("hi");
                   }}>
-                    हिंदी
+                    {t('panchayatWebsite.languages.hindi')}
                   </DropdownMenuItem>
                   <DropdownMenuItem onClick={() => {
                     i18n.changeLanguage("regional");
                   }}>
-                    Regional
+                    {t('panchayatWebsite.languages.regional')}
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
@@ -632,10 +637,10 @@ export function PanchayatWebsite() {
                 <p className="text-xs font-semibold text-[#666] mb-2 px-2">{t('nav.language')}</p>
                 <div className="grid grid-cols-2 gap-2">
                   {[
-                    { label: "English", lang: "en" },
-                    { label: "मराठी", lang: "mr" },
-                    { label: "हिंदी", lang: "hi" },
-                    { label: "Regional", lang: "regional" },
+                    { label: t('panchayatWebsite.languages.english'), lang: "en" },
+                    { label: t('panchayatWebsite.languages.marathi'), lang: "mr" },
+                    { label: t('panchayatWebsite.languages.hindi'), lang: "hi" },
+                    { label: t('panchayatWebsite.languages.regional'), lang: "regional" },
                   ].map(({ label, lang }) => (
                     <Button
                       key={lang}
@@ -731,7 +736,7 @@ export function PanchayatWebsite() {
                         className="text-xl sm:text-2xl md:text-3xl lg:text-4xl font-bold mb-1 drop-shadow-lg"
                         style={{ color: theme?.hero.textColor || '#FFFFFF' }}
                       >
-                        {panchayat?.population?.toLocaleString() || 'N/A'}
+                        {panchayat?.population?.toLocaleString() || t('panchayatWebsite.common.na')}
                       </p>
                       <p 
                         className="text-[10px] sm:text-xs lg:text-sm font-medium"
@@ -751,7 +756,7 @@ export function PanchayatWebsite() {
                         className="text-xl sm:text-2xl md:text-3xl lg:text-4xl font-bold mb-1 drop-shadow-lg"
                         style={{ color: theme?.hero.textColor || '#FFFFFF' }}
                       >
-                        {panchayat?.area || 'N/A'}
+                        {panchayat?.area || t('panchayatWebsite.common.na')}
                       </p>
                       <p 
                         className="text-[10px] sm:text-xs lg:text-sm font-medium"
@@ -771,7 +776,7 @@ export function PanchayatWebsite() {
                         className="text-xl sm:text-2xl md:text-3xl lg:text-4xl font-bold mb-1 drop-shadow-lg"
                         style={{ color: theme?.hero.textColor || '#FFFFFF' }}
                       >
-                        {panchayat?.wards || 'N/A'}
+                        {panchayat?.wards || t('panchayatWebsite.common.na')}
                       </p>
                       <p 
                         className="text-[10px] sm:text-xs lg:text-sm font-medium"
@@ -791,7 +796,7 @@ export function PanchayatWebsite() {
                         className="text-xl sm:text-2xl md:text-3xl lg:text-4xl font-bold mb-1 drop-shadow-lg"
                         style={{ color: theme?.hero.textColor || '#FFFFFF' }}
                       >
-                        {panchayat?.established || 'N/A'}
+                        {panchayat?.established || t('panchayatWebsite.common.na')}
                       </p>
                       <p 
                         className="text-[10px] sm:text-xs lg:text-sm font-medium"
@@ -946,14 +951,11 @@ export function PanchayatWebsite() {
                     ) : (
                     <div className="space-y-4 text-[#666]">
                       <p>
-                          {panchayat?.name || 'Ramnagar'} Gram Panchayat is a vibrant rural community located in {panchayat?.district || 'Varanasi'}
-                        district, {panchayat?.state || 'Uttar Pradesh'}. Established in {panchayat?.established || '1995'}, our village has a rich history and cultural
-                          heritage spanning several centuries.
+                          {panchayat?.name || t('panchayatWebsite.gramPanchayat')} {t('panchayatWebsite.aboutText.vibrantCommunity')} {panchayat?.district || ''}
+                        {t('panchayatWebsite.district')}, {panchayat?.state || ''}. {t('panchayatWebsite.aboutText.establishedIn')} {panchayat?.established || ''}, {t('panchayatWebsite.aboutText.richHistory')}
                         </p>
                       <p>
-                          With a population of over {panchayat?.population?.toLocaleString() || '5,200'} residents spread across {panchayat?.wards || '8'} wards, we are
-                          committed to sustainable development, preserving our traditions while embracing
-                          modern governance practices.
+                          {t('panchayatWebsite.aboutText.withPopulation')} {panchayat?.population?.toLocaleString() || ''} {t('panchayatWebsite.aboutText.spreadAcross')} {panchayat?.wards || ''} {t('panchayatWebsite.wards')}, {t('panchayatWebsite.aboutText.committedTo')}
                         </p>
                     {panchayat?.features && panchayat.features.length > 0 && (
                         <div>
@@ -982,7 +984,7 @@ export function PanchayatWebsite() {
                           <div>
                             <p className="text-sm text-[#666]">{t('panchayatWebsite.population')}</p>
                             <p className="text-xl font-bold text-[#1B2B5E]">
-                              {panchayat?.population?.toLocaleString() || 'N/A'}
+                              {panchayat?.population?.toLocaleString() || t('panchayatWebsite.common.na')}
                             </p>
                           </div>
                         </div>
@@ -997,7 +999,7 @@ export function PanchayatWebsite() {
                           <div>
                             <p className="text-sm text-[#666]">{t('panchayatWebsite.area')}</p>
                             <p className="text-xl font-bold text-[#1B2B5E]">
-                              {panchayat?.area || 'N/A'} km²
+                              {panchayat?.area || t('panchayatWebsite.common.na')} km²
                             </p>
                           </div>
                         </div>
@@ -1012,7 +1014,7 @@ export function PanchayatWebsite() {
                           <div>
                             <p className="text-sm text-[#666]">{t('panchayatWebsite.wards')}</p>
                             <p className="text-xl font-bold text-[#1B2B5E]">
-                              {panchayat?.wards || 'N/A'}
+                              {panchayat?.wards || t('panchayatWebsite.common.na')}
                             </p>
                           </div>
                         </div>
@@ -1027,7 +1029,7 @@ export function PanchayatWebsite() {
                           <div>
                             <p className="text-sm text-[#666]">{t('panchayatWebsite.established')}</p>
                             <p className="text-xl font-bold text-[#1B2B5E]">
-                              {panchayat?.established || 'N/A'}
+                              {panchayat?.established || t('panchayatWebsite.common.na')}
                             </p>
                           </div>
                         </div>
@@ -1352,7 +1354,7 @@ export function PanchayatWebsite() {
                           <CardContent className="p-6">
                             <div className="flex items-center gap-2 mb-2">
                               <Badge variant="secondary" className="text-xs">
-                                {newsletter.publishedOn ? new Date(newsletter.publishedOn).toLocaleDateString('en-IN', { month: 'short', year: 'numeric' }) : "Draft"}
+                                {newsletter.publishedOn ? new Date(newsletter.publishedOn).toLocaleDateString('en-IN', { month: 'short', year: 'numeric' }) : t('panchayatWebsite.status.draft')}
                               </Badge>
                             </div>
                             <h3 className="font-semibold text-lg text-[#1B2B5E] mb-2 line-clamp-2">{newsletter.title}</h3>

@@ -88,6 +88,7 @@ export interface Panchayat {
   establishedYear?: number;
   mapCoordinates?: string;
   officeHours?: string;
+  themeId?: string;
   status: PanchayatStatus;
   createdAt: string;
   updatedAt: string;

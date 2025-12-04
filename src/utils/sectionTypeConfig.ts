@@ -627,3 +627,47 @@ export function mapOldSectionType(oldType: string): SectionType {
   return mapping[oldType] || (oldType as SectionType) || 'CARD_SECTION';
 }
 
+/**
+ * Map new professional section types back to legacy types for backend compatibility
+ * This ensures backward compatibility when saving to backend
+ */
+export function mapToBackendSectionType(frontendType: string): string {
+  // If it's already a legacy type, return as is
+  const legacyTypes = [
+    'HERO', 'STATS', 'FEATURES', 'ACTIVE_PANCHAYATS', 'NEWS', 'CTA',
+    'ANNOUNCEMENTS', 'SCHEMES', 'MEMBERS', 'CONTACT', 'GALLERY', 'CARDS',
+    'FAQ', 'FORM', 'VIDEO', 'TIMELINE', 'TESTIMONIALS', 'RICH_TEXT', 'MAP'
+  ];
+  
+  if (legacyTypes.includes(frontendType)) {
+    return frontendType;
+  }
+  
+  // Map new types to legacy types
+  const reverseMapping: Record<string, string> = {
+    'HERO_BANNER': 'HERO',
+    'STATISTICS_SECTION': 'STATS',
+    'FEATURES_GRID': 'FEATURES',
+    'ACTIVE_PANCHAYATS_GRID': 'ACTIVE_PANCHAYATS',
+    'NEWS_FEED': 'NEWS',
+    'CALL_TO_ACTION': 'CTA',
+    'IMAGE_GALLERY': 'GALLERY',
+    'CARD_SECTION': 'CARDS',
+    'FAQ_SECTION': 'FAQ',
+    'FORM_SECTION': 'FORM',
+    'VIDEO_SECTION': 'VIDEO',
+    'TIMELINE_SECTION': 'TIMELINE',
+    'TESTIMONIALS_SECTION': 'TESTIMONIALS',
+    'PARAGRAPH_CONTENT': 'RICH_TEXT',
+    'MAP_SECTION': 'MAP',
+    'SCHEMES_LIST': 'SCHEMES',
+    'TEAM_MEMBERS': 'MEMBERS',
+    'CONTACT_INFO': 'CONTACT',
+    // Keep new types that don't have legacy equivalents
+    'IMAGE_WITH_TEXT': 'IMAGE_WITH_TEXT',
+    'SPLIT_CONTENT': 'SPLIT_CONTENT',
+  };
+  
+  return reverseMapping[frontendType] || frontendType;
+}
+
