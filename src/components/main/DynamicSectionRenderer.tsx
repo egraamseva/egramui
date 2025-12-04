@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import type { PlatformSection, PanchayatWebsiteSection, LayoutType, ContentItem, BackgroundConfig, AnimationConfig, CTAConfig, FormField } from '../../types';
+import { mapOldSectionType } from '../../utils/sectionTypeConfig';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';
 import { ImageWithFallback } from '../figma/ImageWithFallback';
 import { Button } from '../ui/button';
@@ -64,29 +65,97 @@ export function DynamicSectionRenderer({ section, children }: DynamicSectionRend
       return children;
     }
 
+    // Map old section types to new professional types for backward compatibility
+    const mappedSectionType = mapOldSectionType(section.sectionType);
+
     // Render based on section type first, then layout
-    switch (section.sectionType) {
-      case 'HERO':
+    switch (mappedSectionType) {
+      // Hero & Banner Sections
+      case 'HERO_BANNER':
+      case 'HERO': // Backward compatibility
         return renderHeroSection(content);
-      case 'STATS':
-        return renderStatsSection(content, section.layoutType);
-      case 'FAQ':
-        return renderFAQSection(content);
-      case 'FORM':
-        return renderFormSection(content);
-      case 'VIDEO':
-        return renderVideoSection(content);
-      case 'TIMELINE':
-        return renderTimelineSection(content);
-      case 'TESTIMONIALS':
-        return renderTestimonialsSection(content, section.layoutType);
-      case 'RICH_TEXT':
+      
+      // Content Sections
+      case 'PARAGRAPH_CONTENT':
+      case 'RICH_TEXT': // Backward compatibility
         return renderRichTextSection(content);
-      case 'MAP':
+      
+      case 'IMAGE_WITH_TEXT':
+      case 'SPLIT_CONTENT':
+        return renderSplitContentSection(content);
+      
+      // Media Sections
+      case 'IMAGE_GALLERY':
+      case 'GALLERY': // Backward compatibility
+        return renderByLayout(content, section.layoutType, mappedSectionType);
+      
+      case 'VIDEO_SECTION':
+      case 'VIDEO': // Backward compatibility
+        return renderVideoSection(content);
+      
+      // Card & Grid Sections
+      case 'CARD_SECTION':
+      case 'CARDS': // Backward compatibility
+        return renderByLayout(content, section.layoutType, mappedSectionType);
+      
+      case 'FEATURES_GRID':
+      case 'FEATURES': // Backward compatibility
+        return renderByLayout(content, section.layoutType, mappedSectionType);
+      
+      case 'STATISTICS_SECTION':
+      case 'STATS': // Backward compatibility
+        return renderStatsSection(content, section.layoutType);
+      
+      case 'TEAM_MEMBERS':
+      case 'MEMBERS': // Backward compatibility
+        return renderByLayout(content, section.layoutType, mappedSectionType);
+      
+      case 'ACTIVE_PANCHAYATS_GRID':
+      case 'ACTIVE_PANCHAYATS': // Backward compatibility
+        return renderByLayout(content, section.layoutType, mappedSectionType);
+      
+      // Interactive Sections
+      case 'FAQ_SECTION':
+      case 'FAQ': // Backward compatibility
+        return renderFAQSection(content);
+      
+      case 'FORM_SECTION':
+      case 'FORM': // Backward compatibility
+        return renderFormSection(content);
+      
+      case 'TESTIMONIALS_SECTION':
+      case 'TESTIMONIALS': // Backward compatibility
+        return renderTestimonialsSection(content, section.layoutType);
+      
+      case 'TIMELINE_SECTION':
+      case 'TIMELINE': // Backward compatibility
+        return renderTimelineSection(content);
+      
+      // Specialized Sections
+      case 'NEWS_FEED':
+      case 'NEWS': // Backward compatibility
+      case 'ANNOUNCEMENTS': // Backward compatibility
+        return renderByLayout(content, section.layoutType, mappedSectionType);
+      
+      case 'SCHEMES_LIST':
+      case 'SCHEMES': // Backward compatibility
+        return renderByLayout(content, section.layoutType, mappedSectionType);
+      
+      case 'CONTACT_INFO':
+      case 'CONTACT': // Backward compatibility
+        return renderContactInfoSection(content);
+      
+      case 'MAP_SECTION':
+      case 'MAP': // Backward compatibility
         return renderMapSection(content);
+      
+      case 'CALL_TO_ACTION':
+      case 'CTA': // Backward compatibility
+        return renderCTASection(content);
+      
       default:
         // Use layout-based rendering for other types
-        return renderByLayout(content, section.layoutType, section.sectionType);
+        return renderByLayout(content, section.layoutType, mappedSectionType);
     }
   };
 
@@ -354,19 +423,21 @@ export function DynamicSectionRenderer({ section, children }: DynamicSectionRend
     );
   };
 
+  // Helper function to parse coordinates
+  const parseCoordinates = (coordString: string): [number, number] => {
+    if (!coordString) return [22.9734, 78.6569];
+    const [latStr, lngStr] = coordString.split(',');
+    const lat = Number(latStr.trim());
+    const lng = Number(lngStr.trim());
+    if (isNaN(lat) || isNaN(lng)) return [22.9734, 78.6569];
+    return [lat, lng];
+  };
+
   const renderMapSection = (content: any) => {
     const coordinates = content.customSettings?.coordinates || '';
     const zoom = content.customSettings?.zoom || 15;
 
     if (!coordinates) return null;
-
-    const parseCoordinates = (coordString: string): [number, number] => {
-      const [latStr, lngStr] = coordString.split(',');
-      const lat = Number(latStr.trim());
-      const lng = Number(lngStr.trim());
-      if (isNaN(lat) || isNaN(lng)) return [22.9734, 78.6569];
-      return [lat, lng];
-    };
 
     const coords = parseCoordinates(coordinates);
 
@@ -388,6 +459,123 @@ export function DynamicSectionRenderer({ section, children }: DynamicSectionRend
             </Popup>
           </Marker>
         </MapContainer>
+      </div>
+    );
+  };
+
+  const renderSplitContentSection = (content: any) => {
+    const items = content.items || [];
+    if (items.length === 0 && section.imageUrl) {
+      // Single image with text layout
+      return (
+        <div className="grid md:grid-cols-2 gap-8 items-center">
+          <div>
+            {section.imageUrl && (
+              <ImageWithFallback
+                src={section.imageUrl}
+                alt={section.title || 'Section image'}
+                className="w-full h-auto rounded-lg"
+              />
+            )}
+          </div>
+          <div>
+            {section.title && <h3 className="text-2xl font-bold mb-4">{section.title}</h3>}
+            {section.subtitle && <p className="text-muted-foreground mb-4">{section.subtitle}</p>}
+            {content.richText && (
+              <div 
+                className="prose prose-lg max-w-none"
+                dangerouslySetInnerHTML={{ __html: content.richText }}
+              />
+            )}
+            {content.cta && (
+              <Button
+                size={content.cta.size as any}
+                variant={content.cta.style === 'primary' ? 'default' : content.cta.style === 'secondary' ? 'secondary' : 'outline'}
+                onClick={() => window.location.href = content.cta.link}
+                className="mt-4"
+              >
+                {content.cta.text}
+                {content.cta.icon && <ExternalLink className="ml-2 h-4 w-4" />}
+              </Button>
+            )}
+          </div>
+        </div>
+      );
+    }
+    // Use layout-based rendering
+    return renderByLayout(content, section.layoutType, 'SPLIT_CONTENT');
+  };
+
+  const renderContactInfoSection = (content: any) => {
+    const items = content.items || [];
+    return (
+      <div className="grid md:grid-cols-2 gap-8">
+        <div className="space-y-6">
+          {items.map((item: ContentItem, index: number) => (
+            <Card key={index}>
+              <CardContent className="p-6">
+                <div className="flex items-start gap-4">
+                  {item.icon && (
+                    <div className="p-3 bg-primary/10 rounded-lg">
+                      {getIconComponent(item.icon)}
+                    </div>
+                  )}
+                  <div className="flex-1">
+                    {item.title && <h4 className="font-semibold mb-1">{item.title}</h4>}
+                    {item.description && <p className="text-muted-foreground">{item.description}</p>}
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+        {content.customSettings?.coordinates && (
+          <div className="h-96 w-full rounded-lg overflow-hidden border">
+            <MapContainer
+              center={parseCoordinates(content.customSettings.coordinates) as LatLngExpression}
+              zoom={content.customSettings.zoom || 15}
+              style={{ height: '100%', width: '100%' }}
+              scrollWheelZoom={false}
+            >
+              <TileLayer
+                url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+              />
+              <Marker position={parseCoordinates(content.customSettings.coordinates)}>
+                <Popup>
+                  <strong>{section.title || 'Location'}</strong>
+                </Popup>
+              </Marker>
+            </MapContainer>
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  const renderCTASection = (content: any) => {
+    const cta = content.cta || { text: 'Get Started', link: '#', style: 'primary', size: 'lg' };
+    return (
+      <div className="text-center py-12">
+        {section.title && <h2 className="text-3xl md:text-4xl font-bold mb-4">{section.title}</h2>}
+        {section.subtitle && <p className="text-xl text-muted-foreground mb-8 max-w-2xl mx-auto">{section.subtitle}</p>}
+        {content.richText && (
+          <div 
+            className="prose prose-lg max-w-none mb-8"
+            dangerouslySetInnerHTML={{ __html: content.richText }}
+          />
+        )}
+        {cta && (
+          <Button
+            size={cta.size as any}
+            variant={cta.style === 'primary' ? 'default' : cta.style === 'secondary' ? 'secondary' : 'outline'}
+            onClick={() => window.location.href = cta.link}
+            className="text-lg px-8 py-6"
+          >
+            {cta.text}
+            {cta.icon && <ExternalLink className="ml-2 h-4 w-4" />}
+          </Button>
+        )}
       </div>
     );
   };

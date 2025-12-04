@@ -115,6 +115,7 @@ export interface PanchayatDetails {
   };
   features?: string[];
   mapCoordinates?: string;
+  themeId?: string; // Selected theme ID
 }
 
 export interface RegistrationFormData {
@@ -277,6 +278,7 @@ export interface PanchayatSettings {
 
   };
   logo?: string;
+  themeId?: string;
   updatedAt: string;
 }
 
@@ -345,10 +347,36 @@ export interface PostWithStatus extends Post {
   status?: PostStatus;
 }
 
-// Section Management Types
+// Section Management Types - Professional Generic Section Types
 export type LayoutType = 'GRID' | 'ROW' | 'SCROLLING_ROW' | 'CAROUSEL' | 'MASONRY' | 'LIST' | 'SPLIT' | 'FULL_WIDTH' | 'CONTAINED';
-export type PlatformSectionType = 'HERO' | 'STATS' | 'FEATURES' | 'ACTIVE_PANCHAYATS' | 'NEWS' | 'CTA' | 'GALLERY' | 'CARDS' | 'FAQ' | 'FORM' | 'VIDEO' | 'TIMELINE' | 'TESTIMONIALS' | 'RICH_TEXT' | 'MAP';
-export type PanchayatSectionType = 'HERO' | 'STATS' | 'ANNOUNCEMENTS' | 'SCHEMES' | 'GALLERY' | 'MEMBERS' | 'CONTACT' | 'CARDS' | 'FAQ' | 'FORM' | 'VIDEO' | 'TIMELINE' | 'TESTIMONIALS' | 'RICH_TEXT' | 'MAP';
+
+// Generic professional section types that work for both platforms
+export type SectionType = 
+  // Content Sections
+  | 'PARAGRAPH_CONTENT'        // Rich text/paragraph content section
+  | 'IMAGE_WITH_TEXT'          // Image with accompanying text section
+  | 'IMAGE_GALLERY'             // Image gallery section (grid/masonry/carousel)
+  | 'VIDEO_SECTION'            // Video embed section
+  | 'CARD_SECTION'             // Card-based content section
+  | 'STATISTICS_SECTION'       // Statistics/metrics display section
+  | 'TESTIMONIALS_SECTION'     // Testimonials/reviews section
+  | 'FAQ_SECTION'              // FAQ/accordion section
+  | 'FORM_SECTION'             // Form section
+  | 'TIMELINE_SECTION'         // Timeline/chronological section
+  | 'MAP_SECTION'              // Map/location section
+  | 'HERO_BANNER'              // Hero banner section with CTA
+  | 'SPLIT_CONTENT'            // Split content (image left/right with text)
+  | 'FEATURES_GRID'            // Features grid section
+  | 'NEWS_FEED'                // News/announcements feed section
+  | 'CONTACT_INFO'             // Contact information section
+  | 'TEAM_MEMBERS'             // Team/members grid section
+  | 'SCHEMES_LIST'             // Schemes/programs list section
+  | 'CALL_TO_ACTION'           // Call-to-action section
+  | 'ACTIVE_PANCHAYATS_GRID';  // Active panchayats grid (platform only)
+
+// For backward compatibility, map old types to new types
+export type PlatformSectionType = SectionType;
+export type PanchayatSectionType = SectionType;
 
 // Enhanced content structures
 export interface ContentItem {

@@ -9,6 +9,7 @@ interface LayoutTypeSelectorProps {
   value: LayoutType;
   onValueChange: (value: LayoutType) => void;
   label?: string;
+  supportedLayouts?: string[];
 }
 
 const layoutTypes: { value: LayoutType; label: string; description: string; icon: React.ComponentType<{ className?: string }> }[] = [
@@ -26,7 +27,8 @@ const layoutTypes: { value: LayoutType; label: string; description: string; icon
 export function LayoutTypeSelector({ 
   value, 
   onValueChange, 
-  label
+  label,
+  supportedLayouts
 }: LayoutTypeSelectorProps) {
   const { t } = useTranslation();
   const defaultLabel = label || t('sectionManagement.layoutType');
@@ -36,6 +38,11 @@ export function LayoutTypeSelector({
     return t(`sectionManagement.layoutTypes.${key}`, { defaultValue: type });
   };
 
+  // Filter layouts if supportedLayouts is provided
+  const availableLayouts = supportedLayouts 
+    ? layoutTypes.filter(type => supportedLayouts.includes(type.value))
+    : layoutTypes;
+
   return (
     <div className="space-y-2">
       <Label htmlFor="layout-type">{defaultLabel} *</Label>
@@ -44,7 +51,7 @@ export function LayoutTypeSelector({
           <SelectValue placeholder={t('sectionManagement.selectLayoutType')} />
         </SelectTrigger>
         <SelectContent className="max-h-[300px]">
-          {layoutTypes.map((type) => {
+          {availableLayouts.map((type) => {
             const Icon = type.icon;
             return (
               <SelectItem key={type.value} value={type.value}>

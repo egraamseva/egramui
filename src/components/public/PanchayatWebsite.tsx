@@ -34,6 +34,7 @@ import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
 import { LatLngExpression } from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { DynamicSectionRenderer } from "../main/DynamicSectionRenderer";
+import { getThemeById, applyTheme, type WebsiteTheme } from "../../types/themes";
 
 type PageType = 'home' | 'feed' | 'about' | 'gallery' | 'newsletter' | 'contact';
 
@@ -64,6 +65,7 @@ export function PanchayatWebsite() {
   const [loading, setLoading] = useState(true);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
+  const [theme, setTheme] = useState<WebsiteTheme | null>(null);
   
   // Contact form state
   const [contactForm, setContactForm] = useState({
@@ -156,6 +158,18 @@ export function PanchayatWebsite() {
       const subdomainToUse = subdomain || '';
       const panchayatData = await panchayatAPI.getBySubdomain(subdomainToUse);
       setPanchayat(panchayatData);
+      
+      // Apply theme if available
+      if (panchayatData.themeId) {
+        const selectedTheme = getThemeById(panchayatData.themeId);
+        setTheme(selectedTheme);
+        applyTheme(selectedTheme);
+      } else {
+        // Use default theme
+        const defaultTheme = getThemeById('default');
+        setTheme(defaultTheme);
+        applyTheme(defaultTheme);
+      }
 
       const [postsResult, schemesResult, announcementsResult, membersResult, galleryResult, newslettersResult, albumsResult] = await Promise.all([
         publicAPI.getPublicPosts(subdomainToUse, { page: 0, size: 50 }),
@@ -651,16 +665,26 @@ export function PanchayatWebsite() {
         {/* Home Page */}
         {activePage === 'home' && (
           <div className="space-y-0">
-            {/* Hero Section */}
-            <section className="relative min-h-[400px] sm:min-h-[500px] lg:min-h-[600px] overflow-hidden">
-              <div className="absolute inset-0 bg-gradient-to-br from-[#1B2B5E] via-[#2A3F6F] to-[#6C5CE7]">
+            {/* Hero Section - Enhanced with Theme Support */}
+            <section className="relative min-h-[500px] sm:min-h-[600px] lg:min-h-[700px] overflow-hidden">
+              <div 
+                className="absolute inset-0"
+                style={{
+                  background: theme?.hero.backgroundGradient || 'linear-gradient(to bottom right, #1B2B5E, #2A3F6F, #6C5CE7)',
+                }}
+              >
                 {panchayat?.logoUrl && (
                   <div className="absolute inset-0 opacity-10">
                     <div className="absolute inset-0 bg-[url('/pattern.svg')] bg-repeat opacity-20"></div>
                   </div>
                 )}
               </div>
-              <div className="absolute inset-0 bg-black/20" />
+              <div 
+                className="absolute inset-0"
+                style={{
+                  backgroundColor: theme?.hero.overlay || 'rgba(0, 0, 0, 0.2)',
+                }}
+              />
 
               <div className="container relative mx-auto px-4 py-12 sm:py-16 lg:py-20 lg:px-8 lg:py-32">
                 <div className="mx-auto max-w-4xl text-center">
@@ -675,45 +699,106 @@ export function PanchayatWebsite() {
                       </div>
                     </div>
                   )}
-                  <h1 className="mb-3 sm:mb-4 lg:mb-6 text-2xl sm:text-3xl md:text-4xl lg:text-5xl xl:text-6xl font-bold text-white leading-tight px-2">
+                  <h1 
+                    className="mb-3 sm:mb-4 lg:mb-6 text-2xl sm:text-3xl md:text-4xl lg:text-5xl xl:text-6xl font-bold leading-tight px-2 drop-shadow-lg"
+                    style={{ color: theme?.hero.textColor || '#FFFFFF' }}
+                  >
                     {panchayat?.name || t('panchayatWebsite.gramPanchayat')}
                   </h1>
-                  <p className="mb-2 sm:mb-3 lg:mb-4 text-base sm:text-lg md:text-xl lg:text-2xl text-white/90 px-2">
+                  <p 
+                    className="mb-2 sm:mb-3 lg:mb-4 text-base sm:text-lg md:text-xl lg:text-2xl px-2 drop-shadow-md"
+                    style={{ color: theme?.hero.textColor ? `${theme.hero.textColor}E6` : 'rgba(255, 255, 255, 0.9)' }}
+                  >
                     {panchayat?.district || ''} {t('panchayatWebsite.district')}, {panchayat?.state || ''}
                   </p>
-                  <p className="mb-4 sm:mb-6 lg:mb-8 text-sm sm:text-base lg:text-lg text-white/80 max-w-2xl mx-auto px-4">
+                  <p 
+                    className="mb-4 sm:mb-6 lg:mb-8 text-sm sm:text-base lg:text-lg max-w-2xl mx-auto px-4 drop-shadow-sm"
+                    style={{ color: theme?.hero.textColor ? `${theme.hero.textColor}CC` : 'rgba(255, 255, 255, 0.8)' }}
+                  >
                     {panchayat?.aboutText || panchayat?.description || t('panchayatWebsite.defaultDescription')}
                   </p>
                   
-                  {/* Quick Stats */}
-                  <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3 lg:gap-4 mt-6 sm:mt-8 lg:mt-12 max-w-3xl mx-auto px-2">
-                    <div className="bg-white/10 backdrop-blur-sm rounded-lg p-2 sm:p-3 lg:p-4 border border-white/20">
-                      <Users className="h-5 w-5 sm:h-6 sm:w-6 lg:h-8 lg:w-8 mx-auto mb-1 sm:mb-2 text-white" />
-                      <p className="text-lg sm:text-xl md:text-2xl lg:text-3xl font-bold text-white">
+                  {/* Quick Stats - Enhanced Design */}
+                  <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 lg:gap-6 mt-8 sm:mt-10 lg:mt-16 max-w-4xl mx-auto px-2">
+                    <div 
+                      className="bg-white/15 backdrop-blur-md rounded-xl p-3 sm:p-4 lg:p-5 border border-white/30 shadow-lg hover:bg-white/20 transition-all duration-300 hover:scale-105"
+                      style={{ 
+                        borderColor: theme?.hero.textColor ? `${theme.hero.textColor}4D` : 'rgba(255, 255, 255, 0.3)',
+                      }}
+                    >
+                      <Users className="h-6 w-6 sm:h-7 sm:w-7 lg:h-9 lg:w-9 mx-auto mb-2 sm:mb-3 text-white drop-shadow-md" />
+                      <p 
+                        className="text-xl sm:text-2xl md:text-3xl lg:text-4xl font-bold mb-1 drop-shadow-lg"
+                        style={{ color: theme?.hero.textColor || '#FFFFFF' }}
+                      >
                         {panchayat?.population?.toLocaleString() || 'N/A'}
                       </p>
-                      <p className="text-[10px] sm:text-xs lg:text-sm text-white/80">{t('panchayatWebsite.population')}</p>
-                </div>
-                    <div className="bg-white/10 backdrop-blur-sm rounded-lg p-2 sm:p-3 lg:p-4 border border-white/20">
-                      <MapPin className="h-5 w-5 sm:h-6 sm:w-6 lg:h-8 lg:w-8 mx-auto mb-1 sm:mb-2 text-white" />
-                      <p className="text-lg sm:text-xl md:text-2xl lg:text-3xl font-bold text-white">
+                      <p 
+                        className="text-[10px] sm:text-xs lg:text-sm font-medium"
+                        style={{ color: theme?.hero.textColor ? `${theme.hero.textColor}CC` : 'rgba(255, 255, 255, 0.8)' }}
+                      >
+                        {t('panchayatWebsite.population')}
+                      </p>
+                    </div>
+                    <div 
+                      className="bg-white/15 backdrop-blur-md rounded-xl p-3 sm:p-4 lg:p-5 border border-white/30 shadow-lg hover:bg-white/20 transition-all duration-300 hover:scale-105"
+                      style={{ 
+                        borderColor: theme?.hero.textColor ? `${theme.hero.textColor}4D` : 'rgba(255, 255, 255, 0.3)',
+                      }}
+                    >
+                      <MapPin className="h-6 w-6 sm:h-7 sm:w-7 lg:h-9 lg:w-9 mx-auto mb-2 sm:mb-3 text-white drop-shadow-md" />
+                      <p 
+                        className="text-xl sm:text-2xl md:text-3xl lg:text-4xl font-bold mb-1 drop-shadow-lg"
+                        style={{ color: theme?.hero.textColor || '#FFFFFF' }}
+                      >
                         {panchayat?.area || 'N/A'}
                       </p>
-                      <p className="text-[10px] sm:text-xs lg:text-sm text-white/80">{t('panchayatWebsite.area')}</p>
-                </div>
-                    <div className="bg-white/10 backdrop-blur-sm rounded-lg p-2 sm:p-3 lg:p-4 border border-white/20">
-                      <Building2 className="h-5 w-5 sm:h-6 sm:w-6 lg:h-8 lg:w-8 mx-auto mb-1 sm:mb-2 text-white" />
-                      <p className="text-lg sm:text-xl md:text-2xl lg:text-3xl font-bold text-white">
+                      <p 
+                        className="text-[10px] sm:text-xs lg:text-sm font-medium"
+                        style={{ color: theme?.hero.textColor ? `${theme.hero.textColor}CC` : 'rgba(255, 255, 255, 0.8)' }}
+                      >
+                        {t('panchayatWebsite.area')}
+                      </p>
+                    </div>
+                    <div 
+                      className="bg-white/15 backdrop-blur-md rounded-xl p-3 sm:p-4 lg:p-5 border border-white/30 shadow-lg hover:bg-white/20 transition-all duration-300 hover:scale-105"
+                      style={{ 
+                        borderColor: theme?.hero.textColor ? `${theme.hero.textColor}4D` : 'rgba(255, 255, 255, 0.3)',
+                      }}
+                    >
+                      <Building2 className="h-6 w-6 sm:h-7 sm:w-7 lg:h-9 lg:w-9 mx-auto mb-2 sm:mb-3 text-white drop-shadow-md" />
+                      <p 
+                        className="text-xl sm:text-2xl md:text-3xl lg:text-4xl font-bold mb-1 drop-shadow-lg"
+                        style={{ color: theme?.hero.textColor || '#FFFFFF' }}
+                      >
                         {panchayat?.wards || 'N/A'}
                       </p>
-                      <p className="text-[10px] sm:text-xs lg:text-sm text-white/80">{t('panchayatWebsite.wards')}</p>
-                </div>
-                    <div className="bg-white/10 backdrop-blur-sm rounded-lg p-2 sm:p-3 lg:p-4 border border-white/20">
-                      <Calendar className="h-5 w-5 sm:h-6 sm:w-6 lg:h-8 lg:w-8 mx-auto mb-1 sm:mb-2 text-white" />
-                      <p className="text-lg sm:text-xl md:text-2xl lg:text-3xl font-bold text-white">
+                      <p 
+                        className="text-[10px] sm:text-xs lg:text-sm font-medium"
+                        style={{ color: theme?.hero.textColor ? `${theme.hero.textColor}CC` : 'rgba(255, 255, 255, 0.8)' }}
+                      >
+                        {t('panchayatWebsite.wards')}
+                      </p>
+                    </div>
+                    <div 
+                      className="bg-white/15 backdrop-blur-md rounded-xl p-3 sm:p-4 lg:p-5 border border-white/30 shadow-lg hover:bg-white/20 transition-all duration-300 hover:scale-105"
+                      style={{ 
+                        borderColor: theme?.hero.textColor ? `${theme.hero.textColor}4D` : 'rgba(255, 255, 255, 0.3)',
+                      }}
+                    >
+                      <Calendar className="h-6 w-6 sm:h-7 sm:w-7 lg:h-9 lg:w-9 mx-auto mb-2 sm:mb-3 text-white drop-shadow-md" />
+                      <p 
+                        className="text-xl sm:text-2xl md:text-3xl lg:text-4xl font-bold mb-1 drop-shadow-lg"
+                        style={{ color: theme?.hero.textColor || '#FFFFFF' }}
+                      >
                         {panchayat?.established || 'N/A'}
                       </p>
-                      <p className="text-[10px] sm:text-xs lg:text-sm text-white/80">{t('panchayatWebsite.established')}</p>
+                      <p 
+                        className="text-[10px] sm:text-xs lg:text-sm font-medium"
+                        style={{ color: theme?.hero.textColor ? `${theme.hero.textColor}CC` : 'rgba(255, 255, 255, 0.8)' }}
+                      >
+                        {t('panchayatWebsite.established')}
+                      </p>
                     </div>
                   </div>
           </div>

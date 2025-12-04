@@ -1223,6 +1223,7 @@ type ServerPanchayat = {
   wards?: number;
   establishedYear?: number;
   mapCoordinates?: string;
+  themeId?: string;
 };
 
 class PanchayatSettingsApi {

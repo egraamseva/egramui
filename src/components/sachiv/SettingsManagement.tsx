@@ -17,6 +17,7 @@ import type { PanchayatSettings } from "../../types";
 import { ImageWithFallback } from "../figma/ImageWithFallback";
 import { ImageModal } from "../ui/image-modal";
 import { LocationIQAutocomplete } from "./LocationIQ";
+import { ThemeSelector } from "./ThemeSelector";
 
 interface SettingsManagementProps {
   panchayatId: string;
@@ -162,6 +163,7 @@ export function SettingsManagement({ panchayatId }: SettingsManagementProps) {
           <TabsTrigger value="about" className="whitespace-nowrap text-xs sm:text-sm">About</TabsTrigger>
           <TabsTrigger value="contact" className="whitespace-nowrap text-xs sm:text-sm">Contact</TabsTrigger>
           <TabsTrigger value="branding" className="whitespace-nowrap text-xs sm:text-sm">Branding</TabsTrigger>
+          <TabsTrigger value="theme" className="whitespace-nowrap text-xs sm:text-sm">Theme</TabsTrigger>
         </TabsList>
 
         <TabsContent value="basic" className="space-y-4">
@@ -536,6 +538,23 @@ export function SettingsManagement({ panchayatId }: SettingsManagementProps) {
                   </div>
                 </div>
               </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="theme" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Website Theme</CardTitle>
+              <CardDescription>Choose a color theme for your panchayat website</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <ThemeSelector 
+                currentThemeId={settings.themeId}
+                onThemeChange={(themeId) => {
+                  setSettings({ ...settings, themeId });
+                }}
+              />
             </CardContent>
           </Card>
         </TabsContent>
