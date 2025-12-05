@@ -22,6 +22,8 @@ import type {
 } from "@/types";
 
 const DEFAULT_BASE_URL = "http://localhost:8080/api/v1";
+// const DEFAULT_BASE_URL =
+//   "https://egrambackend-production.up.railway.app/api/v1";
 const API_BASE_URL = (
   import.meta.env.VITE_BACKEND_URL ??
   import.meta.env.VITE_API_BASE_URL ??
@@ -109,10 +111,10 @@ class HttpClient {
         config.headers = config.headers ?? {};
         config.headers.Authorization = ensureBearer(token);
       }
-      
+
       // Increment loading count
       globalLoadingManager.increment();
-      
+
       return config;
     });
 
@@ -132,15 +134,17 @@ class HttpClient {
 
   async request<T>(config: AxiosRequestConfig): Promise<T> {
     // Increase timeout for file uploads (multipart/form-data)
-    const isFileUpload = config.data instanceof FormData || 
-                        (config.headers && config.headers['Content-Type'] === 'multipart/form-data');
-    const timeout = isFileUpload ? 120000 : (config.timeout || 15000); // 2 minutes for uploads, 15s default
-    
+    const isFileUpload =
+      config.data instanceof FormData ||
+      (config.headers &&
+        config.headers["Content-Type"] === "multipart/form-data");
+    const timeout = isFileUpload ? 120000 : config.timeout || 15000; // 2 minutes for uploads, 15s default
+
     const requestConfig: AxiosRequestConfig = {
       ...config,
       timeout,
     };
-    
+
     try {
       const response = await this.client.request<ApiResponse<T>>(requestConfig);
       const payload = response.data;
@@ -167,7 +171,11 @@ class HttpClient {
     return this.request<T>({ method: "POST", url, data, ...config });
   }
 
-  postFormData<T>(url: string, formData: FormData, config?: AxiosRequestConfig) {
+  postFormData<T>(
+    url: string,
+    formData: FormData,
+    config?: AxiosRequestConfig
+  ) {
     return this.request<T>({
       method: "POST",
       url,
@@ -303,9 +311,12 @@ class PanchayatPostApi {
   constructor(private http: HttpClient) {}
 
   async list(params?: PostListParams): Promise<PaginatedResult<Post>> {
-    const data = await this.http.get<PagedResponse<ServerPost>>("/panchayat/posts", {
-      params,
-    });
+    const data = await this.http.get<PagedResponse<ServerPost>>(
+      "/panchayat/posts",
+      {
+        params,
+      }
+    );
     return {
       items: data.content.map(mapPostResponse),
       page: data.page,
@@ -334,7 +345,10 @@ class PanchayatPostApi {
       formData.append("bodyText", payload.bodyText);
       formData.append("imageFile", payload.imageFile);
 
-      const data = await this.http.postFormData<ServerPost>("/panchayat/posts", formData);
+      const data = await this.http.postFormData<ServerPost>(
+        "/panchayat/posts",
+        formData
+      );
       return mapPostResponse(data);
     }
 
@@ -346,8 +360,14 @@ class PanchayatPostApi {
     return mapPostResponse(data);
   }
 
-  async update(id: string | number, payload: { title?: string; bodyText: string; mediaUrl?: string }) {
-    const data = await this.http.put<ServerPost>(`/panchayat/posts/${id}`, payload);
+  async update(
+    id: string | number,
+    payload: { title?: string; bodyText: string; mediaUrl?: string }
+  ) {
+    const data = await this.http.put<ServerPost>(
+      `/panchayat/posts/${id}`,
+      payload
+    );
     return mapPostResponse(data);
   }
 
@@ -360,12 +380,12 @@ class PanchayatPostApi {
   }
 
   async refreshImageUrl(id: string | number): Promise<{ mediaUrl: string }> {
-    const data = await this.http.patch<{ mediaUrl: string }>(`/panchayat/posts/${id}/refresh-image-url`);
+    const data = await this.http.patch<{ mediaUrl: string }>(
+      `/panchayat/posts/${id}/refresh-image-url`
+    );
     return data;
   }
 }
-
-
 
 /**
  * Comments API
@@ -386,7 +406,7 @@ class PanchayatCommentApi {
 
   async list(
     postId: string | number,
-    options?: { approvedOnly?: boolean; pageNumber?: number; pageSize?: number },
+    options?: { approvedOnly?: boolean; pageNumber?: number; pageSize?: number }
   ): Promise<PaginatedResult<Comment>> {
     const data = await this.http.get<PagedResponse<ServerComment>>(
       `/panchayat/posts/${postId}/comments`,
@@ -396,7 +416,7 @@ class PanchayatCommentApi {
           page: options?.pageNumber,
           size: options?.pageSize,
         },
-      },
+      }
     );
 
     return {
@@ -411,7 +431,9 @@ class PanchayatCommentApi {
   }
 
   approve(postId: string | number, commentId: string | number) {
-    return this.http.patch(`/panchayat/posts/${postId}/comments/${commentId}/approve`);
+    return this.http.patch(
+      `/panchayat/posts/${postId}/comments/${commentId}/approve`
+    );
   }
 
   delete(postId: string | number, commentId: string | number) {
@@ -425,13 +447,19 @@ class PanchayatCommentApi {
 class PanchayatTeamApi {
   constructor(private http: HttpClient) {}
 
-  async list(options?: { page?: number; size?: number }): Promise<PaginatedResult<TeamMember>> {
-    const data = await this.http.get<PagedResponse<ServerUser>>("/panchayat/team", {
-      params: {
-        page: options?.page,
-        size: options?.size,
-      },
-    });
+  async list(options?: {
+    page?: number;
+    size?: number;
+  }): Promise<PaginatedResult<TeamMember>> {
+    const data = await this.http.get<PagedResponse<ServerUser>>(
+      "/panchayat/team",
+      {
+        params: {
+          page: options?.page,
+          size: options?.size,
+        },
+      }
+    );
 
     return {
       items: data.content.map(mapTeamMemberResponse),
@@ -456,18 +484,23 @@ class PanchayatTeamApi {
   }) {
     // Backend always expects multipart/form-data
     const formData = new FormData();
-    formData.append('name', payload.name);
-    formData.append('email', payload.email);
-    formData.append('phone', payload.phone);
-    formData.append('password', payload.password);
-    if (payload.designation) formData.append('designation', payload.designation);
+    formData.append("name", payload.name);
+    formData.append("email", payload.email);
+    formData.append("phone", payload.phone);
+    formData.append("password", payload.password);
+    if (payload.designation)
+      formData.append("designation", payload.designation);
     if (payload.imageFile instanceof File) {
-      formData.append('imageFile', payload.imageFile);
+      formData.append("imageFile", payload.imageFile);
     }
-    if (payload.imageUrl) formData.append('imageUrl', payload.imageUrl);
-    if (payload.compressionQuality) formData.append('compressionQuality', payload.compressionQuality);
-    
-    const data = await this.http.postFormData<ServerUser>("/panchayat/team", formData);
+    if (payload.imageUrl) formData.append("imageUrl", payload.imageUrl);
+    if (payload.compressionQuality)
+      formData.append("compressionQuality", payload.compressionQuality);
+
+    const data = await this.http.postFormData<ServerUser>(
+      "/panchayat/team",
+      formData
+    );
     return mapTeamMemberResponse(data);
   }
 
@@ -485,18 +518,25 @@ class PanchayatTeamApi {
     }>
   ) {
     const formData = new FormData();
-    if (payload.name !== undefined) formData.append('name', payload.name);
-    if (payload.email !== undefined) formData.append('email', payload.email);
-    if (payload.phone !== undefined) formData.append('phone', payload.phone);
-    if (payload.password !== undefined) formData.append('password', payload.password);
-    if (payload.designation !== undefined) formData.append('designation', payload.designation || '');
+    if (payload.name !== undefined) formData.append("name", payload.name);
+    if (payload.email !== undefined) formData.append("email", payload.email);
+    if (payload.phone !== undefined) formData.append("phone", payload.phone);
+    if (payload.password !== undefined)
+      formData.append("password", payload.password);
+    if (payload.designation !== undefined)
+      formData.append("designation", payload.designation || "");
     if (payload.imageFile instanceof File) {
-      formData.append('imageFile', payload.imageFile);
+      formData.append("imageFile", payload.imageFile);
     }
-    if (payload.imageUrl !== undefined) formData.append('imageUrl', payload.imageUrl || '');
-    if (payload.compressionQuality) formData.append('compressionQuality', payload.compressionQuality);
-    
-    const data = await this.http.putFormData<ServerUser>(`/panchayat/team/${userId}`, formData);
+    if (payload.imageUrl !== undefined)
+      formData.append("imageUrl", payload.imageUrl || "");
+    if (payload.compressionQuality)
+      formData.append("compressionQuality", payload.compressionQuality);
+
+    const data = await this.http.putFormData<ServerUser>(
+      `/panchayat/team/${userId}`,
+      formData
+    );
     return mapTeamMemberResponse(data);
   }
 
@@ -593,7 +633,9 @@ class AnalyticsAdapter {
       totalLikes,
       totalComments,
       totalShares: posts.reduce((sum, post) => sum + post.shares, 0),
-      averageEngagement: posts.length ? (totalLikes + totalComments) / posts.length : 0,
+      averageEngagement: posts.length
+        ? (totalLikes + totalComments) / posts.length
+        : 0,
       topEngagedPosts: posts
         .map((post) => ({
           id: post.id,
@@ -652,7 +694,16 @@ const mapTeamMemberResponse = (user: ServerUser): TeamMember => ({
   image: user.imageUrl,
   imageKey: user.imageKey,
   hasImage: user.hasImage ?? false,
-  initials: user.initials || (user.name ? user.name.split(' ').map(n => n[0]).join('').toUpperCase().substring(0, 2) : ''),
+  initials:
+    user.initials ||
+    (user.name
+      ? user.name
+          .split(" ")
+          .map((n) => n[0])
+          .join("")
+          .toUpperCase()
+          .substring(0, 2)
+      : ""),
   role: user.role.replace("_", " "),
   status: (user.status?.toLowerCase() ?? "inactive") as UserStatus,
   createdAt: user.createdAt,
@@ -683,9 +734,12 @@ class PanchayatSchemeApi {
 
   async list(): Promise<PaginatedResult<Scheme>> {
     try {
-      const data = await this.http.get<PagedResponse<ServerScheme>>("/panchayat/schemes", {
-        params: { page: 0, size: 100 },
-      });
+      const data = await this.http.get<PagedResponse<ServerScheme>>(
+        "/panchayat/schemes",
+        {
+          params: { page: 0, size: 100 },
+        }
+      );
       return {
         items: data.content.map(mapSchemeResponse),
         page: data.page,
@@ -714,20 +768,18 @@ class PanchayatSchemeApi {
     return mapSchemeResponse(data);
   }
 
-  async create(
-    payload: {
-      title: string;
-      description: string;
-      category?: string;
-      budgetAmount?: number;
-      beneficiaryCount?: number;
-      eligibilityText?: string;
-      documentUrls?: string[];
-      contactPersonName?: string;
-      contactPersonPhone?: string;
-      contactPersonEmail?: string;
-    },
-  ) {
+  async create(payload: {
+    title: string;
+    description: string;
+    category?: string;
+    budgetAmount?: number;
+    beneficiaryCount?: number;
+    eligibilityText?: string;
+    documentUrls?: string[];
+    contactPersonName?: string;
+    contactPersonPhone?: string;
+    contactPersonEmail?: string;
+  }) {
     const data = await this.http.post<ServerScheme>("/panchayat/schemes", {
       title: payload.title,
       description: payload.description || payload.category || "",
@@ -755,21 +807,33 @@ class PanchayatSchemeApi {
       contactPersonName?: string;
       contactPersonPhone?: string;
       contactPersonEmail?: string;
-    }>,
+    }>
   ) {
     const updatePayload: any = {};
     if (payload.title !== undefined) updatePayload.title = payload.title;
-    if (payload.description !== undefined) updatePayload.description = payload.description;
-    if (payload.category !== undefined) updatePayload.description = payload.category;
-    if (payload.budgetAmount !== undefined) updatePayload.budgetAmount = payload.budgetAmount;
-    if (payload.beneficiaryCount !== undefined) updatePayload.beneficiaryCount = payload.beneficiaryCount;
-    if (payload.eligibilityText !== undefined) updatePayload.eligibilityText = payload.eligibilityText;
-    if (payload.documentUrls !== undefined) updatePayload.documentUrls = payload.documentUrls;
-    if (payload.contactPersonName !== undefined) updatePayload.contactPersonName = payload.contactPersonName;
-    if (payload.contactPersonPhone !== undefined) updatePayload.contactPersonPhone = payload.contactPersonPhone;
-    if (payload.contactPersonEmail !== undefined) updatePayload.contactPersonEmail = payload.contactPersonEmail;
+    if (payload.description !== undefined)
+      updatePayload.description = payload.description;
+    if (payload.category !== undefined)
+      updatePayload.description = payload.category;
+    if (payload.budgetAmount !== undefined)
+      updatePayload.budgetAmount = payload.budgetAmount;
+    if (payload.beneficiaryCount !== undefined)
+      updatePayload.beneficiaryCount = payload.beneficiaryCount;
+    if (payload.eligibilityText !== undefined)
+      updatePayload.eligibilityText = payload.eligibilityText;
+    if (payload.documentUrls !== undefined)
+      updatePayload.documentUrls = payload.documentUrls;
+    if (payload.contactPersonName !== undefined)
+      updatePayload.contactPersonName = payload.contactPersonName;
+    if (payload.contactPersonPhone !== undefined)
+      updatePayload.contactPersonPhone = payload.contactPersonPhone;
+    if (payload.contactPersonEmail !== undefined)
+      updatePayload.contactPersonEmail = payload.contactPersonEmail;
 
-    const data = await this.http.put<ServerScheme>(`/panchayat/schemes/${id}`, updatePayload);
+    const data = await this.http.put<ServerScheme>(
+      `/panchayat/schemes/${id}`,
+      updatePayload
+    );
     return mapSchemeResponse(data);
   }
 
@@ -799,9 +863,12 @@ class PanchayatAnnouncementApi {
 
   async list(): Promise<PaginatedResult<Announcement>> {
     try {
-      const data = await this.http.get<PagedResponse<ServerAnnouncement>>("/panchayat/announcements", {
-        params: { page: 0, size: 100 },
-      });
+      const data = await this.http.get<PagedResponse<ServerAnnouncement>>(
+        "/panchayat/announcements",
+        {
+          params: { page: 0, size: 100 },
+        }
+      );
       return {
         items: data.content.map(mapAnnouncementResponse),
         page: data.page,
@@ -826,22 +893,25 @@ class PanchayatAnnouncementApi {
   }
 
   async getById(id: string | number): Promise<Announcement> {
-    const data = await this.http.get<ServerAnnouncement>(`/panchayat/announcements/${id}`);
+    const data = await this.http.get<ServerAnnouncement>(
+      `/panchayat/announcements/${id}`
+    );
     return mapAnnouncementResponse(data);
   }
 
-  async create(
-    payload: {
-      title: string;
-      bodyText: string;
-      attachments?: string[];
-      startDate?: string;
-      endDate?: string;
-      priority?: number;
-      isActive?: boolean;
-    },
-  ) {
-    const data = await this.http.post<ServerAnnouncement>("/panchayat/announcements", payload);
+  async create(payload: {
+    title: string;
+    bodyText: string;
+    attachments?: string[];
+    startDate?: string;
+    endDate?: string;
+    priority?: number;
+    isActive?: boolean;
+  }) {
+    const data = await this.http.post<ServerAnnouncement>(
+      "/panchayat/announcements",
+      payload
+    );
     return mapAnnouncementResponse(data);
   }
 
@@ -855,13 +925,16 @@ class PanchayatAnnouncementApi {
       endDate?: string;
       priority?: number;
       isActive?: boolean;
-    }>,
+    }>
   ) {
-    const data = await this.http.put<ServerAnnouncement>(`/panchayat/announcements/${id}`, payload);
+    const data = await this.http.put<ServerAnnouncement>(
+      `/panchayat/announcements/${id}`,
+      payload
+    );
     return mapAnnouncementResponse(data);
   }
 
-  async delete( id: string | number) {
+  async delete(id: string | number) {
     return await this.http.delete(`/panchayat/announcements/${id}`);
   }
 }
@@ -879,7 +952,8 @@ const mapSchemeResponse = (scheme: ServerScheme): Scheme => {
 
   // Map status
   let status: "Active" | "Completed" | "Pending" = "Pending";
-  if (scheme.status === "ACTIVE" || scheme.status === "ONGOING") status = "Active";
+  if (scheme.status === "ACTIVE" || scheme.status === "ONGOING")
+    status = "Active";
   else if (scheme.status === "COMPLETED") status = "Completed";
 
   // Format budget
@@ -895,7 +969,7 @@ const mapSchemeResponse = (scheme: ServerScheme): Scheme => {
     : "General";
 
   return {
-  id: String(scheme.schemeId),
+    id: String(scheme.schemeId),
     panchayatId: undefined,
     name: scheme.title,
     category: category,
@@ -906,7 +980,9 @@ const mapSchemeResponse = (scheme: ServerScheme): Scheme => {
   };
 };
 
-const mapAnnouncementResponse = (announcement: ServerAnnouncement): Announcement => ({
+const mapAnnouncementResponse = (
+  announcement: ServerAnnouncement
+): Announcement => ({
   id: String(announcement.announcementId),
   panchayatId: undefined,
   title: announcement.title,
@@ -936,9 +1012,12 @@ class PanchayatAlbumApi {
 
   async list(): Promise<PaginatedResult<Album>> {
     try {
-      const data = await this.http.get<PagedResponse<ServerAlbum>>("/panchayat/albums", {
-        params: { page: 0, size: 100 },
-      });
+      const data = await this.http.get<PagedResponse<ServerAlbum>>(
+        "/panchayat/albums",
+        {
+          params: { page: 0, size: 100 },
+        }
+      );
       return {
         items: data.content.map(mapAlbumResponse),
         page: data.page,
@@ -962,27 +1041,30 @@ class PanchayatAlbumApi {
     }
   }
 
-  async getById( id: string | number): Promise<Album> {
+  async getById(id: string | number): Promise<Album> {
     const data = await this.http.get<ServerAlbum>(`/panchayat/albums/${id}`);
     return mapAlbumResponse(data);
   }
 
-  async create(
-    payload: {
-      title: string;
-      description?: string;
-      coverImage?: string;
-    },
-  ) {
+  async create(payload: {
+    title: string;
+    description?: string;
+    coverImage?: string;
+  }) {
     const anyPayload: any = payload as any;
     if (anyPayload.coverImageFile instanceof File) {
       const formData = new FormData();
-      formData.append('albumName', anyPayload.title || '');
-      if (anyPayload.description) formData.append('description', anyPayload.description);
-      formData.append('coverImageFile', anyPayload.coverImageFile);
-      const data = await this.http.post<ServerAlbum>('/panchayat/albums', formData, {
-        headers: { 'Content-Type': 'multipart/form-data' },
-      });
+      formData.append("albumName", anyPayload.title || "");
+      if (anyPayload.description)
+        formData.append("description", anyPayload.description);
+      formData.append("coverImageFile", anyPayload.coverImageFile);
+      const data = await this.http.post<ServerAlbum>(
+        "/panchayat/albums",
+        formData,
+        {
+          headers: { "Content-Type": "multipart/form-data" },
+        }
+      );
       return mapAlbumResponse(data);
     }
 
@@ -1000,27 +1082,38 @@ class PanchayatAlbumApi {
       title: string;
       description?: string;
       coverImage?: string;
-    }>,
+    }>
   ) {
     // If caller passed a File via payload.coverImageFile (not part of type above), send FormData
     const anyPayload: any = payload as any;
     if (anyPayload.coverImageFile instanceof File) {
       const formData = new FormData();
-      if (anyPayload.title !== undefined) formData.append('albumName', anyPayload.title);
-      if (anyPayload.description !== undefined) formData.append('description', anyPayload.description);
-      formData.append('coverImageFile', anyPayload.coverImageFile);
-      const data = await this.http.put<ServerAlbum>(`/panchayat/albums/${id}`, formData, {
-        headers: { 'Content-Type': 'multipart/form-data' },
-      });
+      if (anyPayload.title !== undefined)
+        formData.append("albumName", anyPayload.title);
+      if (anyPayload.description !== undefined)
+        formData.append("description", anyPayload.description);
+      formData.append("coverImageFile", anyPayload.coverImageFile);
+      const data = await this.http.put<ServerAlbum>(
+        `/panchayat/albums/${id}`,
+        formData,
+        {
+          headers: { "Content-Type": "multipart/form-data" },
+        }
+      );
       return mapAlbumResponse(data);
     }
 
     const updatePayload: any = {};
     if (payload.title !== undefined) updatePayload.albumName = payload.title;
-    if (payload.description !== undefined) updatePayload.description = payload.description;
-    if (payload.coverImage !== undefined) updatePayload.coverImageUrl = payload.coverImage;
+    if (payload.description !== undefined)
+      updatePayload.description = payload.description;
+    if (payload.coverImage !== undefined)
+      updatePayload.coverImageUrl = payload.coverImage;
 
-    const data = await this.http.put<ServerAlbum>(`/panchayat/albums/${id}`, updatePayload);
+    const data = await this.http.put<ServerAlbum>(
+      `/panchayat/albums/${id}`,
+      updatePayload
+    );
     return mapAlbumResponse(data);
   }
 
@@ -1028,10 +1121,13 @@ class PanchayatAlbumApi {
     return await this.http.delete(`/panchayat/albums/${id}`);
   }
 
-  async refreshCoverImageUrl(id: string | number): Promise<{ coverImageUrl?: string; mediaUrl?: string }> {
-    const data = await this.http.patch<{ coverImageUrl?: string; mediaUrl?: string }>(
-      `/panchayat/albums/${id}/refresh-cover-image-url`,
-    );
+  async refreshCoverImageUrl(
+    id: string | number
+  ): Promise<{ coverImageUrl?: string; mediaUrl?: string }> {
+    const data = await this.http.patch<{
+      coverImageUrl?: string;
+      mediaUrl?: string;
+    }>(`/panchayat/albums/${id}/refresh-cover-image-url`);
     return data;
   }
 }
@@ -1054,14 +1150,17 @@ type ServerGalleryImage = {
 class PanchayatGalleryApi {
   constructor(private http: HttpClient) {}
 
-  async list( albumId?: string | number): Promise<PaginatedResult<GalleryItem>> {
+  async list(albumId?: string | number): Promise<PaginatedResult<GalleryItem>> {
     try {
       const params: any = { page: 0, size: 100 };
       if (albumId) params.albumId = albumId;
-      
-      const data = await this.http.get<PagedResponse<ServerGalleryImage>>("/panchayat/gallery", {
-        params,
-      });
+
+      const data = await this.http.get<PagedResponse<ServerGalleryImage>>(
+        "/panchayat/gallery",
+        {
+          params,
+        }
+      );
       return {
         items: data.content.map(mapGalleryImageResponse),
         page: data.page,
@@ -1085,36 +1184,45 @@ class PanchayatGalleryApi {
     }
   }
 
-  async getById( id: string | number): Promise<GalleryItem> {
-    const data = await this.http.get<ServerGalleryImage>(`/panchayat/gallery/${id}`);
+  async getById(id: string | number): Promise<GalleryItem> {
+    const data = await this.http.get<ServerGalleryImage>(
+      `/panchayat/gallery/${id}`
+    );
     return mapGalleryImageResponse(data);
   }
 
-  async create(
-    payload: {
-      imageUrl: string;
-      caption?: string;
-      tags?: string;
-      albumId?: number;
-      displayOrder?: number;
-    },
-  ) {
+  async create(payload: {
+    imageUrl: string;
+    caption?: string;
+    tags?: string;
+    albumId?: number;
+    displayOrder?: number;
+  }) {
     const anyPayload: any = payload as any;
     // If caller provided an actual File as `imageFile`, send multipart/form-data
     if (anyPayload.imageFile instanceof File) {
       const formData = new FormData();
-      if (anyPayload.caption) formData.append('caption', anyPayload.caption);
-      if (anyPayload.tags) formData.append('tags', anyPayload.tags);
-      if (anyPayload.albumId !== undefined) formData.append('albumId', String(anyPayload.albumId));
-      if (anyPayload.displayOrder !== undefined) formData.append('displayOrder', String(anyPayload.displayOrder));
-      formData.append('imageFile', anyPayload.imageFile);
-      const data = await this.http.post<ServerGalleryImage>("/panchayat/gallery", formData, {
-        headers: { 'Content-Type': 'multipart/form-data' },
-      });
+      if (anyPayload.caption) formData.append("caption", anyPayload.caption);
+      if (anyPayload.tags) formData.append("tags", anyPayload.tags);
+      if (anyPayload.albumId !== undefined)
+        formData.append("albumId", String(anyPayload.albumId));
+      if (anyPayload.displayOrder !== undefined)
+        formData.append("displayOrder", String(anyPayload.displayOrder));
+      formData.append("imageFile", anyPayload.imageFile);
+      const data = await this.http.post<ServerGalleryImage>(
+        "/panchayat/gallery",
+        formData,
+        {
+          headers: { "Content-Type": "multipart/form-data" },
+        }
+      );
       return mapGalleryImageResponse(data);
     }
 
-    const data = await this.http.post<ServerGalleryImage>("/panchayat/gallery", payload);
+    const data = await this.http.post<ServerGalleryImage>(
+      "/panchayat/gallery",
+      payload
+    );
     return mapGalleryImageResponse(data);
   }
 
@@ -1126,44 +1234,54 @@ class PanchayatGalleryApi {
       tags?: string;
       albumId?: number;
       displayOrder?: number;
-    }>,
+    }>
   ) {
     const anyPayload: any = payload as any;
     // Backend always expects multipart/form-data, so always use FormData
     const formData = new FormData();
     if (anyPayload.caption !== undefined && anyPayload.caption !== null) {
-      formData.append('caption', String(anyPayload.caption));
+      formData.append("caption", String(anyPayload.caption));
     }
     if (anyPayload.tags !== undefined && anyPayload.tags !== null) {
-      formData.append('tags', String(anyPayload.tags));
+      formData.append("tags", String(anyPayload.tags));
     }
     if (anyPayload.albumId !== undefined && anyPayload.albumId !== null) {
-      formData.append('albumId', String(anyPayload.albumId));
+      formData.append("albumId", String(anyPayload.albumId));
     }
-    if (anyPayload.displayOrder !== undefined && anyPayload.displayOrder !== null) {
-      formData.append('displayOrder', String(anyPayload.displayOrder));
+    if (
+      anyPayload.displayOrder !== undefined &&
+      anyPayload.displayOrder !== null
+    ) {
+      formData.append("displayOrder", String(anyPayload.displayOrder));
     }
     if (anyPayload.imageFile instanceof File) {
-      formData.append('imageFile', anyPayload.imageFile);
+      formData.append("imageFile", anyPayload.imageFile);
     }
     if (anyPayload.imageUrl !== undefined && anyPayload.imageUrl !== null) {
-      formData.append('imageUrl', String(anyPayload.imageUrl));
+      formData.append("imageUrl", String(anyPayload.imageUrl));
     }
-    
-    const data = await this.http.put<ServerGalleryImage>(`/panchayat/gallery/${id}`, formData, {
-      headers: { 'Content-Type': 'multipart/form-data' },
-    });
+
+    const data = await this.http.put<ServerGalleryImage>(
+      `/panchayat/gallery/${id}`,
+      formData,
+      {
+        headers: { "Content-Type": "multipart/form-data" },
+      }
+    );
     return mapGalleryImageResponse(data);
   }
 
-  async delete( id: string | number) {
+  async delete(id: string | number) {
     return await this.http.delete(`/panchayat/gallery/${id}`);
   }
 
-  async refreshImageUrl(id: string | number): Promise<{ imageUrl?: string; mediaUrl?: string }> {
-    const data = await this.http.patch<{ imageUrl?: string; mediaUrl?: string }>(
-      `/panchayat/gallery/${id}/refresh-image-url`,
-    );
+  async refreshImageUrl(
+    id: string | number
+  ): Promise<{ imageUrl?: string; mediaUrl?: string }> {
+    const data = await this.http.patch<{
+      imageUrl?: string;
+      mediaUrl?: string;
+    }>(`/panchayat/gallery/${id}/refresh-image-url`);
     return data;
   }
 }
@@ -1179,7 +1297,9 @@ const mapAlbumResponse = (album: ServerAlbum): Album => ({
   updatedAt: album.updatedAt || new Date().toISOString(),
 });
 
-const mapGalleryImageResponse = (image: ServerGalleryImage): GalleryItem & { albumId?: number } => ({
+const mapGalleryImageResponse = (
+  image: ServerGalleryImage
+): GalleryItem & { albumId?: number } => ({
   id: String(image.imageId),
   panchayatId: undefined,
   title: image.caption || "Gallery Image",
@@ -1255,7 +1375,12 @@ type ServerAdminPanchayat = {
 class AdminPanchayatApi {
   constructor(private http: HttpClient) {}
 
-  async getAll(params?: { status?: string; search?: string; page?: number; size?: number }): Promise<PagedResponse<ServerAdminPanchayat>> {
+  async getAll(params?: {
+    status?: string;
+    search?: string;
+    page?: number;
+    size?: number;
+  }): Promise<PagedResponse<ServerAdminPanchayat>> {
     const queryParams: any = {};
     if (params?.status && params.status !== "all") {
       queryParams.status = params.status.toUpperCase();
@@ -1269,7 +1394,10 @@ class AdminPanchayatApi {
     if (params?.size !== undefined) {
       queryParams.pageSize = params.size;
     }
-    return await this.http.get<PagedResponse<ServerAdminPanchayat>>("/admin/panchayats", { params: queryParams });
+    return await this.http.get<PagedResponse<ServerAdminPanchayat>>(
+      "/admin/panchayats",
+      { params: queryParams }
+    );
   }
 
   async getById(id: string | number): Promise<ServerAdminPanchayat> {
@@ -1286,24 +1414,35 @@ class AdminPanchayatApi {
     contactEmail?: string;
     description?: string;
   }): Promise<ServerAdminPanchayat> {
-    return await this.http.post<ServerAdminPanchayat>("/admin/panchayats", payload);
+    return await this.http.post<ServerAdminPanchayat>(
+      "/admin/panchayats",
+      payload
+    );
   }
 
-  async update(id: string | number, payload: Partial<{
-    panchayatName: string;
-    slug: string;
-    district: string;
-    state: string;
-    address?: string;
-    contactPhone?: string;
-    contactEmail?: string;
-    description?: string;
-  }>): Promise<ServerAdminPanchayat> {
-    return await this.http.put<ServerAdminPanchayat>(`/admin/panchayats/${id}`, payload);
+  async update(
+    id: string | number,
+    payload: Partial<{
+      panchayatName: string;
+      slug: string;
+      district: string;
+      state: string;
+      address?: string;
+      contactPhone?: string;
+      contactEmail?: string;
+      description?: string;
+    }>
+  ): Promise<ServerAdminPanchayat> {
+    return await this.http.put<ServerAdminPanchayat>(
+      `/admin/panchayats/${id}`,
+      payload
+    );
   }
 
   async updateStatus(id: string | number, status: string): Promise<void> {
-    await this.http.patch(`/admin/panchayats/${id}/status`, { status: status.toUpperCase() });
+    await this.http.patch(`/admin/panchayats/${id}/status`, {
+      status: status.toUpperCase(),
+    });
   }
 
   async delete(id: string | number): Promise<void> {
@@ -1331,17 +1470,26 @@ type ServerAdminUser = {
 class AdminUserApi {
   constructor(private http: HttpClient) {}
 
-  async getAll(params?: { role?: string; status?: string; page?: number; size?: number }): Promise<PagedResponse<ServerAdminUser>> {
+  async getAll(params?: {
+    role?: string;
+    status?: string;
+    page?: number;
+    size?: number;
+  }): Promise<PagedResponse<ServerAdminUser>> {
     const queryParams: any = {};
     if (params?.role) queryParams.role = params.role;
     if (params?.status) queryParams.status = params.status.toUpperCase();
     if (params?.page !== undefined) queryParams.page = params.page;
     if (params?.size !== undefined) queryParams.size = params.size;
-    return await this.http.get<PagedResponse<ServerAdminUser>>("/admin/users", { params: queryParams });
+    return await this.http.get<PagedResponse<ServerAdminUser>>("/admin/users", {
+      params: queryParams,
+    });
   }
 
   async updateStatus(id: string | number, status: string): Promise<void> {
-    await this.http.patch(`/admin/users/${id}/status`, { status: status.toUpperCase() });
+    await this.http.patch(`/admin/users/${id}/status`, {
+      status: status.toUpperCase(),
+    });
   }
 }
 
@@ -1363,7 +1511,9 @@ class AdminAnalyticsApi {
   constructor(private http: HttpClient) {}
 
   async getSystemAnalytics(): Promise<ServerSystemAnalytics> {
-    return await this.http.get<ServerSystemAnalytics>("/admin/analytics/system");
+    return await this.http.get<ServerSystemAnalytics>(
+      "/admin/analytics/system"
+    );
   }
 }
 
@@ -1389,7 +1539,14 @@ type ServerAuditLog = {
 class AdminAuditLogApi {
   constructor(private http: HttpClient) {}
 
-  async getAll(params?: { panchayatId?: number; actionType?: string; startDate?: string; endDate?: string; page?: number; size?: number }): Promise<PagedResponse<ServerAuditLog>> {
+  async getAll(params?: {
+    panchayatId?: number;
+    actionType?: string;
+    startDate?: string;
+    endDate?: string;
+    page?: number;
+    size?: number;
+  }): Promise<PagedResponse<ServerAuditLog>> {
     const queryParams: any = {};
     if (params?.panchayatId) queryParams.panchayatId = params.panchayatId;
     if (params?.actionType) queryParams.actionType = params.actionType;
@@ -1397,7 +1554,10 @@ class AdminAuditLogApi {
     if (params?.endDate) queryParams.endDate = params.endDate;
     if (params?.page !== undefined) queryParams.page = params.page;
     if (params?.size !== undefined) queryParams.size = params.size;
-    return await this.http.get<PagedResponse<ServerAuditLog>>("/admin/audit-logs", { params: queryParams });
+    return await this.http.get<PagedResponse<ServerAuditLog>>(
+      "/admin/audit-logs",
+      { params: queryParams }
+    );
   }
 }
 
@@ -1427,13 +1587,19 @@ type ServerNewsletter = {
 class PanchayatNewsletterApi {
   constructor(private http: HttpClient) {}
 
-  async list(options?: { page?: number; size?: number }): Promise<PaginatedResult<Newsletter>> {
-    const data = await this.http.get<PagedResponse<ServerNewsletter>>("/panchayat/newsletters", {
-      params: {
-        page: options?.page ?? 0,
-        size: options?.size ?? 20,
-      },
-    });
+  async list(options?: {
+    page?: number;
+    size?: number;
+  }): Promise<PaginatedResult<Newsletter>> {
+    const data = await this.http.get<PagedResponse<ServerNewsletter>>(
+      "/panchayat/newsletters",
+      {
+        params: {
+          page: options?.page ?? 0,
+          size: options?.size ?? 20,
+        },
+      }
+    );
     return {
       items: data.content.map(mapNewsletterResponse),
       page: data.page,
@@ -1446,7 +1612,9 @@ class PanchayatNewsletterApi {
   }
 
   async getById(id: string | number): Promise<Newsletter> {
-    const data = await this.http.get<ServerNewsletter>(`/panchayat/newsletters/${id}`);
+    const data = await this.http.get<ServerNewsletter>(
+      `/panchayat/newsletters/${id}`
+    );
     return mapNewsletterResponse(data);
   }
 
@@ -1466,19 +1634,27 @@ class PanchayatNewsletterApi {
     // If caller provided a File, send multipart/form-data
     if (anyPayload.coverImageFile instanceof File) {
       const formData = new FormData();
-      formData.append('title', payload.title);
-      if (payload.subtitle) formData.append('subtitle', payload.subtitle);
-      if (payload.content) formData.append('content', payload.content);
-      if (payload.bulletPoints) formData.append('bulletPoints', JSON.stringify(payload.bulletPoints));
-      if (payload.publishedOn) formData.append('publishedOn', payload.publishedOn);
-      if (payload.authorName) formData.append('authorName', payload.authorName);
-      if (payload.attachments) formData.append('attachments', JSON.stringify(payload.attachments));
-      if (payload.isPublished !== undefined) formData.append('isPublished', String(payload.isPublished));
-      formData.append('coverImageFile', anyPayload.coverImageFile);
-      
-      const data = await this.http.post<ServerNewsletter>("/panchayat/newsletters", formData, {
-        headers: { 'Content-Type': 'multipart/form-data' },
-      });
+      formData.append("title", payload.title);
+      if (payload.subtitle) formData.append("subtitle", payload.subtitle);
+      if (payload.content) formData.append("content", payload.content);
+      if (payload.bulletPoints)
+        formData.append("bulletPoints", JSON.stringify(payload.bulletPoints));
+      if (payload.publishedOn)
+        formData.append("publishedOn", payload.publishedOn);
+      if (payload.authorName) formData.append("authorName", payload.authorName);
+      if (payload.attachments)
+        formData.append("attachments", JSON.stringify(payload.attachments));
+      if (payload.isPublished !== undefined)
+        formData.append("isPublished", String(payload.isPublished));
+      formData.append("coverImageFile", anyPayload.coverImageFile);
+
+      const data = await this.http.post<ServerNewsletter>(
+        "/panchayat/newsletters",
+        formData,
+        {
+          headers: { "Content-Type": "multipart/form-data" },
+        }
+      );
       return mapNewsletterResponse(data);
     }
 
@@ -1494,7 +1670,10 @@ class PanchayatNewsletterApi {
       isPublished: payload.isPublished,
       coverImageFileKey: payload.coverImageFileKey,
     };
-    const data = await this.http.post<ServerNewsletter>("/panchayat/newsletters", jsonPayload);
+    const data = await this.http.post<ServerNewsletter>(
+      "/panchayat/newsletters",
+      jsonPayload
+    );
     return mapNewsletterResponse(data);
   }
 
@@ -1516,34 +1695,59 @@ class PanchayatNewsletterApi {
     const anyPayload: any = payload as any;
     if (anyPayload.coverImageFile instanceof File) {
       const formData = new FormData();
-      if (anyPayload.title !== undefined) formData.append('title', anyPayload.title);
-      if (anyPayload.subtitle !== undefined) formData.append('subtitle', anyPayload.subtitle);
-      if (anyPayload.content !== undefined) formData.append('content', anyPayload.content);
-      if (anyPayload.bulletPoints !== undefined) formData.append('bulletPoints', JSON.stringify(anyPayload.bulletPoints));
-      if (anyPayload.publishedOn !== undefined) formData.append('publishedOn', anyPayload.publishedOn);
-      if (anyPayload.authorName !== undefined) formData.append('authorName', anyPayload.authorName);
-      if (anyPayload.attachments !== undefined) formData.append('attachments', JSON.stringify(anyPayload.attachments));
-      if (anyPayload.isPublished !== undefined) formData.append('isPublished', String(anyPayload.isPublished));
-      formData.append('coverImageFile', anyPayload.coverImageFile);
-      
-      const data = await this.http.put<ServerNewsletter>(`/panchayat/newsletters/${id}`, formData, {
-        headers: { 'Content-Type': 'multipart/form-data' },
-      });
+      if (anyPayload.title !== undefined)
+        formData.append("title", anyPayload.title);
+      if (anyPayload.subtitle !== undefined)
+        formData.append("subtitle", anyPayload.subtitle);
+      if (anyPayload.content !== undefined)
+        formData.append("content", anyPayload.content);
+      if (anyPayload.bulletPoints !== undefined)
+        formData.append(
+          "bulletPoints",
+          JSON.stringify(anyPayload.bulletPoints)
+        );
+      if (anyPayload.publishedOn !== undefined)
+        formData.append("publishedOn", anyPayload.publishedOn);
+      if (anyPayload.authorName !== undefined)
+        formData.append("authorName", anyPayload.authorName);
+      if (anyPayload.attachments !== undefined)
+        formData.append("attachments", JSON.stringify(anyPayload.attachments));
+      if (anyPayload.isPublished !== undefined)
+        formData.append("isPublished", String(anyPayload.isPublished));
+      formData.append("coverImageFile", anyPayload.coverImageFile);
+
+      const data = await this.http.put<ServerNewsletter>(
+        `/panchayat/newsletters/${id}`,
+        formData,
+        {
+          headers: { "Content-Type": "multipart/form-data" },
+        }
+      );
       return mapNewsletterResponse(data);
     }
 
     const updatePayload: any = {};
     if (payload.title !== undefined) updatePayload.title = payload.title;
-    if (payload.subtitle !== undefined) updatePayload.subtitle = payload.subtitle;
+    if (payload.subtitle !== undefined)
+      updatePayload.subtitle = payload.subtitle;
     if (payload.content !== undefined) updatePayload.content = payload.content;
-    if (payload.bulletPoints !== undefined) updatePayload.bulletPoints = payload.bulletPoints;
-    if (payload.publishedOn !== undefined) updatePayload.publishedOn = payload.publishedOn;
-    if (payload.authorName !== undefined) updatePayload.authorName = payload.authorName;
-    if (payload.attachments !== undefined) updatePayload.attachments = payload.attachments;
-    if (payload.isPublished !== undefined) updatePayload.isPublished = payload.isPublished;
-    if (payload.coverImageFileKey !== undefined) updatePayload.coverImageFileKey = payload.coverImageFileKey;
+    if (payload.bulletPoints !== undefined)
+      updatePayload.bulletPoints = payload.bulletPoints;
+    if (payload.publishedOn !== undefined)
+      updatePayload.publishedOn = payload.publishedOn;
+    if (payload.authorName !== undefined)
+      updatePayload.authorName = payload.authorName;
+    if (payload.attachments !== undefined)
+      updatePayload.attachments = payload.attachments;
+    if (payload.isPublished !== undefined)
+      updatePayload.isPublished = payload.isPublished;
+    if (payload.coverImageFileKey !== undefined)
+      updatePayload.coverImageFileKey = payload.coverImageFileKey;
 
-    const data = await this.http.put<ServerNewsletter>(`/panchayat/newsletters/${id}`, updatePayload);
+    const data = await this.http.put<ServerNewsletter>(
+      `/panchayat/newsletters/${id}`,
+      updatePayload
+    );
     return mapNewsletterResponse(data);
   }
 
@@ -1562,16 +1766,22 @@ class PanchayatNewsletterApi {
 class PublicNewsletterApi {
   constructor(private http: HttpClient) {}
 
-  async list(slug: string, options?: { search?: string; page?: number; size?: number }): Promise<PaginatedResult<Newsletter>> {
+  async list(
+    slug: string,
+    options?: { search?: string; page?: number; size?: number }
+  ): Promise<PaginatedResult<Newsletter>> {
     const params: any = {
       page: options?.page ?? 0,
       size: options?.size ?? 20,
     };
     if (options?.search) params.search = options.search;
-    
-    const data = await this.http.get<PagedResponse<ServerNewsletter>>(`/public/${slug}/newsletters`, {
-      params,
-    });
+
+    const data = await this.http.get<PagedResponse<ServerNewsletter>>(
+      `/public/${slug}/newsletters`,
+      {
+        params,
+      }
+    );
     return {
       items: data.content.map(mapNewsletterResponse),
       page: data.page,
@@ -1584,7 +1794,9 @@ class PublicNewsletterApi {
   }
 
   async getById(slug: string, id: string | number): Promise<Newsletter> {
-    const data = await this.http.get<ServerNewsletter>(`/public/${slug}/newsletters/${id}`);
+    const data = await this.http.get<ServerNewsletter>(
+      `/public/${slug}/newsletters/${id}`
+    );
     return mapNewsletterResponse(data);
   }
 }
@@ -1620,7 +1832,9 @@ const mapNewsletterResponse = (newsletter: ServerNewsletter): Newsletter => ({
   authorName: newsletter.authorName,
   attachments: newsletter.attachments || [],
   isPublished: newsletter.isPublished,
-  panchayatId: newsletter.panchayatId ? String(newsletter.panchayatId) : undefined,
+  panchayatId: newsletter.panchayatId
+    ? String(newsletter.panchayatId)
+    : undefined,
   panchayatName: newsletter.panchayatName,
   createdAt: newsletter.createdAt || new Date().toISOString(),
   updatedAt: newsletter.updatedAt || new Date().toISOString(),
@@ -1650,7 +1864,9 @@ class PlatformLandingPageApi {
   constructor(private http: HttpClient) {}
 
   async getSections(): Promise<PlatformSection[]> {
-    const data = await this.http.get<{ sections: any[] }>("/admin/platform/landing-page");
+    const data = await this.http.get<{ sections: any[] }>(
+      "/admin/platform/landing-page"
+    );
     return data.sections.map(this.mapSection);
   }
 
@@ -1673,24 +1889,41 @@ class PlatformLandingPageApi {
     const anyPayload: any = payload as any;
     if (anyPayload.imageFile instanceof File) {
       const formData = new FormData();
-      formData.append('sectionType', payload.sectionType);
-      if (payload.title) formData.append('title', payload.title);
-      if (payload.subtitle) formData.append('subtitle', payload.subtitle);
-      if (payload.content) formData.append('content', typeof payload.content === 'string' ? payload.content : JSON.stringify(payload.content));
-      formData.append('layoutType', payload.layoutType);
-      if (payload.displayOrder !== undefined) formData.append('displayOrder', String(payload.displayOrder));
-      if (payload.isVisible !== undefined) formData.append('isVisible', String(payload.isVisible));
-      if (payload.backgroundColor) formData.append('backgroundColor', payload.backgroundColor);
-      if (payload.textColor) formData.append('textColor', payload.textColor);
-      if (payload.imageUrl) formData.append('imageUrl', payload.imageUrl);
-      if (payload.imageKey) formData.append('imageKey', payload.imageKey);
-      if (payload.metadata) formData.append('metadata', JSON.stringify(payload.metadata));
-      formData.append('imageFile', anyPayload.imageFile);
-      formData.append('compressionQuality', payload.compressionQuality || 'HIGH');
-      
-      const data = await this.http.post<any>("/admin/platform/landing-page/sections", formData, {
-        headers: { 'Content-Type': 'multipart/form-data' },
-      });
+      formData.append("sectionType", payload.sectionType);
+      if (payload.title) formData.append("title", payload.title);
+      if (payload.subtitle) formData.append("subtitle", payload.subtitle);
+      if (payload.content)
+        formData.append(
+          "content",
+          typeof payload.content === "string"
+            ? payload.content
+            : JSON.stringify(payload.content)
+        );
+      formData.append("layoutType", payload.layoutType);
+      if (payload.displayOrder !== undefined)
+        formData.append("displayOrder", String(payload.displayOrder));
+      if (payload.isVisible !== undefined)
+        formData.append("isVisible", String(payload.isVisible));
+      if (payload.backgroundColor)
+        formData.append("backgroundColor", payload.backgroundColor);
+      if (payload.textColor) formData.append("textColor", payload.textColor);
+      if (payload.imageUrl) formData.append("imageUrl", payload.imageUrl);
+      if (payload.imageKey) formData.append("imageKey", payload.imageKey);
+      if (payload.metadata)
+        formData.append("metadata", JSON.stringify(payload.metadata));
+      formData.append("imageFile", anyPayload.imageFile);
+      formData.append(
+        "compressionQuality",
+        payload.compressionQuality || "HIGH"
+      );
+
+      const data = await this.http.post<any>(
+        "/admin/platform/landing-page/sections",
+        formData,
+        {
+          headers: { "Content-Type": "multipart/form-data" },
+        }
+      );
       return this.mapSection(data);
     }
 
@@ -1698,7 +1931,10 @@ class PlatformLandingPageApi {
       sectionType: payload.sectionType,
       title: payload.title,
       subtitle: payload.subtitle,
-      content: typeof payload.content === 'string' ? payload.content : JSON.stringify(payload.content),
+      content:
+        typeof payload.content === "string"
+          ? payload.content
+          : JSON.stringify(payload.content),
       layoutType: payload.layoutType,
       displayOrder: payload.displayOrder,
       isVisible: payload.isVisible,
@@ -1708,63 +1944,107 @@ class PlatformLandingPageApi {
       imageKey: payload.imageKey,
       metadata: payload.metadata ? JSON.stringify(payload.metadata) : undefined,
     };
-    const data = await this.http.post<any>("/admin/platform/landing-page/sections", jsonPayload);
+    const data = await this.http.post<any>(
+      "/admin/platform/landing-page/sections",
+      jsonPayload
+    );
     return this.mapSection(data);
   }
 
-  async updateSection(id: string | number, payload: Partial<{
-    sectionType: PlatformSectionType;
-    title?: string;
-    subtitle?: string;
-    content?: any;
-    layoutType: LayoutType;
-    displayOrder?: number;
-    isVisible?: boolean;
-    backgroundColor?: string;
-    textColor?: string;
-    imageUrl?: string;
-    imageKey?: string;
-    metadata?: Record<string, any>;
-    imageFile?: File;
-  }>): Promise<PlatformSection> {
+  async updateSection(
+    id: string | number,
+    payload: Partial<{
+      sectionType: PlatformSectionType;
+      title?: string;
+      subtitle?: string;
+      content?: any;
+      layoutType: LayoutType;
+      displayOrder?: number;
+      isVisible?: boolean;
+      backgroundColor?: string;
+      textColor?: string;
+      imageUrl?: string;
+      imageKey?: string;
+      metadata?: Record<string, any>;
+      imageFile?: File;
+    }>
+  ): Promise<PlatformSection> {
     const anyPayload: any = payload as any;
     if (anyPayload.imageFile instanceof File) {
       const formData = new FormData();
-      if (anyPayload.sectionType !== undefined) formData.append('sectionType', anyPayload.sectionType);
-      if (anyPayload.title !== undefined) formData.append('title', anyPayload.title);
-      if (anyPayload.subtitle !== undefined) formData.append('subtitle', anyPayload.subtitle);
-      if (anyPayload.content !== undefined) formData.append('content', typeof anyPayload.content === 'string' ? anyPayload.content : JSON.stringify(anyPayload.content));
-      if (anyPayload.layoutType !== undefined) formData.append('layoutType', anyPayload.layoutType);
-      if (anyPayload.displayOrder !== undefined) formData.append('displayOrder', String(anyPayload.displayOrder));
-      if (anyPayload.isVisible !== undefined) formData.append('isVisible', String(anyPayload.isVisible));
-      if (anyPayload.backgroundColor !== undefined) formData.append('backgroundColor', anyPayload.backgroundColor);
-      if (anyPayload.textColor !== undefined) formData.append('textColor', anyPayload.textColor);
-      if (anyPayload.imageUrl !== undefined) formData.append('imageUrl', anyPayload.imageUrl);
-      if (anyPayload.imageKey !== undefined) formData.append('imageKey', anyPayload.imageKey);
-      if (anyPayload.metadata !== undefined) formData.append('metadata', JSON.stringify(anyPayload.metadata));
-      formData.append('imageFile', anyPayload.imageFile);
-      
-      const data = await this.http.put<any>(`/admin/platform/landing-page/sections/${id}`, formData, {
-        headers: { 'Content-Type': 'multipart/form-data' },
-      });
+      if (anyPayload.sectionType !== undefined)
+        formData.append("sectionType", anyPayload.sectionType);
+      if (anyPayload.title !== undefined)
+        formData.append("title", anyPayload.title);
+      if (anyPayload.subtitle !== undefined)
+        formData.append("subtitle", anyPayload.subtitle);
+      if (anyPayload.content !== undefined)
+        formData.append(
+          "content",
+          typeof anyPayload.content === "string"
+            ? anyPayload.content
+            : JSON.stringify(anyPayload.content)
+        );
+      if (anyPayload.layoutType !== undefined)
+        formData.append("layoutType", anyPayload.layoutType);
+      if (anyPayload.displayOrder !== undefined)
+        formData.append("displayOrder", String(anyPayload.displayOrder));
+      if (anyPayload.isVisible !== undefined)
+        formData.append("isVisible", String(anyPayload.isVisible));
+      if (anyPayload.backgroundColor !== undefined)
+        formData.append("backgroundColor", anyPayload.backgroundColor);
+      if (anyPayload.textColor !== undefined)
+        formData.append("textColor", anyPayload.textColor);
+      if (anyPayload.imageUrl !== undefined)
+        formData.append("imageUrl", anyPayload.imageUrl);
+      if (anyPayload.imageKey !== undefined)
+        formData.append("imageKey", anyPayload.imageKey);
+      if (anyPayload.metadata !== undefined)
+        formData.append("metadata", JSON.stringify(anyPayload.metadata));
+      formData.append("imageFile", anyPayload.imageFile);
+
+      const data = await this.http.put<any>(
+        `/admin/platform/landing-page/sections/${id}`,
+        formData,
+        {
+          headers: { "Content-Type": "multipart/form-data" },
+        }
+      );
       return this.mapSection(data);
     }
 
     const updatePayload: any = {};
-    if (payload.sectionType !== undefined) updatePayload.sectionType = payload.sectionType;
+    if (payload.sectionType !== undefined)
+      updatePayload.sectionType = payload.sectionType;
     if (payload.title !== undefined) updatePayload.title = payload.title;
-    if (payload.subtitle !== undefined) updatePayload.subtitle = payload.subtitle;
-    if (payload.content !== undefined) updatePayload.content = typeof payload.content === 'string' ? payload.content : JSON.stringify(payload.content);
-    if (payload.layoutType !== undefined) updatePayload.layoutType = payload.layoutType;
-    if (payload.displayOrder !== undefined) updatePayload.displayOrder = payload.displayOrder;
-    if (payload.isVisible !== undefined) updatePayload.isVisible = payload.isVisible;
-    if (payload.backgroundColor !== undefined) updatePayload.backgroundColor = payload.backgroundColor;
-    if (payload.textColor !== undefined) updatePayload.textColor = payload.textColor;
-    if (payload.imageUrl !== undefined) updatePayload.imageUrl = payload.imageUrl;
-    if (payload.imageKey !== undefined) updatePayload.imageKey = payload.imageKey;
-    if (payload.metadata !== undefined) updatePayload.metadata = JSON.stringify(payload.metadata);
+    if (payload.subtitle !== undefined)
+      updatePayload.subtitle = payload.subtitle;
+    if (payload.content !== undefined)
+      updatePayload.content =
+        typeof payload.content === "string"
+          ? payload.content
+          : JSON.stringify(payload.content);
+    if (payload.layoutType !== undefined)
+      updatePayload.layoutType = payload.layoutType;
+    if (payload.displayOrder !== undefined)
+      updatePayload.displayOrder = payload.displayOrder;
+    if (payload.isVisible !== undefined)
+      updatePayload.isVisible = payload.isVisible;
+    if (payload.backgroundColor !== undefined)
+      updatePayload.backgroundColor = payload.backgroundColor;
+    if (payload.textColor !== undefined)
+      updatePayload.textColor = payload.textColor;
+    if (payload.imageUrl !== undefined)
+      updatePayload.imageUrl = payload.imageUrl;
+    if (payload.imageKey !== undefined)
+      updatePayload.imageKey = payload.imageKey;
+    if (payload.metadata !== undefined)
+      updatePayload.metadata = JSON.stringify(payload.metadata);
 
-    const data = await this.http.put<any>(`/admin/platform/landing-page/sections/${id}`, updatePayload);
+    const data = await this.http.put<any>(
+      `/admin/platform/landing-page/sections/${id}`,
+      updatePayload
+    );
     return this.mapSection(data);
   }
 
@@ -1773,30 +2053,46 @@ class PlatformLandingPageApi {
   }
 
   async updateOrder(id: string | number, newOrder: number): Promise<void> {
-    await this.http.patch(`/admin/platform/landing-page/sections/${id}/order`, { displayOrder: newOrder });
+    await this.http.patch(`/admin/platform/landing-page/sections/${id}/order`, {
+      displayOrder: newOrder,
+    });
   }
 
-  async toggleVisibility(id: string | number, currentVisibility?: boolean): Promise<void> {
+  async toggleVisibility(
+    id: string | number,
+    currentVisibility?: boolean
+  ): Promise<void> {
     // If currentVisibility is provided, use it; otherwise fetch all sections to find the current state
     let isVisible = currentVisibility;
     if (isVisible === undefined) {
       const sections = await this.getSections();
-      const section = sections.find(s => s.id === String(id));
+      const section = sections.find((s) => s.id === String(id));
       if (!section) {
-        throw new Error('Section not found');
+        throw new Error("Section not found");
       }
       isVisible = section.isVisible;
     }
-    await this.http.patch(`/admin/platform/landing-page/sections/${id}/visibility`, { isVisible: !isVisible });
+    await this.http.patch(
+      `/admin/platform/landing-page/sections/${id}/visibility`,
+      { isVisible: !isVisible }
+    );
   }
 
-  async uploadImage(id: string | number, file: File, compressionQuality: string = 'HIGH'): Promise<{ imageUrl: string }> {
+  async uploadImage(
+    id: string | number,
+    file: File,
+    compressionQuality: string = "HIGH"
+  ): Promise<{ imageUrl: string }> {
     const formData = new FormData();
-    formData.append('imageFile', file);
-    formData.append('compressionQuality', compressionQuality);
-    const data = await this.http.post<any>(`/admin/platform/landing-page/sections/${id}/upload-image`, formData, {
-      headers: { 'Content-Type': 'multipart/form-data' },
-    });
+    formData.append("imageFile", file);
+    formData.append("compressionQuality", compressionQuality);
+    const data = await this.http.post<any>(
+      `/admin/platform/landing-page/sections/${id}/upload-image`,
+      formData,
+      {
+        headers: { "Content-Type": "multipart/form-data" },
+      }
+    );
     return { imageUrl: data.imageUrl };
   }
 
@@ -1806,7 +2102,12 @@ class PlatformLandingPageApi {
       sectionType: section.sectionType,
       title: section.title,
       subtitle: section.subtitle,
-      content: typeof section.content === 'string' ? (section.content ? JSON.parse(section.content) : {}) : section.content,
+      content:
+        typeof section.content === "string"
+          ? section.content
+            ? JSON.parse(section.content)
+            : {}
+          : section.content,
       layoutType: section.layoutType,
       displayOrder: section.displayOrder,
       isVisible: section.isVisible,
@@ -1814,7 +2115,12 @@ class PlatformLandingPageApi {
       textColor: section.textColor,
       imageUrl: section.imageUrl,
       imageKey: section.imageKey,
-      metadata: typeof section.metadata === 'string' ? (section.metadata ? JSON.parse(section.metadata) : {}) : section.metadata,
+      metadata:
+        typeof section.metadata === "string"
+          ? section.metadata
+            ? JSON.parse(section.metadata)
+            : {}
+          : section.metadata,
       createdAt: section.createdAt,
       updatedAt: section.updatedAt,
     };
@@ -1828,7 +2134,9 @@ class PanchayatWebsiteApi {
   constructor(private http: HttpClient) {}
 
   async getSections(): Promise<PanchayatWebsiteSection[]> {
-    const data = await this.http.get<{ sections: any[] }>("/panchayat/website/sections");
+    const data = await this.http.get<{ sections: any[] }>(
+      "/panchayat/website/sections"
+    );
     return data.sections.map(this.mapSection);
   }
 
@@ -1851,24 +2159,41 @@ class PanchayatWebsiteApi {
     const anyPayload: any = payload as any;
     if (anyPayload.imageFile instanceof File) {
       const formData = new FormData();
-      formData.append('sectionType', payload.sectionType);
-      if (payload.title) formData.append('title', payload.title);
-      if (payload.subtitle) formData.append('subtitle', payload.subtitle);
-      if (payload.content) formData.append('content', typeof payload.content === 'string' ? payload.content : JSON.stringify(payload.content));
-      formData.append('layoutType', payload.layoutType);
-      if (payload.displayOrder !== undefined) formData.append('displayOrder', String(payload.displayOrder));
-      if (payload.isVisible !== undefined) formData.append('isVisible', String(payload.isVisible));
-      if (payload.backgroundColor) formData.append('backgroundColor', payload.backgroundColor);
-      if (payload.textColor) formData.append('textColor', payload.textColor);
-      if (payload.imageUrl) formData.append('imageUrl', payload.imageUrl);
-      if (payload.imageKey) formData.append('imageKey', payload.imageKey);
-      if (payload.metadata) formData.append('metadata', JSON.stringify(payload.metadata));
-      formData.append('imageFile', anyPayload.imageFile);
-      formData.append('compressionQuality', payload.compressionQuality || 'HIGH');
-      
-      const data = await this.http.post<any>("/panchayat/website/sections", formData, {
-        headers: { 'Content-Type': 'multipart/form-data' },
-      });
+      formData.append("sectionType", payload.sectionType);
+      if (payload.title) formData.append("title", payload.title);
+      if (payload.subtitle) formData.append("subtitle", payload.subtitle);
+      if (payload.content)
+        formData.append(
+          "content",
+          typeof payload.content === "string"
+            ? payload.content
+            : JSON.stringify(payload.content)
+        );
+      formData.append("layoutType", payload.layoutType);
+      if (payload.displayOrder !== undefined)
+        formData.append("displayOrder", String(payload.displayOrder));
+      if (payload.isVisible !== undefined)
+        formData.append("isVisible", String(payload.isVisible));
+      if (payload.backgroundColor)
+        formData.append("backgroundColor", payload.backgroundColor);
+      if (payload.textColor) formData.append("textColor", payload.textColor);
+      if (payload.imageUrl) formData.append("imageUrl", payload.imageUrl);
+      if (payload.imageKey) formData.append("imageKey", payload.imageKey);
+      if (payload.metadata)
+        formData.append("metadata", JSON.stringify(payload.metadata));
+      formData.append("imageFile", anyPayload.imageFile);
+      formData.append(
+        "compressionQuality",
+        payload.compressionQuality || "HIGH"
+      );
+
+      const data = await this.http.post<any>(
+        "/panchayat/website/sections",
+        formData,
+        {
+          headers: { "Content-Type": "multipart/form-data" },
+        }
+      );
       return this.mapSection(data);
     }
 
@@ -1876,7 +2201,10 @@ class PanchayatWebsiteApi {
       sectionType: payload.sectionType,
       title: payload.title,
       subtitle: payload.subtitle,
-      content: typeof payload.content === 'string' ? payload.content : JSON.stringify(payload.content),
+      content:
+        typeof payload.content === "string"
+          ? payload.content
+          : JSON.stringify(payload.content),
       layoutType: payload.layoutType,
       displayOrder: payload.displayOrder,
       isVisible: payload.isVisible,
@@ -1886,63 +2214,107 @@ class PanchayatWebsiteApi {
       imageKey: payload.imageKey,
       metadata: payload.metadata ? JSON.stringify(payload.metadata) : undefined,
     };
-    const data = await this.http.post<any>("/panchayat/website/sections", jsonPayload);
+    const data = await this.http.post<any>(
+      "/panchayat/website/sections",
+      jsonPayload
+    );
     return this.mapSection(data);
   }
 
-  async updateSection(id: string | number, payload: Partial<{
-    sectionType: PanchayatSectionType;
-    title?: string;
-    subtitle?: string;
-    content?: any;
-    layoutType: LayoutType;
-    displayOrder?: number;
-    isVisible?: boolean;
-    backgroundColor?: string;
-    textColor?: string;
-    imageUrl?: string;
-    imageKey?: string;
-    metadata?: Record<string, any>;
-    imageFile?: File;
-  }>): Promise<PanchayatWebsiteSection> {
+  async updateSection(
+    id: string | number,
+    payload: Partial<{
+      sectionType: PanchayatSectionType;
+      title?: string;
+      subtitle?: string;
+      content?: any;
+      layoutType: LayoutType;
+      displayOrder?: number;
+      isVisible?: boolean;
+      backgroundColor?: string;
+      textColor?: string;
+      imageUrl?: string;
+      imageKey?: string;
+      metadata?: Record<string, any>;
+      imageFile?: File;
+    }>
+  ): Promise<PanchayatWebsiteSection> {
     const anyPayload: any = payload as any;
     if (anyPayload.imageFile instanceof File) {
       const formData = new FormData();
-      if (anyPayload.sectionType !== undefined) formData.append('sectionType', anyPayload.sectionType);
-      if (anyPayload.title !== undefined) formData.append('title', anyPayload.title);
-      if (anyPayload.subtitle !== undefined) formData.append('subtitle', anyPayload.subtitle);
-      if (anyPayload.content !== undefined) formData.append('content', typeof anyPayload.content === 'string' ? anyPayload.content : JSON.stringify(anyPayload.content));
-      if (anyPayload.layoutType !== undefined) formData.append('layoutType', anyPayload.layoutType);
-      if (anyPayload.displayOrder !== undefined) formData.append('displayOrder', String(anyPayload.displayOrder));
-      if (anyPayload.isVisible !== undefined) formData.append('isVisible', String(anyPayload.isVisible));
-      if (anyPayload.backgroundColor !== undefined) formData.append('backgroundColor', anyPayload.backgroundColor);
-      if (anyPayload.textColor !== undefined) formData.append('textColor', anyPayload.textColor);
-      if (anyPayload.imageUrl !== undefined) formData.append('imageUrl', anyPayload.imageUrl);
-      if (anyPayload.imageKey !== undefined) formData.append('imageKey', anyPayload.imageKey);
-      if (anyPayload.metadata !== undefined) formData.append('metadata', JSON.stringify(anyPayload.metadata));
-      formData.append('imageFile', anyPayload.imageFile);
-      
-      const data = await this.http.put<any>(`/panchayat/website/sections/${id}`, formData, {
-        headers: { 'Content-Type': 'multipart/form-data' },
-      });
+      if (anyPayload.sectionType !== undefined)
+        formData.append("sectionType", anyPayload.sectionType);
+      if (anyPayload.title !== undefined)
+        formData.append("title", anyPayload.title);
+      if (anyPayload.subtitle !== undefined)
+        formData.append("subtitle", anyPayload.subtitle);
+      if (anyPayload.content !== undefined)
+        formData.append(
+          "content",
+          typeof anyPayload.content === "string"
+            ? anyPayload.content
+            : JSON.stringify(anyPayload.content)
+        );
+      if (anyPayload.layoutType !== undefined)
+        formData.append("layoutType", anyPayload.layoutType);
+      if (anyPayload.displayOrder !== undefined)
+        formData.append("displayOrder", String(anyPayload.displayOrder));
+      if (anyPayload.isVisible !== undefined)
+        formData.append("isVisible", String(anyPayload.isVisible));
+      if (anyPayload.backgroundColor !== undefined)
+        formData.append("backgroundColor", anyPayload.backgroundColor);
+      if (anyPayload.textColor !== undefined)
+        formData.append("textColor", anyPayload.textColor);
+      if (anyPayload.imageUrl !== undefined)
+        formData.append("imageUrl", anyPayload.imageUrl);
+      if (anyPayload.imageKey !== undefined)
+        formData.append("imageKey", anyPayload.imageKey);
+      if (anyPayload.metadata !== undefined)
+        formData.append("metadata", JSON.stringify(anyPayload.metadata));
+      formData.append("imageFile", anyPayload.imageFile);
+
+      const data = await this.http.put<any>(
+        `/panchayat/website/sections/${id}`,
+        formData,
+        {
+          headers: { "Content-Type": "multipart/form-data" },
+        }
+      );
       return this.mapSection(data);
     }
 
     const updatePayload: any = {};
-    if (payload.sectionType !== undefined) updatePayload.sectionType = payload.sectionType;
+    if (payload.sectionType !== undefined)
+      updatePayload.sectionType = payload.sectionType;
     if (payload.title !== undefined) updatePayload.title = payload.title;
-    if (payload.subtitle !== undefined) updatePayload.subtitle = payload.subtitle;
-    if (payload.content !== undefined) updatePayload.content = typeof payload.content === 'string' ? payload.content : JSON.stringify(payload.content);
-    if (payload.layoutType !== undefined) updatePayload.layoutType = payload.layoutType;
-    if (payload.displayOrder !== undefined) updatePayload.displayOrder = payload.displayOrder;
-    if (payload.isVisible !== undefined) updatePayload.isVisible = payload.isVisible;
-    if (payload.backgroundColor !== undefined) updatePayload.backgroundColor = payload.backgroundColor;
-    if (payload.textColor !== undefined) updatePayload.textColor = payload.textColor;
-    if (payload.imageUrl !== undefined) updatePayload.imageUrl = payload.imageUrl;
-    if (payload.imageKey !== undefined) updatePayload.imageKey = payload.imageKey;
-    if (payload.metadata !== undefined) updatePayload.metadata = JSON.stringify(payload.metadata);
+    if (payload.subtitle !== undefined)
+      updatePayload.subtitle = payload.subtitle;
+    if (payload.content !== undefined)
+      updatePayload.content =
+        typeof payload.content === "string"
+          ? payload.content
+          : JSON.stringify(payload.content);
+    if (payload.layoutType !== undefined)
+      updatePayload.layoutType = payload.layoutType;
+    if (payload.displayOrder !== undefined)
+      updatePayload.displayOrder = payload.displayOrder;
+    if (payload.isVisible !== undefined)
+      updatePayload.isVisible = payload.isVisible;
+    if (payload.backgroundColor !== undefined)
+      updatePayload.backgroundColor = payload.backgroundColor;
+    if (payload.textColor !== undefined)
+      updatePayload.textColor = payload.textColor;
+    if (payload.imageUrl !== undefined)
+      updatePayload.imageUrl = payload.imageUrl;
+    if (payload.imageKey !== undefined)
+      updatePayload.imageKey = payload.imageKey;
+    if (payload.metadata !== undefined)
+      updatePayload.metadata = JSON.stringify(payload.metadata);
 
-    const data = await this.http.put<any>(`/panchayat/website/sections/${id}`, updatePayload);
+    const data = await this.http.put<any>(
+      `/panchayat/website/sections/${id}`,
+      updatePayload
+    );
     return this.mapSection(data);
   }
 
@@ -1951,30 +2323,45 @@ class PanchayatWebsiteApi {
   }
 
   async updateOrder(id: string | number, newOrder: number): Promise<void> {
-    await this.http.patch(`/panchayat/website/sections/${id}/order`, { displayOrder: newOrder });
+    await this.http.patch(`/panchayat/website/sections/${id}/order`, {
+      displayOrder: newOrder,
+    });
   }
 
-  async toggleVisibility(id: string | number, currentVisibility?: boolean): Promise<void> {
+  async toggleVisibility(
+    id: string | number,
+    currentVisibility?: boolean
+  ): Promise<void> {
     // If currentVisibility is provided, use it; otherwise fetch all sections to find the current state
     let isVisible = currentVisibility;
     if (isVisible === undefined) {
       const sections = await this.getSections();
-      const section = sections.find(s => s.id === String(id));
+      const section = sections.find((s) => s.id === String(id));
       if (!section) {
-        throw new Error('Section not found');
+        throw new Error("Section not found");
       }
       isVisible = section.isVisible;
     }
-    await this.http.patch(`/panchayat/website/sections/${id}/visibility`, { isVisible: !isVisible });
+    await this.http.patch(`/panchayat/website/sections/${id}/visibility`, {
+      isVisible: !isVisible,
+    });
   }
 
-  async uploadImage(id: string | number, file: File, compressionQuality: string = 'HIGH'): Promise<{ imageUrl: string }> {
+  async uploadImage(
+    id: string | number,
+    file: File,
+    compressionQuality: string = "HIGH"
+  ): Promise<{ imageUrl: string }> {
     const formData = new FormData();
-    formData.append('imageFile', file);
-    formData.append('compressionQuality', compressionQuality);
-    const data = await this.http.post<any>(`/panchayat/website/sections/${id}/upload-image`, formData, {
-      headers: { 'Content-Type': 'multipart/form-data' },
-    });
+    formData.append("imageFile", file);
+    formData.append("compressionQuality", compressionQuality);
+    const data = await this.http.post<any>(
+      `/panchayat/website/sections/${id}/upload-image`,
+      formData,
+      {
+        headers: { "Content-Type": "multipart/form-data" },
+      }
+    );
     return { imageUrl: data.imageUrl };
   }
 
@@ -1985,7 +2372,12 @@ class PanchayatWebsiteApi {
       sectionType: section.sectionType,
       title: section.title,
       subtitle: section.subtitle,
-      content: typeof section.content === 'string' ? (section.content ? JSON.parse(section.content) : {}) : section.content,
+      content:
+        typeof section.content === "string"
+          ? section.content
+            ? JSON.parse(section.content)
+            : {}
+          : section.content,
       layoutType: section.layoutType,
       displayOrder: section.displayOrder,
       isVisible: section.isVisible,
@@ -1993,7 +2385,12 @@ class PanchayatWebsiteApi {
       textColor: section.textColor,
       imageUrl: section.imageUrl,
       imageKey: section.imageKey,
-      metadata: typeof section.metadata === 'string' ? (section.metadata ? JSON.parse(section.metadata) : {}) : section.metadata,
+      metadata:
+        typeof section.metadata === "string"
+          ? section.metadata
+            ? JSON.parse(section.metadata)
+            : {}
+          : section.metadata,
       createdAt: section.createdAt,
       updatedAt: section.updatedAt,
     };
@@ -2007,13 +2404,20 @@ class PublicPlatformLandingPageApi {
   constructor(private http: HttpClient) {}
 
   async getSections(): Promise<PlatformSection[]> {
-    const data = await this.http.get<{ sections: any[] }>("/public/platform/landing-page");
+    const data = await this.http.get<{ sections: any[] }>(
+      "/public/platform/landing-page"
+    );
     return data.sections.map((section: any) => ({
       id: String(section.id),
       sectionType: section.sectionType,
       title: section.title,
       subtitle: section.subtitle,
-      content: typeof section.content === 'string' ? (section.content ? JSON.parse(section.content) : {}) : section.content,
+      content:
+        typeof section.content === "string"
+          ? section.content
+            ? JSON.parse(section.content)
+            : {}
+          : section.content,
       layoutType: section.layoutType,
       displayOrder: section.displayOrder,
       isVisible: section.isVisible,
@@ -2021,7 +2425,12 @@ class PublicPlatformLandingPageApi {
       textColor: section.textColor,
       imageUrl: section.imageUrl,
       imageKey: section.imageKey,
-      metadata: typeof section.metadata === 'string' ? (section.metadata ? JSON.parse(section.metadata) : {}) : section.metadata,
+      metadata:
+        typeof section.metadata === "string"
+          ? section.metadata
+            ? JSON.parse(section.metadata)
+            : {}
+          : section.metadata,
       createdAt: section.createdAt,
       updatedAt: section.updatedAt,
     }));
@@ -2035,14 +2444,21 @@ class PublicPanchayatWebsiteApi {
   constructor(private http: HttpClient) {}
 
   async getSections(slug: string): Promise<PanchayatWebsiteSection[]> {
-    const data = await this.http.get<{ sections: any[] }>(`/public/${slug}/website`);
+    const data = await this.http.get<{ sections: any[] }>(
+      `/public/${slug}/website`
+    );
     return data.sections.map((section: any) => ({
       id: String(section.id),
       panchayatId: String(section.panchayatId),
       sectionType: section.sectionType,
       title: section.title,
       subtitle: section.subtitle,
-      content: typeof section.content === 'string' ? (section.content ? JSON.parse(section.content) : {}) : section.content,
+      content:
+        typeof section.content === "string"
+          ? section.content
+            ? JSON.parse(section.content)
+            : {}
+          : section.content,
       layoutType: section.layoutType,
       displayOrder: section.displayOrder,
       isVisible: section.isVisible,
@@ -2050,7 +2466,12 @@ class PublicPanchayatWebsiteApi {
       textColor: section.textColor,
       imageUrl: section.imageUrl,
       imageKey: section.imageKey,
-      metadata: typeof section.metadata === 'string' ? (section.metadata ? JSON.parse(section.metadata) : {}) : section.metadata,
+      metadata:
+        typeof section.metadata === "string"
+          ? section.metadata
+            ? JSON.parse(section.metadata)
+            : {}
+          : section.metadata,
       createdAt: section.createdAt,
       updatedAt: section.updatedAt,
     }));
@@ -2059,8 +2480,11 @@ class PublicPanchayatWebsiteApi {
 
 export const platformLandingPageApi = new PlatformLandingPageApi(httpClient);
 export const panchayatWebsiteApi = new PanchayatWebsiteApi(httpClient);
-export const publicPlatformLandingPageApi = new PublicPlatformLandingPageApi(httpClient);
-export const publicPanchayatWebsiteApi = new PublicPanchayatWebsiteApi(httpClient);
+export const publicPlatformLandingPageApi = new PublicPlatformLandingPageApi(
+  httpClient
+);
+export const publicPanchayatWebsiteApi = new PublicPanchayatWebsiteApi(
+  httpClient
+);
 
 export type AuthUserDTO = ServerUser;
-

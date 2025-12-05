@@ -21,24 +21,31 @@ interface HeaderProps {
   onLanguageChange?: (lang: Language) => void;
 }
 
-export function Header({ variant = "platform", panchayatName, onLanguageChange }: HeaderProps) {
+export function Header({
+  variant = "platform",
+  panchayatName,
+  onLanguageChange,
+}: HeaderProps) {
   const { user } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const { t } = useTranslation();
 
-  if (location.pathname.startsWith('/admin') || location.pathname.startsWith('/panchayat/dashboard')) {
+  if (
+    location.pathname.startsWith("/admin") ||
+    location.pathname.startsWith("/panchayat/dashboard")
+  ) {
     return null;
   }
 
   const handleLogoClick = (e: React.MouseEvent) => {
-    if (location.pathname === '/') {
+    if (location.pathname === "/") {
       e.preventDefault();
-      window.scrollTo({ top: 0, behavior: 'smooth' });
+      window.scrollTo({ top: 0, behavior: "smooth" });
     } else {
       setTimeout(() => {
-        window.scrollTo({ top: 0, behavior: 'smooth' });
+        window.scrollTo({ top: 0, behavior: "smooth" });
       }, 100);
     }
   };
@@ -48,40 +55,41 @@ export function Header({ variant = "platform", panchayatName, onLanguageChange }
       setMobileMenuOpen(false);
     }
 
-    if (href.startsWith('#')) {
-      if (location.pathname === '/') {
+    if (href.startsWith("#")) {
+      if (location.pathname === "/") {
         const element = document.querySelector(href);
         if (element) {
-          element.scrollIntoView({ behavior: 'smooth' });
+          element.scrollIntoView({ behavior: "smooth" });
         }
       } else {
         navigate(`/${href}`);
         setTimeout(() => {
           const element = document.querySelector(href);
           if (element) {
-            element.scrollIntoView({ behavior: 'smooth' });
+            element.scrollIntoView({ behavior: "smooth" });
           }
         }, 100);
       }
     }
   };
 
-  const navigationItems = variant === "platform"
-    ? [
-        { label: t('nav.home'), href: "#home" },
-        { label: t('nav.features'), href: "#features" },
-        { label: t('nav.panchayats'), href: "#panchayats" },
-        { label: t('nav.news'), href: "#news" },
-        { label: t('nav.contact'), href: "#contact" },
-      ]
-    : [
-        { label: t('nav.home'), href: "#home" },
-        { label: t('nav.news'), href: "#news" },
-        { label: t('nav.schemes'), href: "#schemes" },
-        { label: t('nav.projects'), href: "#projects" },
-        { label: t('nav.gallery'), href: "#gallery" },
-        { label: t('nav.contact'), href: "#contact" },
-      ];
+  const navigationItems =
+    variant === "platform"
+      ? [
+          { label: t("nav.home"), href: "#home" },
+          { label: t("nav.features"), href: "#features" },
+          { label: t("nav.panchayats"), href: "#panchayats" },
+          { label: t("nav.news"), href: "#news" },
+          { label: t("nav.contact"), href: "#contact" },
+        ]
+      : [
+          { label: t("nav.home"), href: "#home" },
+          { label: t("nav.news"), href: "#news" },
+          { label: t("nav.schemes"), href: "#schemes" },
+          { label: t("nav.projects"), href: "#projects" },
+          { label: t("nav.gallery"), href: "#gallery" },
+          { label: t("nav.contact"), href: "#contact" },
+        ];
 
   return (
     <header className="sticky top-0 z-50 w-full border-b border-gray-200 bg-white shadow-sm">
@@ -120,16 +128,18 @@ export function Header({ variant = "platform", panchayatName, onLanguageChange }
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
                 <DropdownMenuItem onClick={() => onLanguageChange?.("en")}>
-                  English
+                  {t("panchayatWebsite.languages.english")}
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => onLanguageChange?.("mr")}>
-                  मराठी
+                  {t("panchayatWebsite.languages.marathi")}
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => onLanguageChange?.("hi")}>
-                  हिंदी
+                  {t("panchayatWebsite.languages.hindi")}
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => onLanguageChange?.("regional")}>
-                  Regional
+                <DropdownMenuItem
+                  onClick={() => onLanguageChange?.("regional")}
+                >
+                  {t("panchayatWebsite.languages.regional")}
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
@@ -140,12 +150,18 @@ export function Header({ variant = "platform", panchayatName, onLanguageChange }
                 {user ? (
                   <Button
                     onClick={() => {
-                      navigate(user.role === 'SUPER_ADMIN' ? '/admin' : '/panchayat/dashboard');
+                      navigate(
+                        user.role === "SUPER_ADMIN"
+                          ? "/admin"
+                          : "/panchayat/dashboard"
+                      );
                     }}
                     className="bg-red-600 text-white hover:bg-red-700 h-9"
                   >
                     <User className="mr-2 h-4 w-4" />
-                    <span className="hidden lg:inline">{t('nav.dashboard')}</span>
+                    <span className="hidden lg:inline">
+                      {t("nav.dashboard")}
+                    </span>
                     <span className="lg:hidden">Dashboard</span>
                   </Button>
                 ) : (
@@ -155,7 +171,7 @@ export function Header({ variant = "platform", panchayatName, onLanguageChange }
                   >
                     <Link to="/login">
                       <User className="mr-2 h-4 w-4" />
-                      <span className="hidden lg:inline">{t('nav.login')}</span>
+                      <span className="hidden lg:inline">{t("nav.login")}</span>
                       <span className="lg:hidden">Login</span>
                     </Link>
                   </Button>
@@ -166,7 +182,11 @@ export function Header({ variant = "platform", panchayatName, onLanguageChange }
             {/* Mobile Menu Trigger */}
             <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
               <SheetTrigger asChild>
-                <Button variant="ghost" size="icon" className="md:hidden h-9 w-9">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="md:hidden h-9 w-9"
+                >
                   <Menu className="h-5 w-5" />
                 </Button>
               </SheetTrigger>
@@ -175,7 +195,9 @@ export function Header({ variant = "platform", panchayatName, onLanguageChange }
                   {/* Mobile Header */}
                   <div className="px-6 py-4 border-b border-gray-200">
                     <h2 className="text-lg font-semibold text-gray-900">
-                      {variant === "platform" ? "e-GramSeva" : (panchayatName || "Panchayat")}
+                      {variant === "platform"
+                        ? "e-GramSeva"
+                        : panchayatName || "Panchayat"}
                     </h2>
                     {variant === "platform" && (
                       <p className="text-sm text-gray-600">Digital Platform</p>
@@ -199,14 +221,28 @@ export function Header({ variant = "platform", panchayatName, onLanguageChange }
                   <div className="border-t border-gray-200 p-4 space-y-4">
                     {/* Language Selector */}
                     <div>
-                      <p className="text-xs font-semibold text-gray-600 mb-2">{t('nav.language')}</p>
+                      <p className="text-xs font-semibold text-gray-600 mb-2">
+                        {t("nav.language")}
+                      </p>
                       <div className="grid grid-cols-2 gap-2">
                         {[
-                          { label: "English", lang: "en" },
-                          { label: "मराठी", lang: "mr" },
-                          { label: "हिंदी", lang: "hi" },
-                          { label: "Regional", lang: "regional" },
-                        ].map(({ label, lang }) => (
+                          {
+                            labelKey: "panchayatWebsite.languages.english",
+                            lang: "en",
+                          },
+                          {
+                            labelKey: "panchayatWebsite.languages.marathi",
+                            lang: "mr",
+                          },
+                          {
+                            labelKey: "panchayatWebsite.languages.hindi",
+                            lang: "hi",
+                          },
+                          {
+                            labelKey: "panchayatWebsite.languages.regional",
+                            lang: "regional",
+                          },
+                        ].map(({ labelKey, lang }) => (
                           <Button
                             key={lang}
                             variant="outline"
@@ -217,38 +253,41 @@ export function Header({ variant = "platform", panchayatName, onLanguageChange }
                             }}
                             className="text-xs"
                           >
-                            {label}
+                            {t(labelKey)}
                           </Button>
                         ))}
                       </div>
                     </div>
 
                     {/* Login/Dashboard Button */}
-                    {variant === "platform" && (
-                      user ? (
+                    {variant === "platform" &&
+                      (user ? (
                         <Button
                           onClick={() => {
-                            navigate(user.role === 'SUPER_ADMIN' ? '/admin' : '/panchayat/dashboard');
+                            navigate(
+                              user.role === "SUPER_ADMIN"
+                                ? "/admin"
+                                : "/panchayat/dashboard"
+                            );
                             setMobileMenuOpen(false);
                           }}
                           className="w-full bg-red-600 text-white hover:bg-red-700"
                         >
                           <User className="mr-2 h-4 w-4" />
-                          {t('nav.dashboard')}
+                          {t("nav.dashboard")}
                         </Button>
                       ) : (
                         <Button
                           onClick={() => {
-                            navigate('/login');
+                            navigate("/login");
                             setMobileMenuOpen(false);
                           }}
                           className="w-full bg-red-600 text-white hover:bg-red-700"
                         >
                           <User className="mr-2 h-4 w-4" />
-                          {t('nav.login')}
+                          {t("nav.login")}
                         </Button>
-                      )
-                    )}
+                      ))}
                   </div>
                 </div>
               </SheetContent>

@@ -256,6 +256,13 @@
       "spreadAcross": "residents spread across",
       "committedTo": "we are committed to sustainable development, preserving our traditions while embracing modern governance practices."
     }
+  },
+  "logo": {
+    "governmentOfIndia": "Government of India",
+    "governmentOfIndiaHindi": "भारत सरकार",
+    "eGramSeva": "e-GramSeva",
+    "eGramSevaDevanagari": "ईग्रामसेवा",
+    "digitalPanchayatService": "Digital Panchayat Service",
+    "digitalPanchayatServiceDevanagari": "डिजिटल पंचायत सेवा"
   }
 }
-

@@ -23,8 +23,8 @@ export interface PaginatedResponse<T> {
 }
 
 // User & Auth Types
-export type UserRole = 'SUPER_ADMIN' | 'PANCHAYAT_ADMIN' | 'PANCHAYAT_MEMBER';
-export type UserStatus = 'ACTIVE' | 'INACTIVE' | 'SUSPENDED';
+export type UserRole = "SUPER_ADMIN" | "PANCHAYAT_ADMIN" | "PANCHAYAT_MEMBER";
+export type UserStatus = "ACTIVE" | "INACTIVE" | "SUSPENDED";
 
 export interface User {
   userId: number;
@@ -64,7 +64,7 @@ export interface RegisterRequest {
 }
 
 // Panchayat Types
-export type PanchayatStatus = 'ACTIVE' | 'INACTIVE' | 'SUSPENDED' | 'DELETED';
+export type PanchayatStatus = "ACTIVE" | "INACTIVE" | "SUSPENDED" | "DELETED";
 
 export interface Panchayat {
   panchayatId: number;
@@ -112,7 +112,7 @@ export interface CreatePanchayatRequest {
 }
 
 // Post Types
-export type PostStatus = 'DRAFT' | 'PUBLISHED';
+export type PostStatus = "DRAFT" | "PUBLISHED";
 
 export interface Post {
   postId: number;
@@ -216,4 +216,3 @@ export interface ResetPasswordRequest {
   password: string;
   token: string;
 }
-

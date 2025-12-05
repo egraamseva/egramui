@@ -40,19 +40,84 @@ interface SidebarItem {
 }
 
 const sidebarItems: SidebarItem[] = [
-  { id: "dashboard", translationKey: "sidebar.dashboard", icon: LayoutDashboard, path: "/panchayat/dashboard" },
-  { id: "posts", translationKey: "sidebar.posts", icon: Megaphone, path: "/panchayat/dashboard/posts" },
-  { id: "announcements", translationKey: "sidebar.announcements", icon: FileText, path: "/panchayat/dashboard/announcements" },
-  { id: "schemes", translationKey: "sidebar.schemes", icon: Users, path: "/panchayat/dashboard/schemes" },
-  { id: "gallery", translationKey: "sidebar.gallery", icon: ImageIcon, path: "/panchayat/dashboard/gallery" },
-  { id: "albums", translationKey: "sidebar.albums", icon: ImageIcon, path: "/panchayat/dashboard/albums" },
-  { id: "newsletters", translationKey: "sidebar.newsletters", icon: FileText, path: "/panchayat/dashboard/newsletters" },
-  { id: "documents", translationKey: "sidebar.documents", icon: FileText, path: "/panchayat/dashboard/documents" },
-  { id: "comments", translationKey: "sidebar.comments", icon: MessageSquare, path: "/panchayat/dashboard/comments" },
-  { id: "team", translationKey: "sidebar.team", icon: Users, path: "/panchayat/dashboard/team" },
-  { id: "analytics", translationKey: "sidebar.analytics", icon: BarChart3, path: "/panchayat/dashboard/analytics" },
-  { id: "website", translationKey: "sidebar.website", icon: Globe, path: "/panchayat/dashboard/website" },
-  { id: "settings", translationKey: "sidebar.settings", icon: Settings, path: "/panchayat/dashboard/settings" },
+  {
+    id: "dashboard",
+    translationKey: "sidebar.dashboard",
+    icon: LayoutDashboard,
+    path: "/panchayat/dashboard",
+  },
+  {
+    id: "posts",
+    translationKey: "sidebar.posts",
+    icon: Megaphone,
+    path: "/panchayat/dashboard/posts",
+  },
+  {
+    id: "announcements",
+    translationKey: "sidebar.announcements",
+    icon: FileText,
+    path: "/panchayat/dashboard/announcements",
+  },
+  {
+    id: "schemes",
+    translationKey: "sidebar.schemes",
+    icon: Users,
+    path: "/panchayat/dashboard/schemes",
+  },
+  {
+    id: "gallery",
+    translationKey: "sidebar.gallery",
+    icon: ImageIcon,
+    path: "/panchayat/dashboard/gallery",
+  },
+  {
+    id: "albums",
+    translationKey: "sidebar.albums",
+    icon: ImageIcon,
+    path: "/panchayat/dashboard/albums",
+  },
+  {
+    id: "newsletters",
+    translationKey: "sidebar.newsletters",
+    icon: FileText,
+    path: "/panchayat/dashboard/newsletters",
+  },
+  {
+    id: "documents",
+    translationKey: "sidebar.documents",
+    icon: FileText,
+    path: "/panchayat/dashboard/documents",
+  },
+  {
+    id: "comments",
+    translationKey: "sidebar.comments",
+    icon: MessageSquare,
+    path: "/panchayat/dashboard/comments",
+  },
+  {
+    id: "team",
+    translationKey: "sidebar.team",
+    icon: Users,
+    path: "/panchayat/dashboard/team",
+  },
+  {
+    id: "analytics",
+    translationKey: "sidebar.analytics",
+    icon: BarChart3,
+    path: "/panchayat/dashboard/analytics",
+  },
+  {
+    id: "website",
+    translationKey: "sidebar.website",
+    icon: Globe,
+    path: "/panchayat/dashboard/website",
+  },
+  {
+    id: "settings",
+    translationKey: "sidebar.settings",
+    icon: Settings,
+    path: "/panchayat/dashboard/settings",
+  },
 ];
 
 export function SachivDashboardLayout() {
@@ -96,16 +161,22 @@ export function SachivDashboardLayout() {
             <div className="flex h-full w-full items-center justify-center rounded-md bg-white">
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
                 <circle cx="12" cy="12" r="10" fill="#138808" />
-                <path d="M12 4 L12 20 M4 12 L20 12" stroke="white" strokeWidth="2" />
+                <path
+                  d="M12 4 L12 20 M4 12 L20 12"
+                  stroke="white"
+                  strokeWidth="2"
+                />
                 <circle cx="12" cy="12" r="3" fill="#FF9933" />
               </svg>
             </div>
           </div>
           <div>
             <h3 className="text-sm font-semibold text-[#1B2B5E]">
-              {user?.panchayatName || "Panchayat"} {t('sidebar.panchayatGP')}
+              {user?.panchayatName || "Panchayat"} {t("sidebar.panchayatGP")}
             </h3>
-            <p className="text-xs text-[#666]">{t('sidebar.sachivDashboard')}</p>
+            <p className="text-xs text-[#666]">
+              {t("sidebar.sachivDashboard")}
+            </p>
           </div>
         </div>
         <nav className="space-y-1 p-4">
@@ -142,16 +213,22 @@ export function SachivDashboardLayout() {
               <div className="flex h-full w-full items-center justify-center rounded-md bg-white">
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
                   <circle cx="12" cy="12" r="10" fill="#138808" />
-                  <path d="M12 4 L12 20 M4 12 L20 12" stroke="white" strokeWidth="2" />
+                  <path
+                    d="M12 4 L12 20 M4 12 L20 12"
+                    stroke="white"
+                    strokeWidth="2"
+                  />
                   <circle cx="12" cy="12" r="3" fill="#FF9933" />
                 </svg>
               </div>
             </div>
             <div>
               <h3 className="text-sm font-semibold text-[#1B2B5E]">
-                {user?.panchayatName || "Panchayat"} {t('sidebar.panchayatGP')}
+                {user?.panchayatName || "Panchayat"} {t("sidebar.panchayatGP")}
               </h3>
-              <p className="text-xs text-[#666]">{t('sidebar.sachivDashboard')}</p>
+              <p className="text-xs text-[#666]">
+                {t("sidebar.sachivDashboard")}
+              </p>
             </div>
           </div>
           <Button
@@ -203,10 +280,10 @@ export function SachivDashboardLayout() {
             </Button>
             <div className="flex-1 min-w-0">
               <h2 className="text-base sm:text-lg font-semibold truncate">
-                {t('sidebar.welcomeBack', { name: user?.name || 'User' })}
+                {t("sidebar.welcomeBack", { name: user?.name || "User" })}
               </h2>
               <p className="text-xs sm:text-sm text-muted-foreground hidden sm:block">
-                {t('sidebar.todayOverview')}
+                {t("sidebar.todayOverview")}
               </p>
             </div>
           </div>
@@ -220,16 +297,18 @@ export function SachivDashboardLayout() {
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
                 <DropdownMenuItem onClick={() => i18n.changeLanguage("en")}>
-                  English
+                  {t("panchayatWebsite.languages.english")}
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => i18n.changeLanguage("mr")}>
-                  मराठी
+                  {t("panchayatWebsite.languages.marathi")}
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => i18n.changeLanguage("hi")}>
-                  हिंदी
+                  {t("panchayatWebsite.languages.hindi")}
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => i18n.changeLanguage("regional")}>
-                  Regional
+                <DropdownMenuItem
+                  onClick={() => i18n.changeLanguage("regional")}
+                >
+                  {t("panchayatWebsite.languages.regional")}
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
@@ -238,18 +317,22 @@ export function SachivDashboardLayout() {
               variant="outline"
               size="sm"
               onClick={() =>
-                navigate(`/panchayat/${user?.panchayatName?.toLowerCase() || "demo"}`)
+                navigate(
+                  `/panchayat/${user?.panchayatName?.toLowerCase() || "demo"}`
+                )
               }
               className="hidden sm:inline-flex"
             >
               <Eye className="mr-2 h-4 w-4" />
-              {t('sidebar.viewWebsite')}
+              {t("sidebar.viewWebsite")}
             </Button>
             <Button
               variant="outline"
               size="icon"
               onClick={() =>
-                navigate(`/panchayat/${user?.panchayatName?.toLowerCase() || "demo"}`)
+                navigate(
+                  `/panchayat/${user?.panchayatName?.toLowerCase() || "demo"}`
+                )
               }
               className="sm:hidden"
             >
@@ -262,7 +345,7 @@ export function SachivDashboardLayout() {
               className="hidden sm:inline-flex"
             >
               <LogOut className="mr-2 h-4 w-4" />
-              {t('sidebar.logout')}
+              {t("sidebar.logout")}
             </Button>
             <Button
               variant="outline"
@@ -274,7 +357,10 @@ export function SachivDashboardLayout() {
             </Button>
             <Avatar className="hidden sm:flex">
               <AvatarFallback className="bg-primary text-white">
-                {user?.name?.split(" ").map((n) => n[0]).join("") || "U"}
+                {user?.name
+                  ?.split(" ")
+                  .map((n) => n[0])
+                  .join("") || "U"}
               </AvatarFallback>
             </Avatar>
           </div>
@@ -288,4 +374,3 @@ export function SachivDashboardLayout() {
     </div>
   );
 }
-

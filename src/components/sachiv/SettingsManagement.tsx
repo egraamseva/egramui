@@ -5,7 +5,13 @@
 
 import { useState, useEffect } from "react";
 import { Upload, Save, Mail, Phone, MapPin, X } from "lucide-react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "../ui/card";
 import { Button } from "../ui/button";
 import { Input } from "../ui/input";
 import { Label } from "../ui/label";
@@ -52,7 +58,7 @@ export function SettingsManagement({ panchayatId }: SettingsManagementProps) {
     if (!settings) return;
     setSaving(true);
     try {
-      const updated = await settingsAPI.updateHero( settings.hero);
+      const updated = await settingsAPI.updateHero(settings.hero);
       setSettings(updated);
       toast.success("Hero section updated successfully");
     } catch (error: any) {
@@ -67,7 +73,7 @@ export function SettingsManagement({ panchayatId }: SettingsManagementProps) {
     if (!settings) return;
     setSaving(true);
     try {
-      const updated = await settingsAPI.updateAbout( settings.about);
+      const updated = await settingsAPI.updateAbout(settings.about);
       setSettings(updated);
       toast.success("About section updated successfully");
     } catch (error: any) {
@@ -82,7 +88,7 @@ export function SettingsManagement({ panchayatId }: SettingsManagementProps) {
     if (!settings) return;
     setSaving(true);
     try {
-      const updated = await settingsAPI.updateContact( settings.contact);
+      const updated = await settingsAPI.updateContact(settings.contact);
       setSettings(updated);
       toast.success("Contact information updated successfully");
     } catch (error: any) {
@@ -114,7 +120,7 @@ export function SettingsManagement({ panchayatId }: SettingsManagementProps) {
     if (!file) return;
     setSaving(true);
     try {
-      const updated = await settingsAPI.uploadLogo( file);
+      const updated = await settingsAPI.uploadLogo(file);
       setSettings(updated);
       toast.success("Logo uploaded successfully");
     } catch (error: any) {
@@ -128,7 +134,7 @@ export function SettingsManagement({ panchayatId }: SettingsManagementProps) {
     if (!file) return;
     setSaving(true);
     try {
-      const updated = await settingsAPI.uploadHeroImage( file);
+      const updated = await settingsAPI.uploadHeroImage(file);
       setSettings(updated);
       toast.success("Hero image uploaded successfully");
     } catch (error: any) {
@@ -152,25 +158,61 @@ export function SettingsManagement({ panchayatId }: SettingsManagementProps) {
   return (
     <div className="space-y-4 sm:space-y-6">
       <div>
-        <h2 className="text-xl sm:text-2xl font-bold text-[#1B2B5E]">Website Settings</h2>
-        <p className="text-sm sm:text-base text-[#666] mt-1">Customize your panchayat website appearance and content</p>
+        <h2 className="text-xl sm:text-2xl font-bold text-[#1B2B5E]">
+          Website Settings
+        </h2>
+        <p className="text-sm sm:text-base text-[#666] mt-1">
+          Customize your panchayat website appearance and content
+        </p>
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
         <TabsList className="w-full h-auto justify-start overflow-x-auto overflow-y-hidden scrollbar-hide md:flex-wrap md:justify-start">
-          <TabsTrigger value="basic" className="whitespace-nowrap text-xs sm:text-sm">Basic Info</TabsTrigger>
-          <TabsTrigger value="hero" className="whitespace-nowrap text-xs sm:text-sm">Hero</TabsTrigger>
-          <TabsTrigger value="about" className="whitespace-nowrap text-xs sm:text-sm">About</TabsTrigger>
-          <TabsTrigger value="contact" className="whitespace-nowrap text-xs sm:text-sm">Contact</TabsTrigger>
-          <TabsTrigger value="branding" className="whitespace-nowrap text-xs sm:text-sm">Branding</TabsTrigger>
-          <TabsTrigger value="theme" className="whitespace-nowrap text-xs sm:text-sm">Theme</TabsTrigger>
+          <TabsTrigger
+            value="basic"
+            className="whitespace-nowrap text-xs sm:text-sm"
+          >
+            Basic Info
+          </TabsTrigger>
+          <TabsTrigger
+            value="hero"
+            className="whitespace-nowrap text-xs sm:text-sm"
+          >
+            Hero
+          </TabsTrigger>
+          <TabsTrigger
+            value="about"
+            className="whitespace-nowrap text-xs sm:text-sm"
+          >
+            About
+          </TabsTrigger>
+          <TabsTrigger
+            value="contact"
+            className="whitespace-nowrap text-xs sm:text-sm"
+          >
+            Contact
+          </TabsTrigger>
+          <TabsTrigger
+            value="branding"
+            className="whitespace-nowrap text-xs sm:text-sm"
+          >
+            Branding
+          </TabsTrigger>
+          <TabsTrigger
+            value="theme"
+            className="whitespace-nowrap text-xs sm:text-sm"
+          >
+            Theme
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="basic" className="space-y-4">
           <Card>
             <CardHeader>
               <CardTitle>Basic Information</CardTitle>
-              <CardDescription>Panchayat demographics and location</CardDescription>
+              <CardDescription>
+                Panchayat demographics and location
+              </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
@@ -179,14 +221,18 @@ export function SettingsManagement({ panchayatId }: SettingsManagementProps) {
                   <Input
                     id="population"
                     type="number"
-                    value={settings.basicInfo?.population || ''}
-                    onChange={(e) => setSettings({
-                      ...settings,
-                      basicInfo: {
-                        ...settings.basicInfo,
-                        population: e.target.value ? parseInt(e.target.value) : undefined
-                      }
-                    })}
+                    value={settings.basicInfo?.population || ""}
+                    onChange={(e) =>
+                      setSettings({
+                        ...settings,
+                        basicInfo: {
+                          ...settings.basicInfo,
+                          population: e.target.value
+                            ? parseInt(e.target.value)
+                            : undefined,
+                        },
+                      })
+                    }
                     placeholder="Enter population"
                   />
                 </div>
@@ -194,14 +240,16 @@ export function SettingsManagement({ panchayatId }: SettingsManagementProps) {
                   <Label htmlFor="area">Area (km²)</Label>
                   <Input
                     id="area"
-                    value={settings.basicInfo?.area || ''}
-                    onChange={(e) => setSettings({
-                      ...settings,
-                      basicInfo: {
-                        ...settings.basicInfo,
-                        area: e.target.value
-                      }
-                    })}
+                    value={settings.basicInfo?.area || ""}
+                    onChange={(e) =>
+                      setSettings({
+                        ...settings,
+                        basicInfo: {
+                          ...settings.basicInfo,
+                          area: e.target.value,
+                        },
+                      })
+                    }
                     placeholder="e.g., 12.5"
                   />
                 </div>
@@ -210,14 +258,18 @@ export function SettingsManagement({ panchayatId }: SettingsManagementProps) {
                   <Input
                     id="wards"
                     type="number"
-                    value={settings.basicInfo?.wards || ''}
-                    onChange={(e) => setSettings({
-                      ...settings,
-                      basicInfo: {
-                        ...settings.basicInfo,
-                        wards: e.target.value ? parseInt(e.target.value) : undefined
-                      }
-                    })}
+                    value={settings.basicInfo?.wards || ""}
+                    onChange={(e) =>
+                      setSettings({
+                        ...settings,
+                        basicInfo: {
+                          ...settings.basicInfo,
+                          wards: e.target.value
+                            ? parseInt(e.target.value)
+                            : undefined,
+                        },
+                      })
+                    }
                     placeholder="Enter number of wards"
                   />
                 </div>
@@ -226,14 +278,18 @@ export function SettingsManagement({ panchayatId }: SettingsManagementProps) {
                   <Input
                     id="establishedYear"
                     type="number"
-                    value={settings.basicInfo?.establishedYear || ''}
-                    onChange={(e) => setSettings({
-                      ...settings,
-                      basicInfo: {
-                        ...settings.basicInfo,
-                        establishedYear: e.target.value ? parseInt(e.target.value) : undefined
-                      }
-                    })}
+                    value={settings.basicInfo?.establishedYear || ""}
+                    onChange={(e) =>
+                      setSettings({
+                        ...settings,
+                        basicInfo: {
+                          ...settings.basicInfo,
+                          establishedYear: e.target.value
+                            ? parseInt(e.target.value)
+                            : undefined,
+                        },
+                      })
+                    }
                     placeholder="e.g., 1995"
                     min="1900"
                     max={new Date().getFullYear()}
@@ -241,14 +297,16 @@ export function SettingsManagement({ panchayatId }: SettingsManagementProps) {
                 </div>
               </div>
               <LocationIQAutocomplete
-                value={settings.basicInfo?.mapCoordinates || ''}
-                onChange={(value) => setSettings({
-                  ...settings,
-                  basicInfo: {
-                    ...settings.basicInfo,
-                    mapCoordinates: value
-                  }
-                })}
+                value={settings.basicInfo?.mapCoordinates || ""}
+                onChange={(value) =>
+                  setSettings({
+                    ...settings,
+                    basicInfo: {
+                      ...settings.basicInfo,
+                      mapCoordinates: value,
+                    },
+                  })
+                }
                 label={
                   <>
                     <MapPin className="h-4 w-4 inline mr-2" />
@@ -258,7 +316,11 @@ export function SettingsManagement({ panchayatId }: SettingsManagementProps) {
                 id="basic-mapCoordinates"
                 placeholder="Search for your panchayat office location..."
               />
-              <Button type="button" onClick={(e) => handleSaveBasicInfo(e)} disabled={saving}>
+              <Button
+                type="button"
+                onClick={(e) => handleSaveBasicInfo(e)}
+                disabled={saving}
+              >
                 <Save className="h-4 w-4 mr-2" />
                 {saving ? "Saving..." : "Save Changes"}
               </Button>
@@ -270,7 +332,9 @@ export function SettingsManagement({ panchayatId }: SettingsManagementProps) {
           <Card>
             <CardHeader>
               <CardTitle>Hero Section</CardTitle>
-              <CardDescription>Main banner section of your website</CardDescription>
+              <CardDescription>
+                Main banner section of your website
+              </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="space-y-2">
@@ -278,7 +342,12 @@ export function SettingsManagement({ panchayatId }: SettingsManagementProps) {
                 <Input
                   id="hero-title"
                   value={settings.hero.title}
-                  onChange={(e) => setSettings({ ...settings, hero: { ...settings.hero, title: e.target.value } })}
+                  onChange={(e) =>
+                    setSettings({
+                      ...settings,
+                      hero: { ...settings.hero, title: e.target.value },
+                    })
+                  }
                 />
               </div>
               <div className="space-y-2">
@@ -286,7 +355,12 @@ export function SettingsManagement({ panchayatId }: SettingsManagementProps) {
                 <Input
                   id="hero-subtitle"
                   value={settings.hero.subtitle}
-                  onChange={(e) => setSettings({ ...settings, hero: { ...settings.hero, subtitle: e.target.value } })}
+                  onChange={(e) =>
+                    setSettings({
+                      ...settings,
+                      hero: { ...settings.hero, subtitle: e.target.value },
+                    })
+                  }
                 />
               </div>
               <div className="space-y-2">
@@ -294,7 +368,12 @@ export function SettingsManagement({ panchayatId }: SettingsManagementProps) {
                 <Textarea
                   id="hero-description"
                   value={settings.hero.description}
-                  onChange={(e) => setSettings({ ...settings, hero: { ...settings.hero, description: e.target.value } })}
+                  onChange={(e) =>
+                    setSettings({
+                      ...settings,
+                      hero: { ...settings.hero, description: e.target.value },
+                    })
+                  }
                   rows={4}
                 />
               </div>
@@ -302,7 +381,7 @@ export function SettingsManagement({ panchayatId }: SettingsManagementProps) {
                 <Label>Hero Image</Label>
                 <div className="flex items-center gap-4">
                   {settings.hero.image && (
-                    <div 
+                    <div
                       className="relative w-32 h-32 rounded-lg overflow-hidden border cursor-pointer"
                       onClick={() => {
                         setSelectedImageUrl(settings.hero.image || "");
@@ -329,7 +408,9 @@ export function SettingsManagement({ panchayatId }: SettingsManagementProps) {
                     />
                     <Button
                       variant="outline"
-                      onClick={() => document.getElementById("hero-image-upload")?.click()}
+                      onClick={() =>
+                        document.getElementById("hero-image-upload")?.click()
+                      }
                     >
                       <Upload className="h-4 w-4 mr-2" />
                       {settings.hero.image ? "Change Image" : "Upload Image"}
@@ -337,7 +418,11 @@ export function SettingsManagement({ panchayatId }: SettingsManagementProps) {
                   </div>
                 </div>
               </div>
-              <Button type="button" onClick={(e) => handleSaveHero(e)} disabled={saving}>
+              <Button
+                type="button"
+                onClick={(e) => handleSaveHero(e)}
+                disabled={saving}
+              >
                 <Save className="h-4 w-4 mr-2" />
                 {saving ? "Saving..." : "Save Changes"}
               </Button>
@@ -349,7 +434,9 @@ export function SettingsManagement({ panchayatId }: SettingsManagementProps) {
           <Card>
             <CardHeader>
               <CardTitle>About Section</CardTitle>
-              <CardDescription>Information about your panchayat</CardDescription>
+              <CardDescription>
+                Information about your panchayat
+              </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="space-y-2">
@@ -357,7 +444,12 @@ export function SettingsManagement({ panchayatId }: SettingsManagementProps) {
                 <Input
                   id="about-title"
                   value={settings.about.title}
-                  onChange={(e) => setSettings({ ...settings, about: { ...settings.about, title: e.target.value } })}
+                  onChange={(e) =>
+                    setSettings({
+                      ...settings,
+                      about: { ...settings.about, title: e.target.value },
+                    })
+                  }
                 />
               </div>
               <div className="space-y-2">
@@ -365,7 +457,12 @@ export function SettingsManagement({ panchayatId }: SettingsManagementProps) {
                 <Textarea
                   id="about-content"
                   value={settings.about.content}
-                  onChange={(e) => setSettings({ ...settings, about: { ...settings.about, content: e.target.value } })}
+                  onChange={(e) =>
+                    setSettings({
+                      ...settings,
+                      about: { ...settings.about, content: e.target.value },
+                    })
+                  }
                   rows={6}
                 />
               </div>
@@ -379,15 +476,23 @@ export function SettingsManagement({ panchayatId }: SettingsManagementProps) {
                         onChange={(e) => {
                           const newFeatures = [...settings.about.features];
                           newFeatures[index] = e.target.value;
-                          setSettings({ ...settings, about: { ...settings.about, features: newFeatures } });
+                          setSettings({
+                            ...settings,
+                            about: { ...settings.about, features: newFeatures },
+                          });
                         }}
                       />
                       <Button
                         variant="ghost"
                         size="icon"
                         onClick={() => {
-                          const newFeatures = settings.about.features.filter((_, i) => i !== index);
-                          setSettings({ ...settings, about: { ...settings.about, features: newFeatures } });
+                          const newFeatures = settings.about.features.filter(
+                            (_, i) => i !== index
+                          );
+                          setSettings({
+                            ...settings,
+                            about: { ...settings.about, features: newFeatures },
+                          });
                         }}
                       >
                         <X className="h-4 w-4" />
@@ -399,7 +504,10 @@ export function SettingsManagement({ panchayatId }: SettingsManagementProps) {
                     onClick={() => {
                       setSettings({
                         ...settings,
-                        about: { ...settings.about, features: [...settings.about.features, ""] },
+                        about: {
+                          ...settings.about,
+                          features: [...settings.about.features, ""],
+                        },
                       });
                     }}
                   >
@@ -407,7 +515,11 @@ export function SettingsManagement({ panchayatId }: SettingsManagementProps) {
                   </Button>
                 </div>
               </div>
-              <Button type="button" onClick={(e) => handleSaveAbout(e)} disabled={saving}>
+              <Button
+                type="button"
+                onClick={(e) => handleSaveAbout(e)}
+                disabled={saving}
+              >
                 <Save className="h-4 w-4 mr-2" />
                 {saving ? "Saving..." : "Save Changes"}
               </Button>
@@ -419,7 +531,9 @@ export function SettingsManagement({ panchayatId }: SettingsManagementProps) {
           <Card>
             <CardHeader>
               <CardTitle>Contact Information</CardTitle>
-              <CardDescription>Update contact details for your panchayat</CardDescription>
+              <CardDescription>
+                Update contact details for your panchayat
+              </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="space-y-2">
@@ -430,7 +544,12 @@ export function SettingsManagement({ panchayatId }: SettingsManagementProps) {
                 <Textarea
                   id="contact-address"
                   value={settings.contact.address}
-                  onChange={(e) => setSettings({ ...settings, contact: { ...settings.contact, address: e.target.value } })}
+                  onChange={(e) =>
+                    setSettings({
+                      ...settings,
+                      contact: { ...settings.contact, address: e.target.value },
+                    })
+                  }
                   rows={3}
                 />
               </div>
@@ -442,7 +561,12 @@ export function SettingsManagement({ panchayatId }: SettingsManagementProps) {
                 <Input
                   id="contact-phone"
                   value={settings.contact.phone}
-                  onChange={(e) => setSettings({ ...settings, contact: { ...settings.contact, phone: e.target.value } })}
+                  onChange={(e) =>
+                    setSettings({
+                      ...settings,
+                      contact: { ...settings.contact, phone: e.target.value },
+                    })
+                  }
                 />
               </div>
               <div className="space-y-2">
@@ -454,7 +578,12 @@ export function SettingsManagement({ panchayatId }: SettingsManagementProps) {
                   id="contact-email"
                   type="email"
                   value={settings.contact.email}
-                  onChange={(e) => setSettings({ ...settings, contact: { ...settings.contact, email: e.target.value } })}
+                  onChange={(e) =>
+                    setSettings({
+                      ...settings,
+                      contact: { ...settings.contact, email: e.target.value },
+                    })
+                  }
                 />
               </div>
               <div className="space-y-2">
@@ -462,19 +591,29 @@ export function SettingsManagement({ panchayatId }: SettingsManagementProps) {
                 <Textarea
                   id="contact-hours"
                   value={settings.contact.officeHours}
-                  onChange={(e) => setSettings({ ...settings, contact: { ...settings.contact, officeHours: e.target.value } })}
+                  onChange={(e) =>
+                    setSettings({
+                      ...settings,
+                      contact: {
+                        ...settings.contact,
+                        officeHours: e.target.value,
+                      },
+                    })
+                  }
                   rows={3}
                 />
               </div>
               <LocationIQAutocomplete
-                value={settings.contact?.mapCoordinates || ''}
-                onChange={(value) => setSettings({
-                  ...settings,
-                  contact: {
-                    ...settings.contact,
-                    mapCoordinates: value
-                  }
-                })}
+                value={settings.contact?.mapCoordinates || ""}
+                onChange={(value) =>
+                  setSettings({
+                    ...settings,
+                    contact: {
+                      ...settings.contact,
+                      mapCoordinates: value,
+                    },
+                  })
+                }
                 label={
                   <>
                     <MapPin className="h-4 w-4 inline mr-2" />
@@ -484,7 +623,11 @@ export function SettingsManagement({ panchayatId }: SettingsManagementProps) {
                 id="contact-mapCoordinates"
                 placeholder="Search for your panchayat office location..."
               />
-              <Button type="button" onClick={(e) => handleSaveContact(e)} disabled={saving}>
+              <Button
+                type="button"
+                onClick={(e) => handleSaveContact(e)}
+                disabled={saving}
+              >
                 <Save className="h-4 w-4 mr-2" />
                 {saving ? "Saving..." : "Save Changes"}
               </Button>
@@ -503,7 +646,7 @@ export function SettingsManagement({ panchayatId }: SettingsManagementProps) {
                 <Label>Logo</Label>
                 <div className="flex items-center gap-4">
                   {settings.logo && (
-                    <div 
+                    <div
                       className="relative w-32 h-32 rounded-lg overflow-hidden border border-[#E5E5E5] flex items-center justify-center bg-[#F5F5F5] cursor-pointer"
                       onClick={() => {
                         setSelectedImageUrl(settings.logo || "");
@@ -530,7 +673,9 @@ export function SettingsManagement({ panchayatId }: SettingsManagementProps) {
                     />
                     <Button
                       variant="outline"
-                      onClick={() => document.getElementById("logo-upload")?.click()}
+                      onClick={() =>
+                        document.getElementById("logo-upload")?.click()
+                      }
                     >
                       <Upload className="h-4 w-4 mr-2" />
                       {settings.logo ? "Change Logo" : "Upload Logo"}
@@ -546,10 +691,12 @@ export function SettingsManagement({ panchayatId }: SettingsManagementProps) {
           <Card>
             <CardHeader>
               <CardTitle>Website Theme</CardTitle>
-              <CardDescription>Choose a color theme for your panchayat website</CardDescription>
+              <CardDescription>
+                Choose a color theme for your panchayat website
+              </CardDescription>
             </CardHeader>
             <CardContent>
-              <ThemeSelector 
+              <ThemeSelector
                 currentThemeId={settings.themeId}
                 onThemeChange={(themeId) => {
                   setSettings({ ...settings, themeId });

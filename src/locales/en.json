@@ -24,6 +24,7 @@
     "searchPlaceholder": "Search your Panchayat by name or district...",
     "searchButton": "Search"
   },
+  "heroImage": "Hero Image",
   "stats": {
     "activePanchayats": "Active Panchayats",
     "citizensReached": "Citizens Reached",
@@ -1007,6 +1008,13 @@
       "title": "Panchayat Website",
       "subtitle": "Customize your public website sections"
     }
+  },
+  "logo": {
+    "governmentOfIndia": "Government of India",
+    "governmentOfIndiaHindi": "भारत सरकार",
+    "eGramSeva": "e-GramSeva",
+    "eGramSevaDevanagari": "ईग्रामसेवा",
+    "digitalPanchayatService": "Digital Panchayat Service",
+    "digitalPanchayatServiceDevanagari": "डिजिटल पंचायत सेवा"
   }
 }
-

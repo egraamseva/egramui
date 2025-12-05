@@ -2,7 +2,12 @@
  * Shared TypeScript types and interfaces for the e-GramSeva application
  */
 
-export type PageType = "landing" | "registration" | "panchayat-demo" | "dashboard" | "success";
+export type PageType =
+  | "landing"
+  | "registration"
+  | "panchayat-demo"
+  | "dashboard"
+  | "success";
 
 export type Language = "en" | "mr" | "hi" | "regional";
 
@@ -275,7 +280,6 @@ export interface PanchayatSettings {
     wards?: number;
     establishedYear?: number;
     mapCoordinates?: string;
-
   };
   logo?: string;
   themeId?: string;
@@ -348,31 +352,40 @@ export interface PostWithStatus extends Post {
 }
 
 // Section Management Types - Professional Generic Section Types
-export type LayoutType = 'GRID' | 'ROW' | 'SCROLLING_ROW' | 'CAROUSEL' | 'MASONRY' | 'LIST' | 'SPLIT' | 'FULL_WIDTH' | 'CONTAINED';
+export type LayoutType =
+  | "GRID"
+  | "ROW"
+  | "SCROLLING_ROW"
+  | "CAROUSEL"
+  | "MASONRY"
+  | "LIST"
+  | "SPLIT"
+  | "FULL_WIDTH"
+  | "CONTAINED";
 
 // Generic professional section types that work for both platforms
-export type SectionType = 
+export type SectionType =
   // Content Sections
-  | 'PARAGRAPH_CONTENT'        // Rich text/paragraph content section
-  | 'IMAGE_WITH_TEXT'          // Image with accompanying text section
-  | 'IMAGE_GALLERY'             // Image gallery section (grid/masonry/carousel)
-  | 'VIDEO_SECTION'            // Video embed section
-  | 'CARD_SECTION'             // Card-based content section
-  | 'STATISTICS_SECTION'       // Statistics/metrics display section
-  | 'TESTIMONIALS_SECTION'     // Testimonials/reviews section
-  | 'FAQ_SECTION'              // FAQ/accordion section
-  | 'FORM_SECTION'             // Form section
-  | 'TIMELINE_SECTION'         // Timeline/chronological section
-  | 'MAP_SECTION'              // Map/location section
-  | 'HERO_BANNER'              // Hero banner section with CTA
-  | 'SPLIT_CONTENT'            // Split content (image left/right with text)
-  | 'FEATURES_GRID'            // Features grid section
-  | 'NEWS_FEED'                // News/announcements feed section
-  | 'CONTACT_INFO'             // Contact information section
-  | 'TEAM_MEMBERS'             // Team/members grid section
-  | 'SCHEMES_LIST'             // Schemes/programs list section
-  | 'CALL_TO_ACTION'           // Call-to-action section
-  | 'ACTIVE_PANCHAYATS_GRID';  // Active panchayats grid (platform only)
+  | "PARAGRAPH_CONTENT" // Rich text/paragraph content section
+  | "IMAGE_WITH_TEXT" // Image with accompanying text section
+  | "IMAGE_GALLERY" // Image gallery section (grid/masonry/carousel)
+  | "VIDEO_SECTION" // Video embed section
+  | "CARD_SECTION" // Card-based content section
+  | "STATISTICS_SECTION" // Statistics/metrics display section
+  | "TESTIMONIALS_SECTION" // Testimonials/reviews section
+  | "FAQ_SECTION" // FAQ/accordion section
+  | "FORM_SECTION" // Form section
+  | "TIMELINE_SECTION" // Timeline/chronological section
+  | "MAP_SECTION" // Map/location section
+  | "HERO_BANNER" // Hero banner section with CTA
+  | "SPLIT_CONTENT" // Split content (image left/right with text)
+  | "FEATURES_GRID" // Features grid section
+  | "NEWS_FEED" // News/announcements feed section
+  | "CONTACT_INFO" // Contact information section
+  | "TEAM_MEMBERS" // Team/members grid section
+  | "SCHEMES_LIST" // Schemes/programs list section
+  | "CALL_TO_ACTION" // Call-to-action section
+  | "ACTIVE_PANCHAYATS_GRID"; // Active panchayats grid (platform only)
 
 // For backward compatibility, map old types to new types
 export type PlatformSectionType = SectionType;
@@ -381,7 +394,15 @@ export type PanchayatSectionType = SectionType;
 // Enhanced content structures
 export interface ContentItem {
   id?: string;
-  type?: 'image' | 'card' | 'testimonial' | 'accordion_item' | 'timeline_item' | 'stat' | 'feature' | 'gallery_item';
+  type?:
+    | "image"
+    | "card"
+    | "testimonial"
+    | "accordion_item"
+    | "timeline_item"
+    | "stat"
+    | "feature"
+    | "gallery_item";
   title?: string;
   subtitle?: string;
   description?: string;
@@ -397,7 +418,7 @@ export interface ContentItem {
 }
 
 export interface BackgroundConfig {
-  type: 'color' | 'gradient' | 'image' | 'video';
+  type: "color" | "gradient" | "image" | "video";
   value: string; // Color hex, gradient CSS, image URL, video URL
   overlay?: string; // Overlay color with opacity
   parallax?: boolean;
@@ -414,7 +435,7 @@ export interface SpacingConfig {
 }
 
 export interface AnimationConfig {
-  type?: 'fade-in' | 'slide-in' | 'zoom' | 'none';
+  type?: "fade-in" | "slide-in" | "zoom" | "none";
   delay?: number;
   duration?: number;
 }
@@ -422,13 +443,13 @@ export interface AnimationConfig {
 export interface CTAConfig {
   text: string;
   link: string;
-  style?: 'primary' | 'secondary' | 'outline';
-  size?: 'sm' | 'md' | 'lg';
+  style?: "primary" | "secondary" | "outline";
+  size?: "sm" | "md" | "lg";
   icon?: string;
 }
 
 export interface MediaConfig {
-  type: 'image' | 'video';
+  type: "image" | "video";
   url: string;
   thumbnail?: string;
   alt?: string;
@@ -440,7 +461,15 @@ export interface MediaConfig {
 
 export interface FormField {
   id: string;
-  type: 'text' | 'email' | 'phone' | 'textarea' | 'select' | 'checkbox' | 'radio' | 'date';
+  type:
+    | "text"
+    | "email"
+    | "phone"
+    | "textarea"
+    | "select"
+    | "checkbox"
+    | "radio"
+    | "date";
   label: string;
   placeholder?: string;
   required?: boolean;
@@ -509,4 +538,3 @@ export interface PlatformLandingPageConfig {
 export interface PanchayatWebsiteConfig {
   sections: PanchayatWebsiteSection[];
 }
-
