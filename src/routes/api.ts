@@ -1356,6 +1356,38 @@ class PanchayatSettingsApi {
   async update(payload: Partial<ServerPanchayat>): Promise<ServerPanchayat> {
     return await this.http.put<ServerPanchayat>("/panchayat/settings", payload);
   }
+
+  async uploadLogo(
+    imageFile: File,
+    compressionQuality: string = "HIGH"
+  ): Promise<ServerPanchayat> {
+    const formData = new FormData();
+    formData.append("imageFile", imageFile);
+    formData.append("compressionQuality", compressionQuality);
+    return await this.http.post<ServerPanchayat>(
+      "/panchayat/settings/logo",
+      formData,
+      {
+        headers: { "Content-Type": "multipart/form-data" },
+      }
+    );
+  }
+
+  async uploadHeroImage(
+    imageFile: File,
+    compressionQuality: string = "HIGH"
+  ): Promise<ServerPanchayat> {
+    const formData = new FormData();
+    formData.append("imageFile", imageFile);
+    formData.append("compressionQuality", compressionQuality);
+    return await this.http.post<ServerPanchayat>(
+      "/panchayat/settings/hero-image",
+      formData,
+      {
+        headers: { "Content-Type": "multipart/form-data" },
+      }
+    );
+  }
 }
 
 /**

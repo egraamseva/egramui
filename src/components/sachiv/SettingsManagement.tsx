@@ -144,6 +144,24 @@ export function SettingsManagement({ panchayatId }: SettingsManagementProps) {
     }
   };
 
+  const handleRemoveHeroImage = async () => {
+    if (!settings) return;
+    setSaving(true);
+    try {
+      const updatedHero = {
+        ...settings.hero,
+        image: undefined,
+      };
+      const updated = await settingsAPI.updateHero(updatedHero);
+      setSettings(updated);
+      toast.success("Hero image removed successfully");
+    } catch (error: any) {
+      toast.error(error.message || "Failed to remove hero image");
+    } finally {
+      setSaving(false);
+    }
+  };
+
   if (loading || !settings) {
     return (
       <div className="flex items-center justify-center py-12">
@@ -381,18 +399,33 @@ export function SettingsManagement({ panchayatId }: SettingsManagementProps) {
                 <Label>Hero Image</Label>
                 <div className="flex items-center gap-4">
                   {settings.hero.image && (
-                    <div
-                      className="relative w-32 h-32 rounded-lg overflow-hidden border cursor-pointer"
-                      onClick={() => {
-                        setSelectedImageUrl(settings.hero.image || "");
-                        setIsImageModalOpen(true);
-                      }}
-                    >
-                      <ImageWithFallback
-                        src={settings.hero.image}
-                        alt="Hero"
-                        className="w-full h-full object-cover"
-                      />
+                    <div className="relative">
+                      <div
+                        className="relative w-32 h-32 rounded-lg overflow-hidden border cursor-pointer"
+                        onClick={() => {
+                          setSelectedImageUrl(settings.hero.image || "");
+                          setIsImageModalOpen(true);
+                        }}
+                      >
+                        <ImageWithFallback
+                          src={settings.hero.image}
+                          alt="Hero"
+                          className="w-full h-full object-cover"
+                        />
+                      </div>
+                      <Button
+                        variant="destructive"
+                        size="icon"
+                        className="absolute -top-2 -right-2 h-6 w-6 rounded-full"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleRemoveHeroImage();
+                        }}
+                        disabled={saving}
+                        title="Remove hero image"
+                      >
+                        <X className="h-3 w-3" />
+                      </Button>
                     </div>
                   )}
                   <div>
@@ -411,6 +444,7 @@ export function SettingsManagement({ panchayatId }: SettingsManagementProps) {
                       onClick={() =>
                         document.getElementById("hero-image-upload")?.click()
                       }
+                      disabled={saving}
                     >
                       <Upload className="h-4 w-4 mr-2" />
                       {settings.hero.image ? "Change Image" : "Upload Image"}

@@ -281,19 +281,19 @@ export function NewsletterPage() {
 
   return (
     <div className="space-y-4 sm:space-y-6">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between pb-4 border-b border-[#E5E5E5]">
         <div>
-          <h2 className="text-lg sm:text-xl font-semibold">{t('newsletters.title')}</h2>
-          <p className="text-xs sm:text-sm text-muted-foreground">
-            {t('newsletters.createNew')}
+          <h2 className="text-xl sm:text-2xl font-bold text-[#1B2B5E]">{t('newsletters.title')}</h2>
+          <p className="text-sm text-[#666] mt-1">
+            Create and manage newsletters to keep your community informed
           </p>
         </div>
         <Button
-          className="bg-[#FF9933] hover:bg-[#FF9933]/90 w-full sm:w-auto"
+          className="bg-[#1B2B5E] hover:bg-[#2A3F6F] text-white w-full sm:w-auto shadow-md hover:shadow-lg transition-all"
           onClick={openCreateDialog}
         >
           <PlusCircle className="mr-2 h-4 w-4" />
-          <span className="text-sm sm:text-base">{t('newsletters.createNew')}</span>
+          <span className="text-sm sm:text-base font-medium">{t('newsletters.createNew')}</span>
         </Button>
       </div>
 
@@ -470,50 +470,62 @@ export function NewsletterPage() {
 
       {/* Create/Edit Dialog */}
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto p-4 sm:p-6">
-          <DialogHeader>
-            <DialogTitle>
-              {editingNewsletter ? t('newsletters.edit') || 'Edit Newsletter' : t('newsletters.createNew')}
-            </DialogTitle>
-            <DialogDescription>
-              {editingNewsletter
-                ? t('common.updateDescription') || "Update the newsletter details below"
-                : t('common.createDescription') || "Fill in the details to create a new newsletter"}
-            </DialogDescription>
-          </DialogHeader>
+        <DialogContent className="max-w-5xl max-h-[95vh] overflow-y-auto p-0">
+          <div className="sticky top-0 bg-white z-10 border-b border-[#E5E5E5] px-6 py-4">
+            <DialogHeader>
+              <DialogTitle className="text-2xl font-bold text-[#1B2B5E]">
+                {editingNewsletter ? t('newsletters.edit') || 'Edit Newsletter' : t('newsletters.createNew')}
+              </DialogTitle>
+              <DialogDescription className="text-sm text-[#666] mt-1">
+                {editingNewsletter
+                  ? t('common.updateDescription') || "Update the newsletter details below"
+                  : t('common.createDescription') || "Fill in the details to create a new newsletter"}
+              </DialogDescription>
+            </DialogHeader>
+          </div>
           <form
             onSubmit={(e) => {
               e.preventDefault();
               editingNewsletter ? handleUpdate(e) : handleCreate(e);
             }}
-            className="space-y-4 py-4"
+            className="space-y-6 px-6 py-6"
           >
-            <div className="space-y-2">
-              <Label htmlFor="title">{t('newsletters.newsletterTitle')} *</Label>
-              <Input
-                id="title"
-                placeholder="Enter newsletter title"
-                value={formData.title}
-                onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                required
-              />
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="title" className="text-sm font-semibold text-[#1B2B5E]">
+                  {t('newsletters.newsletterTitle')} <span className="text-[#E31E24]">*</span>
+                </Label>
+                <Input
+                  id="title"
+                  placeholder="Enter newsletter title"
+                  value={formData.title}
+                  onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                  required
+                  className="border-[#E5E5E5] focus:border-[#1B2B5E] focus:ring-[#1B2B5E]"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="subtitle" className="text-sm font-semibold text-[#1B2B5E]">
+                  {t('newsletters.subtitle')}
+                </Label>
+                <Input
+                  id="subtitle"
+                  placeholder="Enter newsletter subtitle"
+                  value={formData.subtitle}
+                  onChange={(e) => setFormData({ ...formData, subtitle: e.target.value })}
+                  className="border-[#E5E5E5] focus:border-[#1B2B5E] focus:ring-[#1B2B5E]"
+                />
+              </div>
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="subtitle">{t('newsletters.subtitle')}</Label>
-              <Input
-                id="subtitle"
-                placeholder="Enter newsletter subtitle"
-                value={formData.subtitle}
-                onChange={(e) => setFormData({ ...formData, subtitle: e.target.value })}
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="coverImage">{t('newsletters.coverImage')}</Label>
+              <Label htmlFor="coverImage" className="text-sm font-semibold text-[#1B2B5E]">
+                {t('newsletters.coverImage')}
+              </Label>
               {formData.coverImagePreview ? (
-                <div className="relative">
-                  <div className="w-full h-48 rounded-lg overflow-hidden border">
+                <div className="relative group">
+                  <div className="w-full h-64 rounded-lg overflow-hidden border-2 border-[#E5E5E5] shadow-sm">
                     <img
                       src={formData.coverImagePreview}
                       alt="Cover preview"
@@ -524,17 +536,21 @@ export function NewsletterPage() {
                     type="button"
                     variant="destructive"
                     size="icon"
-                    className="absolute top-2 right-2"
+                    className="absolute top-3 right-3 shadow-lg hover:scale-110 transition-transform"
                     onClick={removeCoverImage}
                   >
                     <X className="h-4 w-4" />
                   </Button>
+                  <div className="absolute bottom-3 left-3 right-3 bg-black/50 backdrop-blur-sm rounded px-3 py-2">
+                    <p className="text-white text-xs font-medium">Cover Image Preview</p>
+                  </div>
                 </div>
               ) : (
-                <div className="border-2 border-dashed rounded-lg p-6 text-center">
-                  <Upload className="mx-auto h-8 w-8 text-muted-foreground mb-2" />
+                <div className="border-2 border-dashed border-[#E5E5E5] rounded-lg p-8 text-center hover:border-[#1B2B5E] transition-colors bg-[#FAFAFA]">
+                  <Upload className="mx-auto h-12 w-12 text-[#666] mb-3" />
                   <Label htmlFor="coverImage" className="cursor-pointer">
-                    <span className="text-sm text-muted-foreground">Click to upload cover image</span>
+                    <span className="text-sm font-medium text-[#1B2B5E] block mb-1">Click to upload cover image</span>
+                    <span className="text-xs text-[#666]">Recommended: 1200x600px (JPG, PNG)</span>
                     <Input
                       id="coverImage"
                       type="file"
@@ -549,10 +565,14 @@ export function NewsletterPage() {
 
             <div className="space-y-2">
               <div className="flex items-center justify-between">
-                <Label htmlFor="content">{t('newsletter.content') || 'Content'}</Label>
+                <Label htmlFor="content" className="text-sm font-semibold text-[#1B2B5E]">
+                  {t('newsletter.content') || 'Content'}
+                </Label>
                 {autosaveStatus && (
-                  <span className={`text-xs ${
-                    autosaveStatus === 'saving' ? 'text-blue-600' : 'text-green-600'
+                  <span className={`text-xs font-medium px-2 py-1 rounded ${
+                    autosaveStatus === 'saving' 
+                      ? 'text-blue-600 bg-blue-50' 
+                      : 'text-green-600 bg-green-50'
                   }`}>
                     {autosaveStatus === 'saving' 
                       ? t('newsletter.autosave') || 'Auto-saving...'
@@ -560,33 +580,38 @@ export function NewsletterPage() {
                   </span>
                 )}
               </div>
-              <TipTapEditor
-                content={formData.content}
-                onChange={(html) => {
-                  setFormData({ ...formData, content: html });
-                  setAutosaveStatus('saving');
-                  // Clear status after a delay
-                  setTimeout(() => setAutosaveStatus('saved'), 1000);
-                  setTimeout(() => setAutosaveStatus(null), 3000);
-                }}
-                onSave={(html) => {
-                  // Autosave callback - could save to draft here
-                  setFormData({ ...formData, content: html });
-                  setAutosaveStatus('saved');
-                }}
-                placeholder={t('newsletter.contentPlaceholder') || 'Start writing your newsletter content...'}
-                autosaveInterval={30000}
-              />
-              <p className="text-xs text-muted-foreground">
+              <div className="border border-[#E5E5E5] rounded-lg overflow-hidden">
+                <TipTapEditor
+                  content={formData.content}
+                  onChange={(html) => {
+                    setFormData({ ...formData, content: html });
+                    setAutosaveStatus('saving');
+                    // Clear status after a delay
+                    setTimeout(() => setAutosaveStatus('saved'), 1000);
+                    setTimeout(() => setAutosaveStatus(null), 3000);
+                  }}
+                  onSave={(html) => {
+                    // Autosave callback - could save to draft here
+                    setFormData({ ...formData, content: html });
+                    setAutosaveStatus('saved');
+                  }}
+                  placeholder={t('newsletter.contentPlaceholder') || 'Start writing your newsletter content...'}
+                  autosaveInterval={30000}
+                />
+              </div>
+              <p className="text-xs text-[#666] flex items-center gap-1">
+                <FileText className="h-3 w-3" />
                 {t('newsletter.contentHint') || 'Use the toolbar to format text, add images, tables, and links. Content is saved automatically.'}
               </p>
             </div>
 
             <div className="space-y-2">
-              <Label>{t('newsletters.bulletPoints')}</Label>
+              <Label className="text-sm font-semibold text-[#1B2B5E]">
+                {t('newsletters.bulletPoints')}
+              </Label>
               <div className="flex gap-2">
                 <Input
-                  placeholder={t('newsletters.addBulletPoint')}
+                  placeholder={t('newsletters.addBulletPoint') || "Add a key point..."}
                   value={newBulletPoint}
                   onChange={(e) => setNewBulletPoint(e.target.value)}
                   onKeyPress={(e) => {
@@ -595,69 +620,93 @@ export function NewsletterPage() {
                       addBulletPoint();
                     }
                   }}
+                  className="border-[#E5E5E5] focus:border-[#1B2B5E] focus:ring-[#1B2B5E]"
                 />
-                <Button type="button" onClick={addBulletPoint} size="icon">
+                <Button 
+                  type="button" 
+                  onClick={addBulletPoint} 
+                  size="icon"
+                  className="bg-[#1B2B5E] hover:bg-[#2A3F6F] text-white"
+                >
                   <Plus className="h-4 w-4" />
                 </Button>
               </div>
               {formData.bulletPoints.length > 0 && (
-                <ul className="list-disc list-inside space-y-1 mt-2">
+                <div className="mt-3 space-y-2 p-4 bg-[#F9FAFB] rounded-lg border border-[#E5E5E5]">
                   {formData.bulletPoints.map((point, index) => (
-                    <li key={index} className="flex items-center justify-between text-sm">
-                      <span>{point}</span>
+                    <div key={index} className="flex items-start gap-3 p-2 bg-white rounded border border-[#E5E5E5] hover:border-[#1B2B5E] transition-colors">
+                      <span className="flex-shrink-0 w-6 h-6 rounded-full bg-[#1B2B5E] text-white text-xs font-semibold flex items-center justify-center mt-0.5">
+                        {index + 1}
+                      </span>
+                      <span className="flex-1 text-sm text-[#1B2B5E] pt-0.5">{point}</span>
                       <Button
                         type="button"
                         variant="ghost"
                         size="icon"
                         onClick={() => removeBulletPoint(index)}
+                        className="h-7 w-7 text-[#666] hover:text-[#E31E24] hover:bg-red-50"
                       >
-                        <X className="h-3 w-3" />
+                        <X className="h-3.5 w-3.5" />
                       </Button>
-                    </li>
+                    </div>
                   ))}
-                </ul>
+                </div>
               )}
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="publishedOn">{t('newsletters.publishedOn')}</Label>
+                <Label htmlFor="publishedOn" className="text-sm font-semibold text-[#1B2B5E]">
+                  {t('newsletters.publishedOn')}
+                </Label>
                 <Input
                   id="publishedOn"
                   type="date"
                   value={formData.publishedOn}
                   onChange={(e) => setFormData({ ...formData, publishedOn: e.target.value })}
+                  className="border-[#E5E5E5] focus:border-[#1B2B5E] focus:ring-[#1B2B5E]"
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="authorName">{t('newsletters.authorName')}</Label>
+                <Label htmlFor="authorName" className="text-sm font-semibold text-[#1B2B5E]">
+                  {t('newsletters.authorName')}
+                </Label>
                 <Input
                   id="authorName"
                   placeholder="Author name"
                   value={formData.authorName}
                   onChange={(e) => setFormData({ ...formData, authorName: e.target.value })}
+                  className="border-[#E5E5E5] focus:border-[#1B2B5E] focus:ring-[#1B2B5E]"
                 />
               </div>
             </div>
 
-            <div className="flex items-center space-x-2">
+            <div className="flex items-center space-x-3 p-4 bg-[#F9FAFB] rounded-lg border border-[#E5E5E5]">
               <input
                 type="checkbox"
                 id="isPublished"
                 checked={formData.isPublished}
                 onChange={(e) => setFormData({ ...formData, isPublished: e.target.checked })}
-                className="h-4 w-4 rounded border-gray-300"
+                className="h-4 w-4 rounded border-[#E5E5E5] text-[#1B2B5E] focus:ring-[#1B2B5E] cursor-pointer"
               />
-              <Label htmlFor="isPublished" className="cursor-pointer">
+              <Label htmlFor="isPublished" className="cursor-pointer text-sm font-medium text-[#1B2B5E]">
                 {t('newsletters.publishImmediately')}
               </Label>
             </div>
 
-            <DialogFooter>
-              <Button type="button" variant="outline" onClick={closeDialog}>
+            <DialogFooter className="sticky bottom-0 bg-white border-t border-[#E5E5E5] px-6 py-4 -mx-6 -mb-6">
+              <Button 
+                type="button" 
+                variant="outline" 
+                onClick={closeDialog}
+                className="border-[#E5E5E5] text-[#666] hover:bg-[#F5F5F5]"
+              >
                 Cancel
               </Button>
-              <Button type="submit" className="bg-[#FF9933] hover:bg-[#FF9933]/90">
+              <Button 
+                type="submit" 
+                className="bg-[#1B2B5E] hover:bg-[#2A3F6F] text-white shadow-md hover:shadow-lg transition-all"
+              >
                 {editingNewsletter ? t('common.update') || 'Update' : t('common.create') || 'Create'}
               </Button>
             </DialogFooter>

@@ -421,14 +421,14 @@ export function DynamicSectionRenderer({ section, children }: DynamicSectionRend
     // If richText exists, render it (and items if they exist)
     if (richText) {
       return (
-        <div className="space-y-6">
+        <div className="space-y-6 px-4 sm:px-6 lg:px-8">
           <div 
             className="prose prose-lg max-w-none"
             dangerouslySetInnerHTML={{ __html: richText }}
           />
           {/* Render items after richText if they exist */}
           {items.length > 0 && (
-            <div className="space-y-6 mt-8">
+            <div className="space-y-6 mt-8 ">
               {items.map((item: ContentItem, index: number) => (
                 <div key={index} className="prose prose-lg max-w-none">
                   {item.title && (
@@ -899,7 +899,7 @@ export function DynamicSectionRenderer({ section, children }: DynamicSectionRend
   const renderContainedLayout = (content: any, sectionType?: string) => {
     const items = content.items || [];
     return (
-      <div className="max-w-4xl mx-auto">
+      <div className="max-w-4xl px-4 sm:px-6 lg:px-8 mx-auto">
         {items.map((item: ContentItem, index: number) => renderItemCard(item, index, sectionType))}
       </div>
     );
@@ -989,7 +989,7 @@ export function DynamicSectionRenderer({ section, children }: DynamicSectionRend
   };
 
   const containerClass = section.layoutType === 'FULL_WIDTH' ? 'w-full' : 
-                         section.layoutType === 'CONTAINED' ? 'max-w-4xl mx-auto' : 
+                         section.layoutType === 'CONTAINED' ? 'max-w-4xl mx-auto px-4 sm:px-6 lg:px-8' : 
                          'container mx-auto px-4';
 
   const renderedContent = renderContent();

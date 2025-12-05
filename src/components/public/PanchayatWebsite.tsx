@@ -11,8 +11,6 @@ import {
   Download,
   AlertCircle,
   Loader2,
-  Menu,
-  X,
   Building2,
   Award,
   Image as ImageIcon,
@@ -122,7 +120,6 @@ export function PanchayatWebsite() {
   const [sections, setSections] = useState<PanchayatWebsiteSection[]>([]);
   const [loadingSections, setLoadingSections] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const [theme, setTheme] = useState<WebsiteTheme | null>(null);
 
@@ -653,12 +650,21 @@ export function PanchayatWebsite() {
       {loading && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-white/90 backdrop-blur-sm">
           <div className="flex flex-col items-center gap-4">
-            <Loader2 className="h-12 w-12 animate-spin text-[#E31E24]" />
+            <Loader2 
+              className="h-12 w-12 animate-spin" 
+              style={{ color: theme?.colors.primary || "#E31E24" }}
+            />
             <div className="text-center">
-              <p className="text-lg font-semibold text-[#1B2B5E]">
+              <p 
+                className="text-lg font-semibold"
+                style={{ color: theme?.colors.text || "#1B2B5E" }}
+              >
                 {t("panchayatWebsite.loadingPanchayatInfo")}
               </p>
-              <p className="mt-1 text-sm text-[#666]">
+              <p 
+                className="mt-1 text-sm"
+                style={{ color: theme?.colors.textSecondary || "#666" }}
+              >
                 {t("panchayatWebsite.pleaseWait")}
               </p>
             </div>
@@ -673,31 +679,38 @@ export function PanchayatWebsite() {
         }`}
       >
         <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-16 lg:h-20">
-            {/* Logo and Name */}
+          {/* Desktop Navbar - Centered */}
+          <div className="hidden lg:flex items-center justify-between h-20">
+            {/* Logo and Name - Left */}
             <button
               onClick={() => setActivePage("home")}
-              className="flex items-center gap-3 hover:opacity-80 transition-opacity"
+              className="flex items-center gap-3 hover:opacity-80 transition-opacity flex-shrink-0"
             >
               {panchayat?.logoUrl && (
                 <ImageWithFallback
                   src={panchayat.logoUrl}
                   alt={`${panchayat.name} Logo`}
-                  className="h-10 w-10 lg:h-12 lg:w-12 object-contain"
+                  className="h-12 w-12 object-contain"
                 />
               )}
               <div className="text-left">
-                <h1 className="text-lg lg:text-xl font-bold text-[#1B2B5E] leading-tight">
+                <h1 
+                  className="text-xl font-bold leading-tight"
+                  style={{ color: theme?.colors.text || "#1B2B5E" }}
+                >
                   {panchayat?.name || t("panchayatWebsite.gramPanchayat")}
                 </h1>
-                <p className="text-xs text-[#666] hidden sm:block">
+                <p 
+                  className="text-xs"
+                  style={{ color: theme?.colors.textSecondary || "#666" }}
+                >
                   {panchayat?.district || ""} {t("panchayatWebsite.district")}
                 </p>
               </div>
             </button>
 
-            {/* Desktop Navigation */}
-            <div className="hidden lg:flex items-center gap-1">
+            {/* Navigation - Centered */}
+            <div className="flex items-center gap-1 justify-center flex-1">
               {navItems.map((item) => {
                 const Icon = item.icon;
                 return (
@@ -705,27 +718,56 @@ export function PanchayatWebsite() {
                     key={item.id}
                     variant="ghost"
                     onClick={() => setActivePage(item.id)}
-                    className={`${
-                      activePage === item.id
-                        ? "text-[#E31E24] bg-[#E31E24]/10"
-                        : "text-[#1B2B5E] hover:text-[#E31E24] hover:bg-[#E31E24]/10"
+                    style={{
+                      color: activePage === item.id 
+                        ? theme?.colors.primary || "#E31E24"
+                        : theme?.colors.text || "#1B2B5E",
+                      backgroundColor: activePage === item.id 
+                        ? `${theme?.colors.primary || "#E31E24"}1A`
+                        : "transparent",
+                    }}
+                    className={`hover:bg-opacity-10 transition-colors ${
+                      activePage === item.id ? "" : ""
                     }`}
+                    onMouseEnter={(e) => {
+                      if (activePage !== item.id) {
+                        e.currentTarget.style.color = theme?.colors.primary || "#E31E24";
+                        e.currentTarget.style.backgroundColor = `${theme?.colors.primary || "#E31E24"}1A`;
+                      }
+                    }}
+                    onMouseLeave={(e) => {
+                      if (activePage !== item.id) {
+                        e.currentTarget.style.color = theme?.colors.text || "#1B2B5E";
+                        e.currentTarget.style.backgroundColor = "transparent";
+                      }
+                    }}
                   >
                     <Icon className="h-4 w-4 mr-2" />
-                    {item.label}
+                    <span className="text-base">{item.label}</span>
                   </Button>
                 );
               })}
             </div>
 
-            {/* Right Actions - Main Platform Link, Language & Mobile Menu */}
-            <div className="flex items-center gap-2">
-              {/* Main Platform Link - Desktop */}
+            {/* Right Actions - Main Platform Link, Language */}
+            <div className="flex items-center gap-2 flex-shrink-0">
+              {/* Main Platform Link */}
               <Button
                 variant="ghost"
                 size="sm"
                 onClick={() => navigate("/")}
-                className="hidden lg:flex items-center gap-2 text-[#1B2B5E] hover:text-[#E31E24] hover:bg-[#E31E24]/10"
+                style={{
+                  color: theme?.colors.text || "#1B2B5E",
+                }}
+                className="flex items-center gap-2 hover:bg-opacity-10 transition-colors"
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.color = theme?.colors.primary || "#E31E24";
+                  e.currentTarget.style.backgroundColor = `${theme?.colors.primary || "#E31E24"}1A`;
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.color = theme?.colors.text || "#1B2B5E";
+                  e.currentTarget.style.backgroundColor = "transparent";
+                }}
                 title={t("panchayatWebsite.goToMainPlatform")}
               >
                 <ExternalLink className="h-4 w-4" />
@@ -738,7 +780,10 @@ export function PanchayatWebsite() {
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button variant="ghost" size="icon" className="h-9 w-9">
-                    <Globe className="h-5 w-5 text-[#1B2B5E]" />
+                    <Globe 
+                      className="h-5 w-5" 
+                      style={{ color: theme?.colors.text || "#1B2B5E" }}
+                    />
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
@@ -772,133 +817,127 @@ export function PanchayatWebsite() {
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
-
-              {/* Mobile Menu Button */}
-              <Button
-                variant="ghost"
-                size="icon"
-                className="lg:hidden"
-                onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              >
-                {mobileMenuOpen ? (
-                  <X className="h-6 w-6" />
-                ) : (
-                  <Menu className="h-6 w-6" />
-                )}
-              </Button>
             </div>
           </div>
 
-          {/* Mobile Menu */}
-          {mobileMenuOpen && (
-            <div className="lg:hidden border-t border-[#E5E5E5] py-4 space-y-4">
-              <div className="space-y-2">
-                {navItems.map((item) => {
-                  const Icon = item.icon;
-                  return (
-                    <Button
-                      key={item.id}
-                      variant="ghost"
-                      className={`w-full justify-start ${
-                        activePage === item.id
-                          ? "text-[#E31E24] bg-[#E31E24]/10"
-                          : "text-[#1B2B5E]"
-                      }`}
-                      onClick={() => {
-                        setActivePage(item.id);
-                        setMobileMenuOpen(false);
-                      }}
-                    >
-                      <Icon className="h-4 w-4 mr-2" />
-                      {item.label}
-                    </Button>
-                  );
-                })}
-              </div>
-
-              {/* Main Platform Link - Mobile */}
-              <div className="border-t border-[#E5E5E5] pt-4">
-                <Button
-                  variant="outline"
-                  className="w-full justify-start text-[#1B2B5E] hover:text-[#E31E24] hover:bg-[#E31E24]/10"
-                  onClick={() => {
-                    navigate("/");
-                    setMobileMenuOpen(false);
-                  }}
-                >
-                  <ExternalLink className="h-4 w-4 mr-2" />
-                  {t("panchayatWebsite.mainPlatform")}
-                </Button>
-              </div>
-
-              {/* Language Selector in Mobile Menu */}
-              <div className="border-t border-[#E5E5E5] pt-4">
-                <p className="text-xs font-semibold text-[#666] mb-2 px-2">
-                  {t("nav.language")}
-                </p>
-                <div className="grid grid-cols-2 gap-2">
-                  {[
-                    {
-                      label: t("panchayatWebsite.languages.english"),
-                      lang: "en",
-                    },
-                    {
-                      label: t("panchayatWebsite.languages.marathi"),
-                      lang: "mr",
-                    },
-                    {
-                      label: t("panchayatWebsite.languages.hindi"),
-                      lang: "hi",
-                    },
-                    {
-                      label: t("panchayatWebsite.languages.regional"),
-                      lang: "regional",
-                    },
-                  ].map(({ label, lang }) => (
-                    <Button
-                      key={lang}
-                      variant="outline"
-                      size="sm"
-                      onClick={() => {
-                        i18n.changeLanguage(lang);
-                        setMobileMenuOpen(false);
-                      }}
-                      className="text-xs"
-                    >
-                      {label}
-                    </Button>
-                  ))}
+          {/* Mobile Navbar - New Design */}
+          <div className="lg:hidden">
+            {/* Top Row - Logo, Language, Platform Link */}
+            <div className="flex items-center justify-between h-16 border-b border-[#E5E5E5]">
+              {/* Logo and Name */}
+              <button
+                onClick={() => setActivePage("home")}
+                className="flex items-center gap-2 hover:opacity-80 transition-opacity flex-1 min-w-0"
+              >
+                {panchayat?.logoUrl && (
+                  <ImageWithFallback
+                    src={panchayat.logoUrl}
+                    alt={`${panchayat.name} Logo`}
+                    className="h-10 w-10 object-contain flex-shrink-0"
+                  />
+                )}
+                <div className="text-left min-w-0">
+                  <h1 
+                    className="text-base font-bold leading-tight truncate"
+                    style={{ color: theme?.colors.text || "#1B2B5E" }}
+                  >
+                    {panchayat?.name || t("panchayatWebsite.gramPanchayat")}
+                  </h1>
+                  <p 
+                    className="text-xs truncate"
+                    style={{ color: theme?.colors.textSecondary || "#666" }}
+                  >
+                    {panchayat?.district || ""} {t("panchayatWebsite.district")}
+                  </p>
                 </div>
+              </button>
+
+              {/* Right Actions - Platform Link and Language */}
+              <div className="flex items-center gap-1 flex-shrink-0">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => navigate("/")}
+                  className="h-9 w-9"
+                  title={t("panchayatWebsite.goToMainPlatform")}
+                >
+                  <ExternalLink 
+                    className="h-4 w-4" 
+                    style={{ color: theme?.colors.text || "#1B2B5E" }}
+                  />
+                </Button>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" size="icon" className="h-9 w-9">
+                      <Globe 
+                      className="h-5 w-5" 
+                      style={{ color: theme?.colors.text || "#1B2B5E" }}
+                    />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem
+                      onClick={() => {
+                        i18n.changeLanguage("en");
+                      }}
+                    >
+                      {t("panchayatWebsite.languages.english")}
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      onClick={() => {
+                        i18n.changeLanguage("mr");
+                      }}
+                    >
+                      {t("panchayatWebsite.languages.marathi")}
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      onClick={() => {
+                        i18n.changeLanguage("hi");
+                      }}
+                    >
+                      {t("panchayatWebsite.languages.hindi")}
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      onClick={() => {
+                        i18n.changeLanguage("regional");
+                      }}
+                    >
+                      {t("panchayatWebsite.languages.regional")}
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
               </div>
             </div>
-          )}
+
+            {/* Bottom Row - Navigation Items */}
+            <div className="flex items-center gap-0.5 overflow-x-auto scrollbar-hide px-2 py-2 bg-[#F9F9F9]">
+              {navItems.map((item) => {
+                const Icon = item.icon;
+                return (
+                  <Button
+                    key={item.id}
+                    variant="ghost"
+                    onClick={() => setActivePage(item.id)}
+                    className={`flex-1 min-w-0 flex flex-col items-center gap-1 h-auto py-2 px-2 rounded-lg transition-all ${
+                      activePage === item.id
+                        ? "text-[#E31E24] bg-[#E31E24]/10"
+                        : "text-[#1B2B5E] hover:text-[#E31E24] hover:bg-[#E31E24]/5"
+                    }`}
+                  >
+                    <Icon className="h-5 w-5 flex-shrink-0" />
+                    <span className="text-[10px] font-medium leading-tight text-center">
+                      {item.label}
+                    </span>
+                  </Button>
+                );
+              })}
+            </div>
+          </div>
         </div>
       </nav>
 
       {/* Spacer for fixed navbar */}
-      <div className="h-16 lg:h-20" />
-
-      {/* Cover Image Section - Displayed on all pages */}
-      {panchayat && (
-        <section className="relative w-full h-48 sm:h-64 md:h-80 lg:h-96 overflow-hidden bg-gray-100">
-          {panchayat.heroImage ? (
-            <>
-              <ImageWithFallback
-                src={panchayat.heroImage}
-                alt={`${panchayat.name} Cover`}
-                className="w-full h-full object-cover"
-              />
-              <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent" />
-            </>
-          ) : (
-            <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-gray-50 to-gray-200">
-              <p className="text-2xl sm:text-3xl md:text-4xl font-semibold text-gray-400">
-                {panchayat.name} {t("heroImage")}
-              </p>
-            </div>
-          )}
-        </section>
-      )}
+      <div className="h-[88px] lg:h-20" />
 
       {/* Page Content */}
       <main className="min-h-[calc(100vh-4rem)]">
@@ -907,26 +946,44 @@ export function PanchayatWebsite() {
           <div className="space-y-0">
             {/* Hero Section - Enhanced with Theme Support */}
             <section className="relative min-h-[500px] sm:min-h-[600px] lg:min-h-[700px] overflow-hidden">
-              <div
-                className="absolute inset-0"
-                style={{
-                  background:
-                    theme?.hero.backgroundGradient ||
-                    "linear-gradient(to bottom right, #1B2B5E, #2A3F6F, #6C5CE7)",
-                }}
-              >
-                {panchayat?.logoUrl && (
-                  <div className="absolute inset-0 opacity-10">
-                    <div className="absolute inset-0 bg-[url('/pattern.svg')] bg-repeat opacity-20"></div>
+              {panchayat?.heroImage ? (
+                <>
+                  {/* Hero Image Background */}
+                  <div className="absolute inset-0">
+                    <ImageWithFallback
+                      src={panchayat.heroImage}
+                      alt={`${panchayat.name} Hero`}
+                      className="w-full h-full object-cover"
+                    />
                   </div>
-                )}
-              </div>
-              <div
-                className="absolute inset-0"
-                style={{
-                  backgroundColor: theme?.hero.overlay || "rgba(0, 0, 0, 0.2)",
-                }}
-              />
+                  {/* Black Overlay */}
+                  <div className="absolute inset-0 bg-black/50" />
+                </>
+              ) : (
+                <>
+                  {/* Gradient Background Fallback */}
+                  <div
+                    className="absolute inset-0"
+                    style={{
+                      background:
+                        theme?.hero.backgroundGradient ||
+                        "linear-gradient(to bottom right, #1B2B5E, #2A3F6F, #6C5CE7)",
+                    }}
+                  >
+                    {panchayat?.logoUrl && (
+                      <div className="absolute inset-0 opacity-10">
+                        <div className="absolute inset-0 bg-[url('/pattern.svg')] bg-repeat opacity-20"></div>
+                      </div>
+                    )}
+                  </div>
+                  <div
+                    className="absolute inset-0"
+                    style={{
+                      backgroundColor: theme?.hero.overlay || "rgba(0, 0, 0, 0.2)",
+                    }}
+                  />
+                </>
+              )}
 
               <div className="container relative mx-auto px-4 py-12 sm:py-16 lg:py-20 lg:px-8 lg:py-32">
                 <div className="mx-auto max-w-4xl text-center">
@@ -1087,7 +1144,10 @@ export function PanchayatWebsite() {
             {/* Dynamic Sections from Admin */}
             {loadingSections ? (
               <div className="py-16 text-center">
-                <Loader2 className="h-8 w-8 animate-spin mx-auto text-[#E31E24]" />
+                <Loader2 
+                  className="h-8 w-8 animate-spin mx-auto" 
+                  style={{ color: theme?.colors.primary || "#E31E24" }}
+                />
                 <p className="mt-2 text-[#666]">
                   {t("panchayatWebsite.loadingSections")}
                 </p>
@@ -1100,14 +1160,20 @@ export function PanchayatWebsite() {
 
         {/* Feed Page */}
         {activePage === "feed" && (
-          <div className="py-4 sm:py-6 lg:py-12 bg-[#F5F5F5] min-h-[calc(100vh-4rem)]">
+          <div className="pt-10 pb-4 sm:pt-8 sm:pb-6 lg:pt-16 lg:pb-12 bg-[#F5F5F5] min-h-[calc(100vh-4rem)]">
             <div className="container mx-auto px-4 sm:px-6 lg:px-8">
               <div className="max-w-7xl mx-auto">
                 <div className="mb-6 sm:mb-8">
-                  <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-[#1B2B5E] mb-3 sm:mb-4">
+                  <h2 
+                    className="text-2xl sm:text-3xl lg:text-4xl font-bold mb-3 sm:mb-4 scroll-mt-24"
+                    style={{ color: theme?.colors.text || "#1B2B5E" }}
+                  >
                     {t("panchayatWebsite.communityFeed")}
                   </h2>
-                  <div className="w-16 sm:w-24 h-1 bg-[#E31E24]"></div>
+                  <div 
+                    className="w-16 sm:w-24 h-1"
+                    style={{ backgroundColor: theme?.colors.primary || "#E31E24" }}
+                  ></div>
                 </div>
 
                 {/* Feed Layout - Main feed first on mobile, sidebar on desktop */}
@@ -1248,22 +1314,31 @@ export function PanchayatWebsite() {
 
         {/* About Page */}
         {activePage === "about" && (
-          <div className="py-8 lg:py-16 bg-white min-h-[calc(100vh-4rem)]">
+          <div className="pt-12 pb-8 lg:pt-20 lg:pb-16 bg-white min-h-[calc(100vh-4rem)]">
             <div className="container mx-auto px-4 lg:px-8">
               <div className="text-center mb-12">
-                <h2 className="text-3xl lg:text-4xl font-bold text-[#1B2B5E] mb-4">
+                <h2 
+                  className="text-3xl lg:text-4xl font-bold mb-4 scroll-mt-24"
+                  style={{ color: theme?.colors.text || "#1B2B5E" }}
+                >
                   {t("panchayatWebsite.about")}{" "}
-                  <span className="text-[#E31E24]">
+                  <span style={{ color: theme?.colors.primary || "#E31E24" }}>
                     {panchayat?.name || t("panchayatWebsite.ourPanchayat")}
                   </span>
                 </h2>
-                <div className="w-24 h-1 bg-[#E31E24] mx-auto"></div>
+                <div 
+                  className="w-24 h-1 mx-auto"
+                  style={{ backgroundColor: theme?.colors.primary || "#E31E24" }}
+                ></div>
               </div>
 
               <div className="grid lg:grid-cols-2 gap-12 items-start">
                 {/* About Text */}
                 <div>
-                  <h3 className="text-2xl font-semibold text-[#1B2B5E] mb-6">
+                  <h3 
+                    className="text-2xl font-semibold mb-6 scroll-mt-24"
+                    style={{ color: theme?.colors.text || "#1B2B5E" }}
+                  >
                     {t("panchayatWebsite.ourStory")}
                   </h3>
                   {panchayat?.aboutText ? (
@@ -1291,7 +1366,10 @@ export function PanchayatWebsite() {
                       </p>
                       {panchayat?.features && panchayat.features.length > 0 && (
                         <div>
-                          <h4 className="text-lg font-semibold text-[#1B2B5E] mb-3">
+                          <h4 
+                            className="text-lg font-semibold mb-3"
+                            style={{ color: theme?.colors.text || "#1B2B5E" }}
+                          >
                             {t("panchayatWebsite.keyFeatures")}
                           </h4>
                           <ul className="space-y-2">
@@ -1322,7 +1400,10 @@ export function PanchayatWebsite() {
                             <p className="text-sm text-[#666]">
                               {t("panchayatWebsite.population")}
                             </p>
-                            <p className="text-xl font-bold text-[#1B2B5E]">
+                            <p 
+                              className="text-xl font-bold"
+                              style={{ color: theme?.colors.text || "#1B2B5E" }}
+                            >
                               {panchayat?.population?.toLocaleString() ||
                                 t("panchayatWebsite.common.na")}
                             </p>
@@ -1340,7 +1421,10 @@ export function PanchayatWebsite() {
                             <p className="text-sm text-[#666]">
                               {t("panchayatWebsite.area")}
                             </p>
-                            <p className="text-xl font-bold text-[#1B2B5E]">
+                            <p 
+                              className="text-xl font-bold"
+                              style={{ color: theme?.colors.text || "#1B2B5E" }}
+                            >
                               {panchayat?.area ||
                                 t("panchayatWebsite.common.na")}{" "}
                               km²
@@ -1352,14 +1436,25 @@ export function PanchayatWebsite() {
                     <Card className="border-[#E5E5E5]">
                       <CardContent className="p-4">
                         <div className="flex items-center gap-3 mb-2">
-                          <div className="p-2 bg-[#E31E24]/10 rounded-lg">
-                            <Building2 className="h-5 w-5 text-[#E31E24]" />
+                          <div 
+                            className="p-2 rounded-lg"
+                            style={{ 
+                              backgroundColor: `${theme?.colors.primary || "#E31E24"}1A`,
+                            }}
+                          >
+                            <Building2 
+                              className="h-5 w-5" 
+                              style={{ color: theme?.colors.primary || "#E31E24" }}
+                            />
                           </div>
                           <div>
                             <p className="text-sm text-[#666]">
                               {t("panchayatWebsite.wards")}
                             </p>
-                            <p className="text-xl font-bold text-[#1B2B5E]">
+                            <p 
+                              className="text-xl font-bold"
+                              style={{ color: theme?.colors.text || "#1B2B5E" }}
+                            >
                               {panchayat?.wards ||
                                 t("panchayatWebsite.common.na")}
                             </p>
@@ -1377,7 +1472,10 @@ export function PanchayatWebsite() {
                             <p className="text-sm text-[#666]">
                               {t("panchayatWebsite.established")}
                             </p>
-                            <p className="text-xl font-bold text-[#1B2B5E]">
+                            <p 
+                              className="text-xl font-bold"
+                              style={{ color: theme?.colors.text || "#1B2B5E" }}
+                            >
                               {panchayat?.established ||
                                 t("panchayatWebsite.common.na")}
                             </p>
@@ -1390,12 +1488,18 @@ export function PanchayatWebsite() {
 
                 {/* Members Section */}
                 <div>
-                  <h3 className="text-2xl font-semibold text-[#1B2B5E] mb-6">
+                  <h3 
+                    className="text-2xl font-semibold mb-6 scroll-mt-24"
+                    style={{ color: theme?.colors.text || "#1B2B5E" }}
+                  >
                     {t("panchayatWebsite.electedMembers")}
                   </h3>
                   {loading ? (
                     <div className="text-center py-12">
-                      <Loader2 className="h-8 w-8 animate-spin mx-auto text-[#E31E24]" />
+                      <Loader2 
+                  className="h-8 w-8 animate-spin mx-auto" 
+                  style={{ color: theme?.colors.primary || "#E31E24" }}
+                />
                       <p className="mt-2 text-[#666]">
                         {t("panchayatWebsite.loadingMembers")}
                       </p>
@@ -1437,7 +1541,10 @@ export function PanchayatWebsite() {
                                 )}
                               </Avatar>
                               <div className="flex-1 min-w-0">
-                                <h4 className="font-semibold text-[#1B2B5E] truncate">
+                                <h4 
+                                  className="font-semibold truncate"
+                                  style={{ color: theme?.colors.text || "#1B2B5E" }}
+                                >
                                   {member.name}
                                 </h4>
                                 <p className="text-sm text-[#FF9933] font-medium">
@@ -1475,16 +1582,22 @@ export function PanchayatWebsite() {
 
         {/* Gallery Page */}
         {activePage === "gallery" && (
-          <div className="py-8 lg:py-16 bg-white min-h-[calc(100vh-4rem)]">
+          <div className="pt-12 pb-8 lg:pt-20 lg:pb-16 bg-white min-h-[calc(100vh-4rem)]">
             <div className="container mx-auto px-4 lg:px-8">
               <div className="text-center mb-12">
-                <h2 className="text-3xl lg:text-4xl font-bold text-[#1B2B5E] mb-4">
+                <h2 
+                  className="text-3xl lg:text-4xl font-bold mb-4 scroll-mt-24"
+                  style={{ color: theme?.colors.text || "#1B2B5E" }}
+                >
                   {t("panchayatWebsite.photoGallery")}{" "}
-                  <span className="text-[#E31E24]">
+                  <span style={{ color: theme?.colors.primary || "#E31E24" }}>
                     {t("panchayatWebsite.gallery")}
                   </span>
                 </h2>
-                <div className="w-24 h-1 bg-[#E31E24] mx-auto mb-4"></div>
+                <div 
+                  className="w-24 h-1 mx-auto mb-4"
+                  style={{ backgroundColor: theme?.colors.primary || "#E31E24" }}
+                ></div>
                 <p className="text-[#666] max-w-2xl mx-auto">
                   {t("panchayatWebsite.galleryDescription")}
                 </p>
@@ -1505,7 +1618,10 @@ export function PanchayatWebsite() {
                       {t("panchayatWebsite.backToAlbums")}
                     </Button>
                     <div>
-                      <h3 className="text-2xl font-bold text-[#1B2B5E]">
+                      <h3 
+                        className="text-2xl font-bold scroll-mt-24"
+                        style={{ color: theme?.colors.text || "#1B2B5E" }}
+                      >
                         {selectedAlbum.title}
                       </h3>
                       {selectedAlbum.description && (
@@ -1517,7 +1633,10 @@ export function PanchayatWebsite() {
                   </div>
                   {loadingAlbumImages ? (
                     <div className="text-center py-12">
-                      <Loader2 className="h-8 w-8 animate-spin mx-auto text-[#E31E24]" />
+                      <Loader2 
+                  className="h-8 w-8 animate-spin mx-auto" 
+                  style={{ color: theme?.colors.primary || "#E31E24" }}
+                />
                       <p className="mt-2 text-[#666]">
                         {t("panchayatWebsite.loadingImages")}
                       </p>
@@ -1580,7 +1699,10 @@ export function PanchayatWebsite() {
                   {/* Albums */}
                   {albums.length > 0 && (
                     <div className="mb-12">
-                      <h3 className="text-xl font-semibold text-[#1B2B5E] mb-6">
+                      <h3 
+                        className="text-xl font-semibold mb-6 scroll-mt-24"
+                        style={{ color: theme?.colors.text || "#1B2B5E" }}
+                      >
                         {t("panchayatWebsite.albums")}
                       </h3>
                       <div className="grid gap-6 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
@@ -1610,7 +1732,10 @@ export function PanchayatWebsite() {
                               </div>
                             </div>
                             <CardContent className="p-4">
-                              <h4 className="font-semibold text-[#1B2B5E] mb-1 line-clamp-1">
+                              <h4 
+                                className="font-semibold mb-1 line-clamp-1"
+                                style={{ color: theme?.colors.text || "#1B2B5E" }}
+                              >
                                 {album.title}
                               </h4>
                               {album.description && (
@@ -1649,7 +1774,10 @@ export function PanchayatWebsite() {
                   {/* All Images Grid */}
                   {gallery.length > 0 && (
                     <div>
-                      <h3 className="text-xl font-semibold text-[#1B2B5E] mb-6">
+                      <h3 
+                        className="text-xl font-semibold mb-6 scroll-mt-24"
+                        style={{ color: theme?.colors.text || "#1B2B5E" }}
+                      >
                         {t("panchayatWebsite.allPhotos")}
                       </h3>
                       <div className="grid gap-4 grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
@@ -1722,16 +1850,22 @@ export function PanchayatWebsite() {
 
         {/* Newsletter Page */}
         {activePage === "newsletter" && (
-          <div className="py-8 lg:py-16 bg-gradient-to-br from-[#F5F5F5] to-white min-h-[calc(100vh-4rem)]">
+          <div className="pt-12 pb-8 lg:pt-20 lg:pb-16 bg-gradient-to-br from-[#F5F5F5] to-white min-h-[calc(100vh-4rem)]">
             <div className="container mx-auto px-4 lg:px-8">
               <div className="text-center mb-12">
-                <h2 className="text-3xl lg:text-4xl font-bold text-[#1B2B5E] mb-4">
+                <h2 
+                  className="text-3xl lg:text-4xl font-bold mb-4 scroll-mt-24"
+                  style={{ color: theme?.colors.text || "#1B2B5E" }}
+                >
                   {t("panchayatWebsite.newsletters")} &{" "}
-                  <span className="text-[#E31E24]">
+                  <span style={{ color: theme?.colors.primary || "#E31E24" }}>
                     {t("panchayatWebsite.updates")}
                   </span>
                 </h2>
-                <div className="w-24 h-1 bg-[#E31E24] mx-auto mb-4"></div>
+                <div 
+                  className="w-24 h-1 mx-auto mb-4"
+                  style={{ backgroundColor: theme?.colors.primary || "#E31E24" }}
+                ></div>
                 <p className="text-[#666] max-w-2xl mx-auto">
                   {t("panchayatWebsite.newsletterDescription")}
                 </p>
@@ -1740,6 +1874,7 @@ export function PanchayatWebsite() {
               {selectedNewsletter ? (
                 <NewsletterDetailView
                   newsletter={selectedNewsletter}
+                  theme={theme}
                   onBack={() => setSelectedNewsletter(null)}
                   onImageClick={(imageUrl) => {
                     setSelectedNewsletterImageUrl(imageUrl);
@@ -1750,7 +1885,10 @@ export function PanchayatWebsite() {
                 <>
                   {loading ? (
                     <div className="text-center py-12">
-                      <Loader2 className="h-8 w-8 animate-spin mx-auto text-[#E31E24]" />
+                      <Loader2 
+                  className="h-8 w-8 animate-spin mx-auto" 
+                  style={{ color: theme?.colors.primary || "#E31E24" }}
+                />
                       <p className="mt-2 text-[#666]">
                         {t("panchayatWebsite.loadingNewsletters")}
                       </p>
@@ -1772,12 +1910,12 @@ export function PanchayatWebsite() {
                       {newsletters.map((newsletter) => (
                         <Card
                           key={newsletter.id}
-                          className="overflow-hidden transition-all hover:shadow-lg hover:scale-[1.02] cursor-pointer border-[#E5E5E5]"
+                          className="overflow-hidden transition-all hover:shadow-xl hover:scale-[1.02] cursor-pointer border-2 border-[#E5E5E5] hover:border-[#1B2B5E] bg-white group"
                           onClick={() => setSelectedNewsletter(newsletter)}
                         >
                           {newsletter.coverImageUrl && (
                             <div
-                              className="h-48 w-full overflow-hidden cursor-pointer relative group"
+                              className="h-56 w-full overflow-hidden relative group/cover"
                               onClick={(e) => {
                                 e.stopPropagation();
                                 setSelectedNewsletterImageUrl(
@@ -1790,16 +1928,27 @@ export function PanchayatWebsite() {
                                 fileKey={newsletter.coverImageFileKey}
                                 url={newsletter.coverImageUrl}
                               />
-                              <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-center justify-center">
-                                <span className="opacity-0 group-hover:opacity-100 text-white text-sm font-medium">
+                              <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/0 to-black/0 opacity-0 group-hover/cover:opacity-100 transition-opacity" />
+                              <div className="absolute top-3 right-3 opacity-0 group-hover/cover:opacity-100 transition-opacity">
+                                <Badge className="bg-white/90 text-[#1B2B5E] border-0 shadow-md">
+                                  <ImageIcon className="h-3 w-3 mr-1" />
+                                  View Image
+                                </Badge>
+                              </div>
+                              <div className="absolute bottom-0 left-0 right-0 p-4 opacity-0 group-hover/cover:opacity-100 transition-opacity">
+                                <p className="text-white text-xs font-medium">
                                   {t("panchayatWebsite.clickToView")}
-                                </span>
+                                </p>
                               </div>
                             </div>
                           )}
                           <CardContent className="p-6">
-                            <div className="flex items-center gap-2 mb-2">
-                              <Badge variant="secondary" className="text-xs">
+                            <div className="flex items-center gap-2 mb-3">
+                              <Badge 
+                                variant="secondary" 
+                                className="text-xs font-medium bg-[#F5F5F5] text-[#666] border border-[#E5E5E5]"
+                              >
+                                <Calendar className="h-3 w-3 mr-1" />
                                 {newsletter.publishedOn
                                   ? new Date(
                                       newsletter.publishedOn
@@ -1810,32 +1959,62 @@ export function PanchayatWebsite() {
                                   : t("panchayatWebsite.status.draft")}
                               </Badge>
                             </div>
-                            <h3 className="font-semibold text-lg text-[#1B2B5E] mb-2 line-clamp-2">
+                            <h3 
+                              className="font-bold text-xl mb-2 line-clamp-2 transition-colors"
+                              style={{ 
+                                color: theme?.colors.text || "#1B2B5E",
+                              }}
+                              onMouseEnter={(e) => {
+                                e.currentTarget.style.color = theme?.colors.primary || "#E31E24";
+                              }}
+                              onMouseLeave={(e) => {
+                                e.currentTarget.style.color = theme?.colors.text || "#1B2B5E";
+                              }}
+                            >
                               {newsletter.title}
                             </h3>
                             {newsletter.subtitle && (
-                              <p className="text-sm text-[#666] mb-4 line-clamp-2">
+                              <p className="text-sm text-[#666] mb-4 line-clamp-2 leading-relaxed">
                                 {newsletter.subtitle}
                               </p>
                             )}
-                            <div className="flex items-center justify-between text-xs text-[#999]">
+                            <div className="flex items-center justify-between pt-4 border-t border-[#E5E5E5]">
                               {newsletter.authorName && (
-                                <span>
-                                  {t("panchayatWebsite.by")}{" "}
-                                  {newsletter.authorName}
-                                </span>
+                                <div className="flex items-center gap-2 text-xs text-[#666]">
+                                  <UserCircle className="h-3.5 w-3.5" />
+                                  <span>
+                                    {t("panchayatWebsite.by")}{" "}
+                                    <span 
+                                      className="font-medium"
+                                      style={{ color: theme?.colors.text || "#1B2B5E" }}
+                                    >
+                                      {newsletter.authorName}
+                                    </span>
+                                  </span>
+                                </div>
                               )}
                               <Button
                                 variant="ghost"
                                 size="sm"
-                                className="text-[#E31E24] hover:text-[#C91A20]"
+                                style={{
+                                  color: theme?.colors.text || "#1B2B5E",
+                                }}
+                                className="font-medium transition-colors"
+                                onMouseEnter={(e) => {
+                                  e.currentTarget.style.color = theme?.colors.primary || "#E31E24";
+                                  e.currentTarget.style.backgroundColor = `${theme?.colors.primary || "#E31E24"}1A`;
+                                }}
+                                onMouseLeave={(e) => {
+                                  e.currentTarget.style.color = theme?.colors.text || "#1B2B5E";
+                                  e.currentTarget.style.backgroundColor = "transparent";
+                                }}
                                 onClick={(e) => {
                                   e.stopPropagation();
                                   setSelectedNewsletter(newsletter);
                                 }}
                               >
                                 {t("panchayatWebsite.readMore")}{" "}
-                                <ArrowRight className="ml-1 h-3 w-3" />
+                                <ArrowRight className="ml-1 h-3.5 w-3.5" />
                               </Button>
                             </div>
                           </CardContent>
@@ -1851,16 +2030,22 @@ export function PanchayatWebsite() {
 
         {/* Contact Page */}
         {activePage === "contact" && (
-          <div className="py-8 lg:py-16 bg-gradient-to-br from-[#F5F5F5] to-white min-h-[calc(100vh-4rem)]">
+          <div className="pt-12 pb-8 lg:pt-20 lg:pb-16 bg-gradient-to-br from-[#F5F5F5] to-white min-h-[calc(100vh-4rem)]">
             <div className="container mx-auto px-4 lg:px-8">
               <div className="text-center mb-12">
-                <h2 className="text-3xl lg:text-4xl font-bold text-[#1B2B5E] mb-4">
+                <h2 
+                  className="text-3xl lg:text-4xl font-bold mb-4 scroll-mt-24"
+                  style={{ color: theme?.colors.text || "#1B2B5E" }}
+                >
                   {t("panchayatWebsite.getInTouch")}{" "}
-                  <span className="text-[#E31E24]">
+                  <span style={{ color: theme?.colors.primary || "#E31E24" }}>
                     {t("panchayatWebsite.touch")}
                   </span>
                 </h2>
-                <div className="w-24 h-1 bg-[#E31E24] mx-auto mb-4"></div>
+                <div 
+                  className="w-24 h-1 mx-auto mb-4"
+                  style={{ backgroundColor: theme?.colors.primary || "#E31E24" }}
+                ></div>
                 <p className="text-[#666] max-w-2xl mx-auto">
                   {t("panchayatWebsite.contactDescription")}
                 </p>
@@ -1871,7 +2056,10 @@ export function PanchayatWebsite() {
                 <div className="space-y-6">
                   <Card className="border-[#E5E5E5]">
                     <CardContent className="p-6">
-                      <h3 className="text-xl font-semibold text-[#1B2B5E] mb-6">
+                      <h3 
+                        className="text-xl font-semibold mb-6 scroll-mt-24"
+                        style={{ color: theme?.colors.text || "#1B2B5E" }}
+                      >
                         {t("panchayatWebsite.contactInformation")}
                       </h3>
                       <div className="space-y-6">
@@ -1881,7 +2069,10 @@ export function PanchayatWebsite() {
                               <MapPin className="h-6 w-6 text-[#FF9933]" />
                             </div>
                             <div>
-                              <h4 className="font-semibold text-[#1B2B5E] mb-1">
+                              <h4 
+                                className="font-semibold mb-1"
+                                style={{ color: theme?.colors.text || "#1B2B5E" }}
+                              >
                                 {t("panchayatWebsite.address")}
                               </h4>
                               <p className="text-[#666] whitespace-pre-line">
@@ -1896,12 +2087,16 @@ export function PanchayatWebsite() {
                               <Phone className="h-6 w-6 text-[#138808]" />
                             </div>
                             <div>
-                              <h4 className="font-semibold text-[#1B2B5E] mb-1">
+                              <h4 
+                                className="font-semibold mb-1"
+                                style={{ color: theme?.colors.text || "#1B2B5E" }}
+                              >
                                 {t("panchayatWebsite.phone")}
                               </h4>
                               <a
                                 href={`tel:${panchayat.contactInfo.phone}`}
-                                className="text-[#E31E24] hover:underline"
+                                style={{ color: theme?.colors.primary || "#E31E24" }}
+                                className="hover:underline"
                               >
                                 {panchayat.contactInfo.phone}
                               </a>
@@ -1914,12 +2109,16 @@ export function PanchayatWebsite() {
                               <Mail className="h-6 w-6 text-[#E31E24]" />
                             </div>
                             <div>
-                              <h4 className="font-semibold text-[#1B2B5E] mb-1">
+                              <h4 
+                                className="font-semibold mb-1"
+                                style={{ color: theme?.colors.text || "#1B2B5E" }}
+                              >
                                 {t("panchayatWebsite.email")}
                               </h4>
                               <a
                                 href={`mailto:${panchayat.contactInfo.email}`}
-                                className="text-[#E31E24] hover:underline break-all"
+                                style={{ color: theme?.colors.primary || "#E31E24" }}
+                                className="hover:underline break-all"
                               >
                                 {panchayat.contactInfo.email}
                               </a>
@@ -1932,7 +2131,10 @@ export function PanchayatWebsite() {
                               <Clock className="h-6 w-6 text-[#6C5CE7]" />
                             </div>
                             <div>
-                              <h4 className="font-semibold text-[#1B2B5E] mb-1">
+                              <h4 
+                                className="font-semibold mb-1"
+                                style={{ color: theme?.colors.text || "#1B2B5E" }}
+                              >
                                 {t("panchayatWebsite.officeHours")}
                               </h4>
                               <p className="text-[#666] whitespace-pre-line">
@@ -1995,7 +2197,10 @@ export function PanchayatWebsite() {
                 {/* Contact Form */}
                 <Card className="border-[#E5E5E5]">
                   <CardContent className="p-6">
-                    <h3 className="text-xl font-semibold text-[#1B2B5E] mb-6">
+                    <h3 
+                      className="text-xl font-semibold mb-6 scroll-mt-24"
+                      style={{ color: theme?.colors.text || "#1B2B5E" }}
+                    >
                       {t("panchayatWebsite.sendUsMessage")}
                     </h3>
                     {formSubmitted && (
@@ -2009,9 +2214,12 @@ export function PanchayatWebsite() {
                       className="space-y-4"
                     >
                       <div>
-                        <Label htmlFor="name" className="text-[#1B2B5E]">
+                        <Label 
+                          htmlFor="name"
+                          style={{ color: theme?.colors.text || "#1B2B5E" }}
+                        >
                           {t("panchayatWebsite.name")}{" "}
-                          <span className="text-[#E31E24]">*</span>
+                          <span style={{ color: theme?.colors.primary || "#E31E24" }}>*</span>
                         </Label>
                         <Input
                           id="name"
@@ -2030,15 +2238,21 @@ export function PanchayatWebsite() {
                           }}
                         />
                         {formErrors.name && (
-                          <p className="text-xs text-[#E31E24] mt-1">
+                          <p 
+                            className="text-xs mt-1"
+                            style={{ color: theme?.colors.error || theme?.colors.primary || "#E31E24" }}
+                          >
                             {formErrors.name}
                           </p>
                         )}
                       </div>
                       <div>
-                        <Label htmlFor="email" className="text-[#1B2B5E]">
+                        <Label 
+                          htmlFor="email"
+                          style={{ color: theme?.colors.text || "#1B2B5E" }}
+                        >
                           {t("panchayatWebsite.email")}{" "}
-                          <span className="text-[#E31E24]">*</span>
+                          <span style={{ color: theme?.colors.primary || "#E31E24" }}>*</span>
                         </Label>
                         <Input
                           id="email"
@@ -2058,15 +2272,21 @@ export function PanchayatWebsite() {
                           }}
                         />
                         {formErrors.email && (
-                          <p className="text-xs text-[#E31E24] mt-1">
+                          <p 
+                            className="text-xs mt-1"
+                            style={{ color: theme?.colors.error || theme?.colors.primary || "#E31E24" }}
+                          >
                             {formErrors.email}
                           </p>
                         )}
                       </div>
                       <div>
-                        <Label htmlFor="subject" className="text-[#1B2B5E]">
+                        <Label 
+                          htmlFor="subject"
+                          style={{ color: theme?.colors.text || "#1B2B5E" }}
+                        >
                           {t("panchayatWebsite.subject")}{" "}
-                          <span className="text-[#E31E24]">*</span>
+                          <span style={{ color: theme?.colors.primary || "#E31E24" }}>*</span>
                         </Label>
                         <Input
                           id="subject"
@@ -2085,15 +2305,21 @@ export function PanchayatWebsite() {
                           }}
                         />
                         {formErrors.subject && (
-                          <p className="text-xs text-[#E31E24] mt-1">
+                          <p 
+                            className="text-xs mt-1"
+                            style={{ color: theme?.colors.error || theme?.colors.primary || "#E31E24" }}
+                          >
                             {formErrors.subject}
                           </p>
                         )}
                       </div>
                       <div>
-                        <Label htmlFor="message" className="text-[#1B2B5E]">
+                        <Label 
+                          htmlFor="message"
+                          style={{ color: theme?.colors.text || "#1B2B5E" }}
+                        >
                           {t("panchayatWebsite.message")}{" "}
-                          <span className="text-[#E31E24]">*</span>
+                          <span style={{ color: theme?.colors.primary || "#E31E24" }}>*</span>
                         </Label>
                         <Textarea
                           id="message"
@@ -2113,14 +2339,28 @@ export function PanchayatWebsite() {
                           }}
                         />
                         {formErrors.message && (
-                          <p className="text-xs text-[#E31E24] mt-1">
+                          <p 
+                            className="text-xs mt-1"
+                            style={{ color: theme?.colors.error || theme?.colors.primary || "#E31E24" }}
+                          >
                             {formErrors.message}
                           </p>
                         )}
                       </div>
                       <Button
                         type="submit"
-                        className="w-full bg-[#E31E24] hover:bg-[#C91A20] text-white"
+                        className="w-full text-white"
+                        style={{
+                          backgroundColor: theme?.colors.primary || "#E31E24",
+                        }}
+                        onMouseEnter={(e) => {
+                          // Darken the color on hover
+                          const color = theme?.colors.primary || "#E31E24";
+                          e.currentTarget.style.backgroundColor = color === "#E31E24" ? "#C91A20" : color;
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.backgroundColor = theme?.colors.primary || "#E31E24";
+                        }}
                       >
                         {t("panchayatWebsite.sendMessage")}
                         <MessageCircle className="ml-2 h-4 w-4" />
@@ -2328,102 +2568,159 @@ function AlbumImageWithRefresh({
 // Newsletter Detail View Component
 function NewsletterDetailView({
   newsletter,
+  theme,
   onBack,
   onImageClick,
 }: {
   newsletter: any;
+  theme: WebsiteTheme | null;
   onBack: () => void;
   onImageClick: (imageUrl: string) => void;
 }) {
   const { t } = useTranslation();
   return (
-    <article className="max-w-4xl mx-auto space-y-6">
-      <Button variant="ghost" onClick={onBack} className="mb-4">
+    <article className="max-w-5xl mx-auto space-y-8">
+      <Button 
+        variant="ghost" 
+        onClick={onBack} 
+        className="mb-2 text-[#1B2B5E] hover:text-[#E31E24] hover:bg-[#E31E24]/10"
+      >
         <ArrowRight className="h-4 w-4 mr-2 rotate-180" />
         {t("panchayatWebsite.backToNewsletters")}
       </Button>
 
       {newsletter.coverImageUrl && (
         <div
-          className="w-full h-64 sm:h-96 rounded-lg overflow-hidden cursor-pointer transition-transform hover:scale-[1.01]"
+          className="w-full h-80 sm:h-[500px] rounded-xl overflow-hidden cursor-pointer transition-transform hover:scale-[1.01] shadow-xl border-2 border-[#E5E5E5] group relative"
           onClick={() => onImageClick(newsletter.coverImageUrl || "")}
         >
           <NewsletterCoverImage
             fileKey={newsletter.coverImageFileKey}
             url={newsletter.coverImageUrl}
           />
+          <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors flex items-center justify-center">
+            <Badge className="opacity-0 group-hover:opacity-100 bg-white/90 text-[#1B2B5E] border-0 shadow-lg transition-opacity">
+              <ImageIcon className="h-4 w-4 mr-2" />
+              Click to view full image
+            </Badge>
+          </div>
         </div>
       )}
 
-      <div className="space-y-4">
-        <div>
-          <h1 className="text-3xl font-bold text-[#1B2B5E] mb-2">
-            {newsletter.title}
-          </h1>
-          {newsletter.subtitle && (
-            <p className="text-xl text-[#666] mb-4">{newsletter.subtitle}</p>
-          )}
-          <div className="flex flex-wrap items-center gap-4 text-sm text-[#666]">
-            {newsletter.authorName && (
-              <span>
-                {t("panchayatWebsite.by")} {newsletter.authorName}
-              </span>
+      <div className="bg-white rounded-xl shadow-sm border border-[#E5E5E5] p-8 sm:p-12">
+        <div className="space-y-6">
+          <div className="border-b border-[#E5E5E5] pb-6">
+            <div className="flex items-center gap-3 mb-4">
+              <Badge className="bg-[#1B2B5E] text-white border-0">
+                <Calendar className="h-3.5 w-3.5 mr-1.5" />
+                {newsletter.publishedOn
+                  ? new Date(newsletter.publishedOn).toLocaleDateString("en-IN", {
+                      year: "numeric",
+                      month: "long",
+                      day: "numeric",
+                    })
+                  : t("panchayatWebsite.status.draft")}
+              </Badge>
+            </div>
+            <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-[#1B2B5E] mb-4 leading-tight">
+              {newsletter.title}
+            </h1>
+            {newsletter.subtitle && (
+              <p className="text-xl sm:text-2xl text-[#666] mb-6 leading-relaxed">
+                {newsletter.subtitle}
+              </p>
             )}
-            {newsletter.publishedOn && (
-              <span>
-                {new Date(newsletter.publishedOn).toLocaleDateString("en-IN", {
-                  year: "numeric",
-                  month: "long",
-                  day: "numeric",
-                })}
-              </span>
-            )}
-          </div>
-        </div>
-
-        {newsletter.content && (
-          <div
-            className="prose prose-lg max-w-none"
-            dangerouslySetInnerHTML={{ __html: newsletter.content }}
-          />
-        )}
-
-        {newsletter.bulletPoints && newsletter.bulletPoints.length > 0 && (
-          <div>
-            <h2 className="text-2xl font-semibold text-[#1B2B5E] mb-3">
-              {t("panchayatWebsite.keyPoints")}
-            </h2>
-            <ul className="list-disc list-inside space-y-2 text-[#666]">
-              {newsletter.bulletPoints.map((point: string, index: number) => (
-                <li key={index}>{point}</li>
-              ))}
-            </ul>
-          </div>
-        )}
-
-        {newsletter.attachments && newsletter.attachments.length > 0 && (
-          <div>
-            <h2 className="text-2xl font-semibold text-[#1B2B5E] mb-3">
-              {t("panchayatWebsite.attachments")}
-            </h2>
-            <div className="space-y-2">
-              {newsletter.attachments.map(
-                (attachment: string, index: number) => (
-                  <Button key={index} variant="outline" asChild>
-                    <a
-                      href={attachment}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                    >
-                      <Download className="mr-2 h-4 w-4" />
-                      {t("panchayatWebsite.downloadAttachment")} {index + 1}
-                    </a>
-                  </Button>
-                )
+            <div className="flex flex-wrap items-center gap-4 text-sm text-[#666]">
+              {newsletter.authorName && (
+                <div className="flex items-center gap-2">
+                  <UserCircle className="h-4 w-4" />
+                  <span>
+                    {t("panchayatWebsite.by")}{" "}
+                    <span className="font-semibold text-[#1B2B5E]">{newsletter.authorName}</span>
+                  </span>
+                </div>
               )}
             </div>
           </div>
-        )}
+
+          {newsletter.content && (
+            <div className="prose prose-lg sm:prose-xl max-w-none prose-headings:text-[#1B2B5E] prose-p:text-[#333] prose-p:leading-relaxed prose-a:text-[#E31E24] prose-a:no-underline hover:prose-a:underline prose-strong:text-[#1B2B5E] prose-img:rounded-lg prose-img:shadow-md">
+              <div dangerouslySetInnerHTML={{ __html: newsletter.content }} />
+            </div>
+          )}
+
+          {newsletter.bulletPoints && newsletter.bulletPoints.length > 0 && (
+            <div className="mt-8 pt-8 border-t border-[#E5E5E5]">
+              <h2 
+                className="text-2xl sm:text-3xl font-bold mb-6 flex items-center gap-3"
+                style={{ color: theme?.colors.text || "#1B2B5E" }}
+              >
+                <Award 
+                  className="h-6 w-6" 
+                  style={{ color: theme?.colors.primary || "#E31E24" }}
+                />
+                {t("panchayatWebsite.keyPoints")}
+              </h2>
+              <div className="grid gap-4 sm:grid-cols-1">
+                {newsletter.bulletPoints.map((point: string, index: number) => (
+                  <div
+                    key={index}
+                    className="flex items-start gap-4 p-4 bg-[#F9FAFB] rounded-lg border border-[#E5E5E5] hover:border-[#1B2B5E] transition-colors"
+                  >
+                    <div className="flex-shrink-0 w-8 h-8 rounded-full bg-[#1B2B5E] text-white text-sm font-bold flex items-center justify-center mt-0.5">
+                      {index + 1}
+                    </div>
+                    <p className="text-base text-[#333] leading-relaxed pt-1">{point}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {newsletter.attachments && newsletter.attachments.length > 0 && (
+            <div className="mt-8 pt-8 border-t border-[#E5E5E5]">
+              <h2 
+                className="text-2xl sm:text-3xl font-bold mb-6 flex items-center gap-3"
+                style={{ color: theme?.colors.text || "#1B2B5E" }}
+              >
+                <Download 
+                  className="h-6 w-6" 
+                  style={{ color: theme?.colors.primary || "#E31E24" }}
+                />
+                {t("panchayatWebsite.attachments")}
+              </h2>
+              <div className="grid gap-3 sm:grid-cols-2">
+                {newsletter.attachments.map(
+                  (attachment: string, index: number) => (
+                    <Button 
+                      key={index} 
+                      variant="outline" 
+                      asChild
+                      className="justify-start h-auto p-4 border-2 border-[#E5E5E5] hover:border-[#1B2B5E] hover:bg-[#1B2B5E] hover:text-white transition-all"
+                    >
+                      <a
+                        href={attachment}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex items-center gap-3"
+                      >
+                        <div className="p-2 bg-[#F5F5F5] rounded-lg">
+                          <Download className="h-5 w-5 text-[#1B2B5E]" />
+                        </div>
+                        <div className="text-left">
+                          <p className="font-semibold text-sm">
+                            {t("panchayatWebsite.downloadAttachment")} {index + 1}
+                          </p>
+                          <p className="text-xs text-[#666]">Click to download</p>
+                        </div>
+                      </a>
+                    </Button>
+                  )
+                )}
+              </div>
+            </div>
+          )}
+        </div>
       </div>
     </article>
   );

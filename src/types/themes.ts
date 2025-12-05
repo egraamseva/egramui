@@ -169,6 +169,98 @@ export const PREDEFINED_THEMES: WebsiteTheme[] = [
       textColor: '#FFFFFF',
     },
   },
+  {
+    id: 'indian-heritage',
+    name: 'Indian Heritage',
+    description: 'Professional theme inspired by Indian flag colors - saffron, white, and green',
+    colors: {
+      primary: '#FF6B35',      // Saffron-inspired
+      secondary: '#1B2B5E',  // Deep blue (Ashoka Chakra)
+      background: '#FFFFFF',
+      surface: '#FFF8F5',
+      text: '#1B2B5E',
+      textSecondary: '#5A5A5A',
+      border: '#E8E8E8',
+      accent: '#138808',      // Green
+      success: '#138808',
+      warning: '#FF6B35',
+      error: '#E31E24',
+    },
+    hero: {
+      backgroundGradient: 'linear-gradient(135deg, #FF6B35 0%, #1B2B5E 50%, #138808 100%)',
+      overlay: 'rgba(0, 0, 0, 0.25)',
+      textColor: '#FFFFFF',
+    },
+  },
+  {
+    id: 'government-blue',
+    name: 'Government Blue',
+    description: 'Official and authoritative blue theme for government websites',
+    colors: {
+      primary: '#1B2B5E',      // Deep government blue
+      secondary: '#2A3F6F',   // Medium blue
+      background: '#FFFFFF',
+      surface: '#F5F7FA',
+      text: '#1B2B5E',
+      textSecondary: '#64748B',
+      border: '#E2E8F0',
+      accent: '#3B82F6',      // Bright blue accent
+      success: '#138808',
+      warning: '#F59E0B',
+      error: '#E31E24',
+    },
+    hero: {
+      backgroundGradient: 'linear-gradient(135deg, #1B2B5E 0%, #2A3F6F 50%, #3B82F6 100%)',
+      overlay: 'rgba(0, 0, 0, 0.2)',
+      textColor: '#FFFFFF',
+    },
+  },
+  {
+    id: 'saffron-elegance',
+    name: 'Saffron Elegance',
+    description: 'Warm and professional saffron theme with deep blue accents',
+    colors: {
+      primary: '#FF6B35',      // Saffron
+      secondary: '#1B2B5E',   // Deep blue
+      background: '#FFFFFF',
+      surface: '#FFF8F5',
+      text: '#1B2B5E',
+      textSecondary: '#6B7280',
+      border: '#FED7AA',
+      accent: '#FF9933',       // Orange
+      success: '#138808',
+      warning: '#FF6B35',
+      error: '#E31E24',
+    },
+    hero: {
+      backgroundGradient: 'linear-gradient(135deg, #FF6B35 0%, #FF9933 50%, #1B2B5E 100%)',
+      overlay: 'rgba(0, 0, 0, 0.2)',
+      textColor: '#FFFFFF',
+    },
+  },
+  {
+    id: 'forest-green',
+    name: 'Forest Green',
+    description: 'Professional green theme representing growth and prosperity',
+    colors: {
+      primary: '#138808',      // Indian green
+      secondary: '#0F6B0A',    // Dark green
+      background: '#FFFFFF',
+      surface: '#F0FDF4',
+      text: '#1B2B5E',
+      textSecondary: '#64748B',
+      border: '#D1FAE5',
+      accent: '#22C55E',       // Bright green
+      success: '#138808',
+      warning: '#F59E0B',
+      error: '#E31E24',
+    },
+    hero: {
+      backgroundGradient: 'linear-gradient(135deg, #138808 0%, #0F6B0A 50%, #22C55E 100%)',
+      overlay: 'rgba(0, 0, 0, 0.15)',
+      textColor: '#FFFFFF',
+    },
+  },
 ];
 
 /**

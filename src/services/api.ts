@@ -996,6 +996,8 @@ export const settingsAPI = {
         payload.description = updates.hero.description || null;
       if (updates.hero.image !== undefined)
         payload.heroImageUrl = updates.hero.image || null;
+      if(updates.hero.image === undefined)
+        payload.heroImageUrl = null;
     }
     if (updates.about) {
       if (updates.about.title !== undefined)
@@ -1069,17 +1071,105 @@ export const settingsAPI = {
   ): Promise<PanchayatSettings> => {
     return await settingsAPI.update({ contact });
   },
-  uploadLogo: async (_file: File): Promise<PanchayatSettings> => {
-    // For now, return error - file upload needs separate endpoint
-    throw new Error(
-      "Logo upload not implemented - please use image URL in settings"
-    );
+  uploadLogo: async (file: File): Promise<PanchayatSettings> => {
+    const { settingsApi } = await import("@/routes/api");
+    const data = await settingsApi.uploadLogo(file);
+    
+    // Parse aboutFeatures JSON string to array
+    let features: string[] = [];
+    if (data.aboutFeatures) {
+      try {
+        features = JSON.parse(data.aboutFeatures);
+        if (!Array.isArray(features)) {
+          features = [];
+        }
+      } catch (e) {
+        features = [];
+      }
+    }
+
+    // Map backend response to frontend PanchayatSettings
+    return {
+      id: String(data.panchayatId),
+      panchayatId: String(data.panchayatId),
+      hero: {
+        title: data.heroTitle || data.panchayatName || "",
+        subtitle: data.heroSubtitle || data.district || "",
+        description: data.description || "",
+        image: data.heroImageUrl || undefined,
+      },
+      about: {
+        title: data.aboutTitle || "About Us",
+        content: data.aboutText || "",
+        features: features,
+      },
+      contact: {
+        address: data.officeAddress || data.address || "",
+        phone: data.officePhone || data.contactPhone || "",
+        email: data.officeEmail || data.contactEmail || "",
+        officeHours: data.officeHours || "",
+      },
+      basicInfo: {
+        population: data.population || undefined,
+        area: data.area || "",
+        wards: data.wards || undefined,
+        establishedYear: data.establishedYear || undefined,
+        mapCoordinates: data.mapCoordinates || "",
+      },
+      logo: data.logoUrl,
+      themeId: data.themeId,
+      updatedAt: data.updatedAt || new Date().toISOString(),
+    };
   },
-  uploadHeroImage: async (_file: File): Promise<PanchayatSettings> => {
-    // For now, return error - file upload needs separate endpoint
-    throw new Error(
-      "Hero image upload not implemented - please use image URL in settings"
-    );
+  uploadHeroImage: async (file: File): Promise<PanchayatSettings> => {
+    const { settingsApi } = await import("@/routes/api");
+    const data = await settingsApi.uploadHeroImage(file);
+    
+    // Parse aboutFeatures JSON string to array
+    let features: string[] = [];
+    if (data.aboutFeatures) {
+      try {
+        features = JSON.parse(data.aboutFeatures);
+        if (!Array.isArray(features)) {
+          features = [];
+        }
+      } catch (e) {
+        features = [];
+      }
+    }
+
+    // Map backend response to frontend PanchayatSettings
+    return {
+      id: String(data.panchayatId),
+      panchayatId: String(data.panchayatId),
+      hero: {
+        title: data.heroTitle || data.panchayatName || "",
+        subtitle: data.heroSubtitle || data.district || "",
+        description: data.description || "",
+        image: data.heroImageUrl || undefined,
+      },
+      about: {
+        title: data.aboutTitle || "About Us",
+        content: data.aboutText || "",
+        features: features,
+      },
+      contact: {
+        address: data.officeAddress || data.address || "",
+        phone: data.officePhone || data.contactPhone || "",
+        email: data.officeEmail || data.contactEmail || "",
+        officeHours: data.officeHours || "",
+      },
+      basicInfo: {
+        population: data.population || undefined,
+        area: data.area || "",
+        wards: data.wards || undefined,
+        establishedYear: data.establishedYear || undefined,
+        mapCoordinates: data.mapCoordinates || "",
+      },
+      logo: data.logoUrl,
+      themeId: data.themeId,
+      updatedAt: data.updatedAt || new Date().toISOString(),
+    };
   },
 };
 
