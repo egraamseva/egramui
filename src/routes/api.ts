@@ -94,6 +94,10 @@ const globalLoadingManager = new GlobalLoadingManager();
 
 class HttpClient {
   private client: AxiosInstance;
+  private requestCache: Map<string, { data: any; timestamp: number }> =
+    new Map();
+  private pendingRequests: Map<string, Promise<any>> = new Map();
+  private readonly CACHE_TTL = 30000; // 30 seconds cache
 
   constructor(baseURL: string) {
     this.client = axios.create({
@@ -132,6 +136,34 @@ class HttpClient {
     );
   }
 
+  /**
+   * Generate cache key from request config
+   */
+  private getCacheKey(config: AxiosRequestConfig): string {
+    return `${config.method}:${config.url}:${JSON.stringify(
+      config.params || {}
+    )}`;
+  }
+
+  /**
+   * Check if cached data is still valid
+   */
+  private isCacheValid(timestamp: number): boolean {
+    return Date.now() - timestamp < this.CACHE_TTL;
+  }
+
+  /**
+   * Clear expired cache entries
+   */
+  private clearExpiredCache(): void {
+    const now = Date.now();
+    for (const [key, value] of this.requestCache.entries()) {
+      if (now - value.timestamp >= this.CACHE_TTL) {
+        this.requestCache.delete(key);
+      }
+    }
+  }
+
   async request<T>(config: AxiosRequestConfig): Promise<T> {
     // Increase timeout for file uploads (multipart/form-data)
     const isFileUpload =
@@ -145,22 +177,70 @@ class HttpClient {
       timeout,
     };
 
-    try {
-      const response = await this.client.request<ApiResponse<T>>(requestConfig);
-      const payload = response.data;
+    // Only cache GET requests
+    const shouldCache = config.method?.toUpperCase() === "GET";
+    const cacheKey = shouldCache ? this.getCacheKey(requestConfig) : "";
 
-      if (payload?.success === false) {
-        throw new Error(payload.message ?? "Request failed");
+    // Check cache for GET requests
+    if (shouldCache && cacheKey) {
+      const cached = this.requestCache.get(cacheKey);
+      if (cached && this.isCacheValid(cached.timestamp)) {
+        return cached.data;
       }
 
-      if (typeof payload?.data !== "undefined") {
-        return payload.data;
+      // Check if there's already a pending request for this key (request deduplication)
+      const pending = this.pendingRequests.get(cacheKey);
+      if (pending) {
+        return pending;
       }
-
-      return payload as unknown as T;
-    } catch (error) {
-      throw this.normalizeError(error);
     }
+
+    // Create the request promise
+    const requestPromise = (async () => {
+      try {
+        const response = await this.client.request<ApiResponse<T>>(
+          requestConfig
+        );
+        const payload = response.data;
+
+        if (payload?.success === false) {
+          throw new Error(payload.message ?? "Request failed");
+        }
+
+        const result =
+          typeof payload?.data !== "undefined"
+            ? payload.data
+            : (payload as unknown as T);
+
+        // Cache successful GET requests
+        if (shouldCache && cacheKey) {
+          this.requestCache.set(cacheKey, {
+            data: result,
+            timestamp: Date.now(),
+          });
+          // Periodically clear expired cache
+          if (this.requestCache.size > 100) {
+            this.clearExpiredCache();
+          }
+        }
+
+        return result;
+      } catch (error) {
+        throw this.normalizeError(error);
+      } finally {
+        // Remove from pending requests
+        if (shouldCache && cacheKey) {
+          this.pendingRequests.delete(cacheKey);
+        }
+      }
+    })();
+
+    // Store pending request for deduplication
+    if (shouldCache && cacheKey) {
+      this.pendingRequests.set(cacheKey, requestPromise);
+    }
+
+    return requestPromise;
   }
 
   get<T>(url: string, config?: AxiosRequestConfig) {
