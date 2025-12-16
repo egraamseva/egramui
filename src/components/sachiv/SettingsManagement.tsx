@@ -17,6 +17,7 @@ import { Input } from "../ui/input";
 import { Label } from "../ui/label";
 import { Textarea } from "../ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../ui/tabs";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../ui/select";
 import { toast } from "sonner";
 import { settingsAPI } from "../../services/api";
 import type { PanchayatSettings } from "../../types";
@@ -395,62 +396,90 @@ export function SettingsManagement({ panchayatId }: SettingsManagementProps) {
                   rows={4}
                 />
               </div>
-              <div className="space-y-2">
-                <Label>Hero Image</Label>
-                <div className="flex items-center gap-4">
-                  {settings.hero.image && (
-                    <div className="relative">
-                      <div
-                        className="relative w-32 h-32 rounded-lg overflow-hidden border cursor-pointer"
-                        onClick={() => {
-                          setSelectedImageUrl(settings.hero.image || "");
-                          setIsImageModalOpen(true);
-                        }}
-                      >
-                        <ImageWithFallback
-                          src={settings.hero.image}
-                          alt="Hero"
-                          className="w-full h-full object-cover"
-                        />
-                      </div>
-                      <Button
-                        variant="destructive"
-                        size="icon"
-                        className="absolute -top-2 -right-2 h-6 w-6 rounded-full"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleRemoveHeroImage();
-                        }}
-                        disabled={saving}
-                        title="Remove hero image"
-                      >
-                        <X className="h-3 w-3" />
-                      </Button>
-                    </div>
-                  )}
-                  <div>
-                    <Input
-                      type="file"
-                      accept="image/*"
-                      onChange={(e) => {
-                        const file = e.target.files?.[0];
-                        if (file) handleHeroImageUpload(file);
-                      }}
-                      className="hidden"
-                      id="hero-image-upload"
-                    />
-                    <Button
-                      variant="outline"
-                      onClick={() =>
-                        document.getElementById("hero-image-upload")?.click()
-                      }
-                      disabled={saving}
-                    >
-                      <Upload className="h-4 w-4 mr-2" />
-                      {settings.hero.image ? "Change Image" : "Upload Image"}
-                    </Button>
-                  </div>
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label>Hero Section Display</Label>
+                  <Select
+                    value={settings.hero.displayType || 'image'}
+                    onValueChange={(value) =>
+                      setSettings({
+                        ...settings,
+                        hero: { ...settings.hero, displayType: value as 'image' | 'theme' },
+                      })
+                    }
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="image">Use Hero Image</SelectItem>
+                      <SelectItem value="theme">Use Theme Colors</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-muted-foreground">
+                    Choose whether to display the hero image or use theme gradient colors
+                  </p>
                 </div>
+                
+                {settings.hero.displayType !== 'theme' && (
+                  <div className="space-y-2">
+                    <Label>Hero Image</Label>
+                    <div className="flex items-center gap-4">
+                      {settings.hero.image && (
+                        <div className="relative">
+                          <div
+                            className="relative w-32 h-32 rounded-lg overflow-hidden border cursor-pointer"
+                            onClick={() => {
+                              setSelectedImageUrl(settings.hero.image || "");
+                              setIsImageModalOpen(true);
+                            }}
+                          >
+                            <ImageWithFallback
+                              src={settings.hero.image}
+                              alt="Hero"
+                              className="w-full h-full object-cover"
+                            />
+                          </div>
+                          <Button
+                            variant="destructive"
+                            size="icon"
+                            className="absolute -top-2 -right-2 h-6 w-6 rounded-full"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleRemoveHeroImage();
+                            }}
+                            disabled={saving}
+                            title="Remove hero image"
+                          >
+                            <X className="h-3 w-3" />
+                          </Button>
+                        </div>
+                      )}
+                      <div>
+                        <Input
+                          type="file"
+                          accept="image/*"
+                          onChange={(e) => {
+                            const file = e.target.files?.[0];
+                            if (file) handleHeroImageUpload(file);
+                          }}
+                          className="hidden"
+                          id="hero-image-upload"
+                        />
+                        <Button
+                          variant="outline"
+                          onClick={() =>
+                            document.getElementById("hero-image-upload")?.click()
+                          }
+                          disabled={saving}
+                        >
+                          <Upload className="h-4 w-4 mr-2" />
+                          {settings.hero.image ? "Change Image" : "Upload Image"}
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
               <Button
                 type="button"

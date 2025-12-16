@@ -33,7 +33,6 @@ import { useAuth } from "../../../contexts/AuthContext";
 import { newsletterApi } from "@/routes/api";
 import { ImageWithFallback } from "../../figma/ImageWithFallback";
 import { ImageModal } from "../../ui/image-modal";
-import { usePresignedUrlRefresh } from "../../../hooks/usePresignedUrlRefresh";
 import { useTranslation } from "react-i18next";
 
 type Newsletter = {
@@ -725,14 +724,11 @@ export function NewsletterPage() {
   );
 }
 
-// Helper component for newsletter cover image with presigned URL refresh
+// Helper component for newsletter cover image
 function NewsletterCoverImage({ fileKey, url }: { fileKey?: string; url?: string }) {
-  const { presignedUrl } = usePresignedUrlRefresh({
-    fileKey: fileKey || undefined,
-    initialPresignedUrl: url || undefined,
-  });
+  const imageUrl = url || (fileKey ? undefined : null); // Use URL directly, fileKey not needed for Cloudflare public URLs
 
-  if (!presignedUrl) {
+  if (!imageUrl) {
     return (
       <div className="w-full h-full bg-muted flex items-center justify-center">
         <span className="text-muted-foreground text-sm">No image</span>
@@ -742,11 +738,11 @@ function NewsletterCoverImage({ fileKey, url }: { fileKey?: string; url?: string
 
   return (
     <ImageWithFallback
-      src={presignedUrl}
+      src={imageUrl}
       alt="Newsletter cover"
       className="w-full h-full object-cover"
       onError={async () => {
-        // Hook will handle refresh automatically
+        // ImageWithFallback handles errors automatically
       }}
     />
   );

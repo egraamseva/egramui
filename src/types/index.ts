@@ -261,6 +261,7 @@ export interface PanchayatSettings {
     subtitle: string;
     description: string;
     image?: string;
+    displayType?: 'image' | 'theme';
   };
   about: {
     title: string;
@@ -408,6 +409,7 @@ export interface ContentItem {
   description?: string;
   image?: string;
   imageKey?: string;
+  imageFit?: 'cover' | 'contain' | 'fill' | 'none' | 'scale-down';
   link?: string;
   icon?: string;
   value?: string;
@@ -507,6 +509,7 @@ export interface PlatformSection {
   textColor?: string;
   imageUrl?: string;
   imageKey?: string;
+  imageFit?: 'cover' | 'contain' | 'fill' | 'none' | 'scale-down';
   metadata?: Record<string, any>;
   createdAt?: string;
   updatedAt?: string;

@@ -287,9 +287,6 @@ export function GalleryPage() {
                       src={image.image}
                       alt={image.title}
                       className="w-full h-full object-cover"
-                      data-gallery-id={image.id}
-                      entityType="gallery"
-                      entityId={image.id}
                     />
                   </div>
                   {image.category && (

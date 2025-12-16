@@ -379,12 +379,6 @@ class PanchayatPostApi {
     return this.http.delete(`/panchayat/posts/${id}`);
   }
 
-  async refreshImageUrl(id: string | number): Promise<{ mediaUrl: string }> {
-    const data = await this.http.patch<{ mediaUrl: string }>(
-      `/panchayat/posts/${id}/refresh-image-url`
-    );
-    return data;
-  }
 }
 
 /**
@@ -1121,15 +1115,6 @@ class PanchayatAlbumApi {
     return await this.http.delete(`/panchayat/albums/${id}`);
   }
 
-  async refreshCoverImageUrl(
-    id: string | number
-  ): Promise<{ coverImageUrl?: string; mediaUrl?: string }> {
-    const data = await this.http.patch<{
-      coverImageUrl?: string;
-      mediaUrl?: string;
-    }>(`/panchayat/albums/${id}/refresh-cover-image-url`);
-    return data;
-  }
 }
 
 /**
@@ -1275,15 +1260,6 @@ class PanchayatGalleryApi {
     return await this.http.delete(`/panchayat/gallery/${id}`);
   }
 
-  async refreshImageUrl(
-    id: string | number
-  ): Promise<{ imageUrl?: string; mediaUrl?: string }> {
-    const data = await this.http.patch<{
-      imageUrl?: string;
-      mediaUrl?: string;
-    }>(`/panchayat/gallery/${id}/refresh-image-url`);
-    return data;
-  }
 }
 
 const mapAlbumResponse = (album: ServerAlbum): Album => ({
@@ -2126,6 +2102,23 @@ class PlatformLandingPageApi {
       }
     );
     return { imageUrl: data.imageUrl };
+  }
+
+  async uploadImageGeneric(
+    file: File,
+    compressionQuality: string = "HIGH"
+  ): Promise<{ imageUrl: string }> {
+    const formData = new FormData();
+    formData.append("imageFile", file);
+    formData.append("compressionQuality", compressionQuality);
+    const data = await this.http.post<any>(
+      `/admin/platform/landing-page/upload-image`,
+      formData,
+      {
+        headers: { "Content-Type": "multipart/form-data" },
+      }
+    );
+    return { imageUrl: data.imageUrl || (data as any).imageUrl || "" };
   }
 
   private mapSection(section: any): PlatformSection {

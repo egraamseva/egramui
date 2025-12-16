@@ -6,12 +6,13 @@ import { Textarea } from '../ui/textarea';
 import { SectionTypeSelector } from './SectionTypeSelector';
 import { LayoutTypeSelector } from './LayoutTypeSelector';
 import { SectionContentEditor } from './SectionContentEditor';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 import { ImageWithFallback } from '../figma/ImageWithFallback';
 import { Upload, X } from 'lucide-react';
 import { toast } from 'sonner';
 import type { PlatformSection, PanchayatWebsiteSection, PlatformSectionType, PanchayatSectionType, LayoutType } from '../../types';
 import { getSectionTypeConfig, mapOldSectionType, mapToBackendSectionType } from '../../utils/sectionTypeConfig';
-import { panchayatWebsiteApi } from '../../routes/api';
+import { panchayatWebsiteApi, platformLandingPageApi } from '../../routes/api';
 
 interface SectionEditorProps {
   section?: PlatformSection | PanchayatWebsiteSection | null;
@@ -39,6 +40,7 @@ export  function SectionEditor({
     textColor: section?.textColor || '',
     imageUrl: section?.imageUrl || '',
     imageKey: section?.imageKey || '',
+    imageFit: (section?.imageFit || 'cover') as 'cover' | 'contain' | 'fill' | 'none' | 'scale-down',
     metadata: section?.metadata || {},
   });
 
@@ -70,6 +72,7 @@ export  function SectionEditor({
         textColor: section.textColor || '',
         imageUrl: section.imageUrl || '',
         imageKey: section.imageKey || '',
+        imageFit: (section.imageFit || 'cover') as 'cover' | 'contain' | 'fill' | 'none' | 'scale-down',
         metadata: section.metadata || {},
       });
       setImagePreview(section.imageUrl || null);
@@ -93,6 +96,7 @@ export  function SectionEditor({
         textColor: '',
         imageUrl: '',
         imageKey: '',
+        imageFit: 'cover' as 'cover' | 'contain' | 'fill' | 'none' | 'scale-down',
         metadata: {},
       });
       setImagePreview(null);
@@ -222,6 +226,11 @@ export  function SectionEditor({
         sectionData.imageUrl = formData.imageUrl;
         sectionData.imageKey = formData.imageKey;
       }
+      
+      // Include imageFit in section data
+      if (formData.imageFit) {
+        sectionData.imageFit = formData.imageFit;
+      }
 
       const savedSection = await onSave(sectionData);
       
@@ -230,11 +239,26 @@ export  function SectionEditor({
       if (totalImagesToUpload > 0 && savedSection) {
         const uploadToastId = toast.loading(`Uploading ${totalImagesToUpload} image(s)...`);
         try {
+          // Use the correct API based on platform or panchayat section
+          const uploadApi = isPlatform ? platformLandingPageApi : panchayatWebsiteApi;
+          const updateApi = isPlatform ? platformLandingPageApi : panchayatWebsiteApi;
+          
+          // Save original section imageUrl to restore it later (since uploadImage overwrites it)
+          const originalImageUrl = savedSection.imageUrl;
+          const originalImageKey = savedSection.imageKey;
+          
           // Upload multiple images and create items for them
           if (imageFiles.length > 0) {
             const uploadPromises = imageFiles.map(async (file, index) => {
               try {
-                const result = await panchayatWebsiteApi.uploadImage(savedSection.id, file);
+                // Use generic upload if available, otherwise use section upload and restore
+                let result;
+                if (isPlatform && (uploadApi as any).uploadImageGeneric) {
+                  result = await (uploadApi as any).uploadImageGeneric(file);
+                } else {
+                  // For panchayat or if generic not available, use section upload
+                  result = await uploadApi.uploadImage(savedSection.id, file);
+                }
                 // Update the corresponding item's image URL
                 if (parsedContent.items && parsedContent.items[parsedContent.items.length - imageFiles.length + index]) {
                   parsedContent.items[parsedContent.items.length - imageFiles.length + index].image = result.imageUrl;
@@ -253,7 +277,14 @@ export  function SectionEditor({
             contentItemImages.forEach((file, itemIndex) => {
               const uploadPromise = (async () => {
                 try {
-                  const result = await panchayatWebsiteApi.uploadImage(savedSection.id, file);
+                  // Use generic upload if available, otherwise use section upload and restore
+                  let result;
+                  if (isPlatform && (uploadApi as any).uploadImageGeneric) {
+                    result = await (uploadApi as any).uploadImageGeneric(file);
+                  } else {
+                    // For panchayat or if generic not available, use section upload
+                    result = await uploadApi.uploadImage(savedSection.id, file);
+                  }
                   // Update the item's image URL in the content
                   if (parsedContent.items && parsedContent.items[itemIndex]) {
                     parsedContent.items[itemIndex].image = result.imageUrl;
@@ -268,11 +299,46 @@ export  function SectionEditor({
             await Promise.all(uploadPromises);
           }
           
+          // Restore original section imageUrl if it was overwritten
+          if ((imageFiles.length > 0 || contentItemImages.size > 0) && originalImageUrl && 
+              (!isPlatform || !(uploadApi as any).uploadImageGeneric)) {
+            // Only restore if we used the section upload method (not generic)
+            try {
+              await updateApi.updateSection(savedSection.id, {
+                imageUrl: originalImageUrl,
+                imageKey: originalImageKey,
+              });
+            } catch (error) {
+              console.warn('Failed to restore original section image:', error);
+            }
+          }
+          
           // Update section with final image URLs
           if (imageFiles.length > 0 || contentItemImages.size > 0) {
-            await panchayatWebsiteApi.updateSection(savedSection.id, {
-              content: parsedContent,
+            // Ensure content is properly structured before updating
+            const contentToUpdate = {
+              ...parsedContent,
+              items: parsedContent.items || []
+            };
+            
+            // Log for debugging
+            console.log('Updating section content with images:', {
+              sectionId: savedSection.id,
+              itemsCount: contentToUpdate.items.length,
+              itemsWithImages: contentToUpdate.items.filter((item: any) => item.image).length
             });
+            
+            const updatedSection = await updateApi.updateSection(savedSection.id, {
+              content: contentToUpdate,
+            });
+            
+            // Verify the update was successful
+            if (updatedSection && updatedSection.content) {
+              const updatedContent = typeof updatedSection.content === 'string' 
+                ? JSON.parse(updatedSection.content) 
+                : updatedSection.content;
+              console.log('Section updated successfully. Content items:', updatedContent.items?.length || 0);
+            }
           }
           
           toast.dismiss(uploadToastId);
@@ -431,35 +497,82 @@ export  function SectionEditor({
               Upload a single image for the section header/background
             </p>
             {imagePreview ? (
-              <div className="relative">
-                <ImageWithFallback
-                  src={imagePreview}
-                  alt="Preview"
-                  className="w-full h-48 object-cover rounded-lg"
-                />
-                <Button
-                  type="button"
-                  variant="destructive"
-                  size="sm"
-                  className="absolute top-2 right-2"
-                  onClick={handleRemoveImage}
-                >
-                  <X className="h-4 w-4" />
-                </Button>
+              <div className="space-y-3">
+                <div className="relative">
+                  <ImageWithFallback
+                    src={imagePreview}
+                    alt="Preview"
+                    className="w-full h-48 rounded-lg"
+                    style={{ objectFit: formData.imageFit }}
+                  />
+                  <Button
+                    type="button"
+                    variant="destructive"
+                    size="sm"
+                    className="absolute top-2 right-2"
+                    onClick={handleRemoveImage}
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="image-fit">Image Display Style</Label>
+                  <Select
+                    value={formData.imageFit}
+                    onValueChange={(value) => setFormData({ ...formData, imageFit: value as any })}
+                  >
+                    <SelectTrigger id="image-fit">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="cover">Cover - Fill container, may crop</SelectItem>
+                      <SelectItem value="contain">Contain - Fit entire image, may have gaps</SelectItem>
+                      <SelectItem value="fill">Fill - Stretch to fill container</SelectItem>
+                      <SelectItem value="none">None - Original size</SelectItem>
+                      <SelectItem value="scale-down">Scale Down - Like none or contain, whichever is smaller</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-muted-foreground">
+                    Choose how the image should be displayed within its container
+                  </p>
+                </div>
               </div>
             ) : (
-              <div className="border-2 border-dashed rounded-lg p-6 text-center">
-                <Upload className="h-8 w-8 mx-auto mb-2 text-gray-400" />
-                <Label htmlFor="image-upload" className="cursor-pointer">
-                  <span className="text-sm text-gray-500">Click to upload image</span>
-                  <Input
-                    id="image-upload"
-                    type="file"
-                    accept="image/*"
-                    onChange={handleImageChange}
-                    className="hidden"
-                  />
-                </Label>
+              <div className="space-y-3">
+                <div className="border-2 border-dashed rounded-lg p-6 text-center">
+                  <Upload className="h-8 w-8 mx-auto mb-2 text-gray-400" />
+                  <Label htmlFor="image-upload" className="cursor-pointer">
+                    <span className="text-sm text-gray-500">Click to upload image</span>
+                    <Input
+                      id="image-upload"
+                      type="file"
+                      accept="image/*"
+                      onChange={handleImageChange}
+                      className="hidden"
+                    />
+                  </Label>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="image-fit-default">Image Display Style (applied after upload)</Label>
+                  <Select
+                    value={formData.imageFit}
+                    onValueChange={(value) => setFormData({ ...formData, imageFit: value as any })}
+                  >
+                    <SelectTrigger id="image-fit-default">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="cover">Cover - Fill container, may crop</SelectItem>
+                      <SelectItem value="contain">Contain - Fit entire image, may have gaps</SelectItem>
+                      <SelectItem value="fill">Fill - Stretch to fill container</SelectItem>
+                      <SelectItem value="none">None - Original size</SelectItem>
+                      <SelectItem value="scale-down">Scale Down - Like none or contain, whichever is smaller</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-muted-foreground">
+                    Choose how the image should be displayed within its container
+                  </p>
+                </div>
               </div>
             )}
           </div>

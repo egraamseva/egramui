@@ -35,7 +35,6 @@ import { formatTimeAgo } from "../../utils/format";
 import { ImageWithFallback } from "../figma/ImageWithFallback";
 import { ImageModal } from "../ui/image-modal";
 import { albumApi, galleryApi } from "@/routes/api";
-import { usePresignedUrlRefresh } from "../../hooks/usePresignedUrlRefresh";
 
 interface GalleryAlbumsProps {
   panchayatId: string;
@@ -752,14 +751,9 @@ export function GalleryAlbums({ panchayatId }: GalleryAlbumsProps) {
   );
 }
 
-// Helper component for album cover image with presigned URL refresh
+// Helper component for album cover image
 function AlbumCoverImageWithRefresh({ src, alt }: { src?: string; alt: string }) {
-  const { presignedUrl } = usePresignedUrlRefresh({
-    fileKey: src || undefined,
-    initialPresignedUrl: src || undefined,
-  });
-
-  if (!presignedUrl) {
+  if (!src) {
     return (
       <div className="w-full h-full bg-muted flex items-center justify-center">
         <ImageIcon className="h-16 w-16 text-[#666]" />
@@ -769,21 +763,16 @@ function AlbumCoverImageWithRefresh({ src, alt }: { src?: string; alt: string })
 
   return (
     <ImageWithFallback
-      src={presignedUrl}
+      src={src}
       alt={alt}
       className="w-full h-full object-cover"
     />
   );
 }
 
-// Helper component for album images with presigned URL refresh
+// Helper component for album images
 function AlbumImageWithRefresh({ src, alt }: { src?: string; alt: string }) {
-  const { presignedUrl } = usePresignedUrlRefresh({
-    fileKey: src || undefined,
-    initialPresignedUrl: src || undefined,
-  });
-
-  if (!presignedUrl) {
+  if (!src) {
     return (
       <div className="w-full h-full bg-muted flex items-center justify-center">
         <span className="text-muted-foreground text-sm">No image</span>
@@ -793,7 +782,7 @@ function AlbumImageWithRefresh({ src, alt }: { src?: string; alt: string }) {
 
   return (
     <ImageWithFallback
-      src={presignedUrl}
+      src={src}
       alt={alt}
       className="w-full h-full object-cover"
     />

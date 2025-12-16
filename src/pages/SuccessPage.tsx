@@ -1,5 +1,5 @@
 /**
- * Success Page Component ss
+ * Success Page Component
  * Shown after successful registration
  */
 

@@ -12,7 +12,6 @@ import { Label } from '../ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 import { Checkbox } from '../ui/checkbox';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '../ui/accordion';
-import { usePresignedUrlRefresh } from '../../hooks/usePresignedUrlRefresh';
 import { 
   ChevronLeft, ChevronRight, Star, MapPin, Phone, Mail, 
   Calendar, Users, Building2, TrendingUp, Award, Clock,
@@ -28,10 +27,8 @@ interface DynamicSectionRendererProps {
 }
 
 export function DynamicSectionRenderer({ section, children }: DynamicSectionRendererProps) {
-  const { presignedUrl: imageUrl } = usePresignedUrlRefresh({
-    fileKey: section.imageKey || null,
-    initialPresignedUrl: section.imageUrl || null,
-  });
+  // Use imageUrl directly - Cloudflare public URLs don't expire
+  const imageUrl = section.imageUrl || null;
 
   const content = typeof section.content === 'object' ? section.content : {};
   const background = content.background || { type: 'color', value: section.backgroundColor || '#ffffff' };
@@ -766,7 +763,8 @@ export function DynamicSectionRenderer({ section, children }: DynamicSectionRend
                   <ImageWithFallback
                     src={item.image}
                     alt={item.title || ''}
-                    className="h-full w-full object-cover"
+                    className="h-full w-full"
+                    style={{ objectFit: item.imageFit || 'cover' }}
                   />
                 </div>
               ) : (
@@ -842,7 +840,8 @@ export function DynamicSectionRenderer({ section, children }: DynamicSectionRend
                   <ImageWithFallback
                     src={item.image}
                     alt={item.title || ''}
-                    className="w-20 h-20 object-cover rounded"
+                    className="w-20 h-20 rounded"
+                    style={{ objectFit: item.imageFit || 'cover' }}
                   />
                 )}
                 <div className="flex-1">
@@ -906,12 +905,9 @@ export function DynamicSectionRenderer({ section, children }: DynamicSectionRend
   };
 
   const renderItemCard = (item: ContentItem, index: number, sectionType?: string) => {
-    const ItemImage = ({ src, alt }: { src: string; alt: string }) => {
-      const { presignedUrl } = usePresignedUrlRefresh({
-        fileKey: item.imageKey || null,
-        initialPresignedUrl: src || null,
-      });
-      return <ImageWithFallback src={presignedUrl || src} alt={alt} className="h-full w-full object-cover" />;
+    const ItemImage = ({ src, alt, imageFit }: { src: string; alt: string; imageFit?: string }) => {
+      // Use src directly - Cloudflare public URLs don't expire
+      return <ImageWithFallback src={src} alt={alt} className="h-full w-full" style={{ objectFit: imageFit || 'cover' }} />;
     };
 
     if (sectionType === 'STATS') {
@@ -930,7 +926,7 @@ export function DynamicSectionRenderer({ section, children }: DynamicSectionRend
       <Card key={index} className="h-full transition-all hover:shadow-lg">
         {item.image && (
           <div className="aspect-video w-full overflow-hidden rounded-t-lg">
-            <ItemImage src={item.image} alt={item.title || ''} />
+            <ItemImage src={item.image} alt={item.title || ''} imageFit={item.imageFit} />
           </div>
         )}
         <CardHeader>
@@ -1023,6 +1019,7 @@ export function DynamicSectionRenderer({ section, children }: DynamicSectionRend
               src={imageUrl}
               alt={section.title || 'Section image'}
               className="w-full h-auto rounded-lg"
+              style={{ objectFit: section.imageFit || 'cover' }}
             />
           </div>
         )}

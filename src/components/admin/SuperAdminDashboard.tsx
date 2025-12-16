@@ -173,14 +173,34 @@ export function SuperAdminDashboard() {
     }
   };
 
-  const handleDeletePanchayat = async (id: string) => {
-    if (!confirm("Are you sure you want to delete this panchayat?")) return;
+  const handleDeletePanchayat = async (id: string, panchayatName: string) => {
+    // Fetch stats to show user count warning
+    let userCount = 0;
+    try {
+      const { adminPanchayatApi } = await import("@/routes/api");
+      const stats = await adminPanchayatApi.getStats(parseInt(id));
+      userCount = stats.totalUsers || 0;
+    } catch (error) {
+      console.warn("Failed to fetch panchayat stats:", error);
+    }
+
+    // Show confirmation dialog with user count warning
+    const message = userCount > 0
+      ? `Are you sure you want to DELETE "${panchayatName}"?\n\n⚠️ WARNING: This will permanently delete:\n• The panchayat\n• All ${userCount} user(s) associated with this panchayat\n• All posts, schemes, announcements, and other data\n\nThis action CANNOT be undone.`
+      : `Are you sure you want to DELETE "${panchayatName}"?\n\n⚠️ WARNING: This will permanently delete the panchayat and all associated data.\n\nThis action CANNOT be undone.`;
+
+    if (!confirm(message)) return;
+
     try {
       await superAdminAPI.deletePanchayat(id);
-      toast.success("Panchayat deleted successfully");
+      toast.success(
+        userCount > 0
+          ? `Panchayat and ${userCount} user(s) deleted successfully`
+          : "Panchayat deleted successfully"
+      );
       fetchDashboardData();
-    } catch (error) {
-      toast.error("Failed to delete panchayat");
+    } catch (error: any) {
+      toast.error(error.message || "Failed to delete panchayat");
     }
   };
 
@@ -793,7 +813,7 @@ export function SuperAdminDashboard() {
                                         <DropdownMenuItem
                                           className="text-red-600"
                                           onClick={() =>
-                                            handleDeletePanchayat(panchayat.id)
+                                            handleDeletePanchayat(panchayat.id, panchayat.panchayatName)
                                           }
                                         >
                                           <Trash2 className="h-4 w-4 mr-2" />
@@ -887,7 +907,7 @@ export function SuperAdminDashboard() {
                                       <DropdownMenuItem
                                         className="text-red-600"
                                         onClick={() =>
-                                          handleDeletePanchayat(panchayat.id)
+                                          handleDeletePanchayat(panchayat.id, panchayat.panchayatName)
                                         }
                                       >
                                         <Trash2 className="h-4 w-4 mr-2" />

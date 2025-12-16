@@ -54,7 +54,6 @@ import { PostCard } from "../sachiv/PostCard";
 import { panchayatAPI, publicAPI } from "../../services/api";
 import {
   publicNewsletterApi,
-  galleryApi,
   publicPanchayatWebsiteApi,
 } from "../../routes/api";
 import type {
@@ -68,7 +67,6 @@ import type {
   PanchayatWebsiteSection,
 } from "../../types";
 import { formatTimeAgo } from "../../utils/format";
-import { usePresignedUrlRefresh } from "../../hooks/usePresignedUrlRefresh";
 import { MapContainer, TileLayer, Marker, Popup } from "react-leaflet";
 import { LatLngExpression } from "leaflet";
 import "leaflet/dist/leaflet.css";
@@ -191,10 +189,33 @@ export function PanchayatWebsite() {
   }, [selectedAlbum]);
 
   const fetchAlbumImages = async (albumId: string) => {
+    if (!subdomain) return;
     setLoadingAlbumImages(true);
     try {
-      const result = await galleryApi.list(albumId);
-      setAlbumImages(result.items);
+      const result = await publicAPI.getPublicGallery(subdomain, {
+        page: 0,
+        size: 100,
+        albumId: parseInt(albumId),
+      });
+      // Map the response to GalleryItem format
+      // Backend returns PagedResponse with 'content' array
+      const images = result.content || result.items || [];
+      const mappedImages = images.map((img: any) => ({
+        id: String(img.imageId || img.id),
+        panchayatId: subdomain,
+        title: img.caption || "Gallery Image",
+        image: img.imageUrl || img.image,
+        description: img.caption,
+        category: img.albumName,
+        date: img.createdAt
+          ? new Date(img.createdAt).toLocaleDateString("en-IN", {
+              year: "numeric",
+              month: "short",
+              day: "numeric",
+            })
+          : undefined,
+      }));
+      setAlbumImages(mappedImages);
     } catch (error) {
       console.error("Error fetching album images:", error);
       setAlbumImages([]);
@@ -423,9 +444,20 @@ export function PanchayatWebsite() {
       setMembers(mappedMembers);
       setGallery(mappedGallery);
       setNewsletters(newslettersResult.items || []);
-      setAlbums(
-        (albumsResult as any).items || (albumsResult as any).content || []
-      );
+      
+      // Map albums - convert backend format to frontend format
+      const rawAlbums = (albumsResult as any).items || (albumsResult as any).content || [];
+      const mappedAlbums = rawAlbums.map((album: any) => ({
+        id: String(album.albumId || album.id),
+        panchayatId: subdomainToUse,
+        title: album.albumName || album.title,
+        description: album.description,
+        coverImage: album.coverImageUrl || album.coverImage, // Map coverImageUrl to coverImage
+        imageCount: album.imageCount || 0,
+        createdAt: album.createdAt || new Date().toISOString(),
+        updatedAt: album.updatedAt || new Date().toISOString(),
+      }));
+      setAlbums(mappedAlbums);
     } catch (error) {
       console.error("Error fetching panchayat data:", error);
       setPanchayat({
@@ -946,7 +978,12 @@ export function PanchayatWebsite() {
           <div className="space-y-0">
             {/* Hero Section - Enhanced with Theme Support */}
             <section className="relative min-h-[500px] sm:min-h-[600px] lg:min-h-[700px] overflow-hidden">
-              {panchayat?.heroImage ? (
+              {/* Determine hero display type - check if heroImage exists and displayType preference */}
+              {/* For now, if heroImage exists, use it; otherwise use theme */}
+              {/* TODO: Add displayType field to panchayat data from backend */}
+              {(() => {
+                const useHeroImage = panchayat?.heroImage && (!panchayat?.heroDisplayType || panchayat.heroDisplayType === 'image');
+                return useHeroImage ? (
                 <>
                   {/* Hero Image Background */}
                   <div className="absolute inset-0">
@@ -983,7 +1020,8 @@ export function PanchayatWebsite() {
                     }}
                   />
                 </>
-              )}
+                );
+              })()}
 
               <div className="container relative mx-auto px-4 py-12 sm:py-16 lg:py-20 lg:px-8 lg:py-32">
                 <div className="mx-auto max-w-4xl text-center">
@@ -1673,8 +1711,6 @@ export function PanchayatWebsite() {
                             <AlbumImageWithRefresh
                               src={item.image}
                               alt={item.title}
-                              entityType="gallery"
-                              entityId={item.id}
                             />
                             <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-colors flex items-center justify-center">
                               <span className="opacity-0 group-hover:opacity-100 text-white text-sm font-medium">
@@ -1717,8 +1753,6 @@ export function PanchayatWebsite() {
                                 <AlbumImageWithRefresh
                                   src={album.coverImage}
                                   alt={album.title}
-                                  entityType="album"
-                                  entityId={album.id}
                                 />
                               ) : (
                                 <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-[#FF9933]/20 to-[#138808]/20">
@@ -1802,8 +1836,6 @@ export function PanchayatWebsite() {
                               <AlbumImageWithRefresh
                                 src={item.image}
                                 alt={item.title}
-                                entityType="gallery"
-                                entityId={item.id}
                               />
                               <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-colors flex items-center justify-center">
                                 <span className="opacity-0 group-hover:opacity-100 text-white text-sm font-medium">
@@ -2477,7 +2509,7 @@ export function PanchayatWebsite() {
   );
 }
 
-// Helper component for team member image with presigned URL refresh
+// Helper component for team member image
 function TeamMemberImageWithRefresh({
   src,
   alt,
@@ -2485,19 +2517,14 @@ function TeamMemberImageWithRefresh({
   src?: string;
   alt: string;
 }) {
-  const { presignedUrl } = usePresignedUrlRefresh({
-    fileKey: src || undefined,
-    initialPresignedUrl: src || undefined,
-  });
-
-  if (!presignedUrl) {
+  if (!src) {
     return null;
   }
 
-  return <AvatarImage src={presignedUrl} alt={alt} />;
+  return <AvatarImage src={src} alt={alt} />;
 }
 
-// Helper component for newsletter cover image with presigned URL refresh
+// Helper component for newsletter cover image
 function NewsletterCoverImage({
   fileKey,
   url,
@@ -2505,12 +2532,9 @@ function NewsletterCoverImage({
   fileKey?: string;
   url?: string;
 }) {
-  const { presignedUrl } = usePresignedUrlRefresh({
-    fileKey: fileKey || undefined,
-    initialPresignedUrl: url || undefined,
-  });
+  const imageUrl = url || (fileKey ? undefined : null); // Use URL directly
 
-  if (!presignedUrl) {
+  if (!imageUrl) {
     return (
       <div className="w-full h-full bg-muted flex items-center justify-center">
         <span className="text-muted-foreground text-sm">No image</span>
@@ -2520,33 +2544,22 @@ function NewsletterCoverImage({
 
   return (
     <ImageWithFallback
-      src={presignedUrl}
+      src={imageUrl}
       alt="Newsletter cover"
       className="w-full h-full object-cover"
     />
   );
 }
 
-// Helper component for album images with presigned URL refresh
+// Helper component for album images
 function AlbumImageWithRefresh({
   src,
   alt,
-  entityType,
-  entityId,
 }: {
   src?: string;
   alt: string;
-  entityType?: string | null;
-  entityId?: string | number | null;
 }) {
-  const { presignedUrl } = usePresignedUrlRefresh({
-    fileKey: src || undefined,
-    initialPresignedUrl: src || undefined,
-    entityType,
-    entityId,
-  });
-
-  if (!presignedUrl) {
+  if (!src) {
     return (
       <div className="h-full w-full bg-muted flex items-center justify-center">
         <span className="text-muted-foreground text-sm">No image</span>
@@ -2556,11 +2569,9 @@ function AlbumImageWithRefresh({
 
   return (
     <ImageWithFallback
-      src={presignedUrl}
+      src={src}
       alt={alt}
       className="h-full w-full object-cover"
-      entityType={entityType}
-      entityId={entityId}
     />
   );
 }

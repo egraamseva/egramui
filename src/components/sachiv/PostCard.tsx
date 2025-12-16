@@ -123,9 +123,6 @@ export function PostCard({ post, showActions = false, onEdit, onDelete }: PostCa
                         src={item.url}
                         alt={`Post media ${index + 1}`}
                         className="h-full w-full object-cover"
-                        data-post-id={post.id}
-                        entityType="post"
-                        entityId={post.id}
                       />
                       {post.media!.length > 4 && index === 3 && (
                         <div className="absolute inset-0 flex items-center justify-center bg-black/60 text-white">

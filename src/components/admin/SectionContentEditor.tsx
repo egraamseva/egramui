@@ -371,38 +371,82 @@ export function SectionContentEditor({
               <div className="space-y-2">
                 <Label>Image</Label>
                 {item.image ? (
-                  <div className="relative">
-                    <ImageWithFallback
-                      src={item.image}
-                      alt={item.title || 'Preview'}
-                      className="w-full h-32 object-cover rounded-lg"
-                    />
-                    <Button
-                      type="button"
-                      variant="destructive"
-                      size="sm"
-                      className="absolute top-2 right-2"
-                      onClick={() => {
-                        updateItem(index, 'image', '');
-                        onImageRemove(index);
-                      }}
-                    >
-                      <X className="h-4 w-4" />
-                    </Button>
+                  <div className="space-y-3">
+                    <div className="relative">
+                      <ImageWithFallback
+                        src={item.image}
+                        alt={item.title || 'Preview'}
+                        className="w-full h-32 rounded-lg"
+                        style={{ objectFit: item.imageFit || 'cover' }}
+                      />
+                      <Button
+                        type="button"
+                        variant="destructive"
+                        size="sm"
+                        className="absolute top-2 right-2"
+                        onClick={() => {
+                          updateItem(index, 'image', '');
+                          onImageRemove(index);
+                        }}
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor={`item-image-fit-${index}`} className="text-xs">Image Display Style</Label>
+                      <Select
+                        value={item.imageFit || 'cover'}
+                        onValueChange={(value) => updateItem(index, 'imageFit', value)}
+                      >
+                        <SelectTrigger id={`item-image-fit-${index}`} className="h-9">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="cover">Cover - Fill container, may crop</SelectItem>
+                          <SelectItem value="contain">Contain - Fit entire image, may have gaps</SelectItem>
+                          <SelectItem value="fill">Fill - Stretch to fill container</SelectItem>
+                          <SelectItem value="none">None - Original size</SelectItem>
+                          <SelectItem value="scale-down">Scale Down - Like none or contain, whichever is smaller</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
                   </div>
                 ) : (
-                  <div className="border-2 border-dashed rounded-lg p-4 text-center">
-                    <Upload className="h-6 w-6 mx-auto mb-2 text-muted-foreground" />
-                    <Label htmlFor={`item-image-${index}`} className="cursor-pointer text-sm">
-                      <span className="text-muted-foreground">Click to upload</span>
-                      <Input
-                        id={`item-image-${index}`}
-                        type="file"
-                        accept="image/*"
-                        onChange={(e) => handleItemImageChange(e, index)}
-                        className="hidden"
-                      />
-                    </Label>
+                  <div className="space-y-3">
+                    <div className="border-2 border-dashed rounded-lg p-4 text-center">
+                      <Upload className="h-6 w-6 mx-auto mb-2 text-muted-foreground" />
+                      <Label htmlFor={`item-image-${index}`} className="cursor-pointer text-sm">
+                        <span className="text-muted-foreground">Click to upload</span>
+                        <Input
+                          id={`item-image-${index}`}
+                          type="file"
+                          accept="image/*"
+                          onChange={(e) => handleItemImageChange(e, index)}
+                          className="hidden"
+                        />
+                      </Label>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor={`item-image-fit-default-${index}`} className="text-xs">Image Display Style (applied after upload)</Label>
+                      <Select
+                        value={item.imageFit || 'cover'}
+                        onValueChange={(value) => updateItem(index, 'imageFit', value)}
+                      >
+                        <SelectTrigger id={`item-image-fit-default-${index}`} className="h-9">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="cover">Cover - Fill container, may crop</SelectItem>
+                          <SelectItem value="contain">Contain - Fit entire image, may have gaps</SelectItem>
+                          <SelectItem value="fill">Fill - Stretch to fill container</SelectItem>
+                          <SelectItem value="none">None - Original size</SelectItem>
+                          <SelectItem value="scale-down">Scale Down - Like none or contain, whichever is smaller</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <p className="text-xs text-muted-foreground">
+                        Choose how the image should be displayed within its container
+                      </p>
+                    </div>
                   </div>
                 )}
               </div>
@@ -563,49 +607,134 @@ export function SectionContentEditor({
     );
   }
 
-  if (sectionType === 'VIDEO') {
+  if (sectionType === 'VIDEO' || sectionType === 'VIDEO_SECTION') {
+    // Helper function to validate and format video URLs
+    const validateVideoUrl = (url: string): { isValid: boolean; type: 'youtube' | 'vimeo' | 'direct' | 'invalid'; message?: string } => {
+      if (!url.trim()) {
+        return { isValid: false, type: 'invalid', message: 'Please enter a video URL' };
+      }
+      
+      // YouTube URL patterns
+      if (url.includes('youtube.com/watch') || url.includes('youtu.be/') || url.includes('youtube.com/embed/')) {
+        const videoId = url.match(/(?:youtube\.com\/(?:watch\?v=|embed\/)|youtu\.be\/)([^&\n?#]+)/)?.[1];
+        if (videoId) {
+          return { isValid: true, type: 'youtube' };
+        }
+        return { isValid: false, type: 'invalid', message: 'Invalid YouTube URL format' };
+      }
+      
+      // Vimeo URL patterns
+      if (url.includes('vimeo.com/')) {
+        const videoId = url.match(/vimeo\.com\/(\d+)/)?.[1];
+        if (videoId) {
+          return { isValid: true, type: 'vimeo' };
+        }
+        return { isValid: false, type: 'invalid', message: 'Invalid Vimeo URL format' };
+      }
+      
+      // Direct video URL (mp4, webm, etc.)
+      if (url.match(/\.(mp4|webm|ogg|mov)(\?.*)?$/i)) {
+        return { isValid: true, type: 'direct' };
+      }
+      
+      // Check if it's a valid URL
+      try {
+        new URL(url);
+        return { isValid: true, type: 'direct' };
+      } catch {
+        return { isValid: false, type: 'invalid', message: 'Invalid URL format' };
+      }
+    };
+
+    const videoUrl = content?.media?.url || '';
+    const validation = validateVideoUrl(videoUrl);
+    
     return (
       <div className="space-y-4">
         <div className="space-y-2">
-          <Label>Video URL (YouTube, Vimeo, or direct link)</Label>
+          <Label htmlFor="video-url">Video URL *</Label>
           <Input
-            value={content?.media?.url || ''}
-            onChange={(e) => updateContent({ media: { ...content?.media, url: e.target.value, type: 'video' } })}
-            placeholder="https://www.youtube.com/watch?v=... or https://vimeo.com/..."
+            id="video-url"
+            value={videoUrl}
+            onChange={(e) => {
+              const newUrl = e.target.value;
+              updateContent({ 
+                media: { 
+                  ...content?.media, 
+                  url: newUrl, 
+                  type: 'video' 
+                } 
+              });
+            }}
+            placeholder="https://www.youtube.com/watch?v=... or https://vimeo.com/... or https://example.com/video.mp4"
+            className={validation.isValid === false && videoUrl ? 'border-red-500' : ''}
           />
+          {videoUrl && (
+            <div className="text-xs space-y-1">
+              {validation.isValid ? (
+                <p className="text-green-600 flex items-center gap-1">
+                  <span>✓</span> Valid {validation.type === 'youtube' ? 'YouTube' : validation.type === 'vimeo' ? 'Vimeo' : 'video'} URL
+                </p>
+              ) : (
+                <p className="text-red-600 flex items-center gap-1">
+                  <span>✗</span> {validation.message || 'Invalid video URL'}
+                </p>
+              )}
+              <p className="text-muted-foreground">
+                Supported: YouTube (watch or embed URLs), Vimeo, or direct video links (.mp4, .webm, etc.)
+              </p>
+            </div>
+          )}
         </div>
+        
+        {validation.isValid && validation.type !== 'direct' && (
+          <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
+            <p className="text-sm text-blue-800">
+              <strong>Preview:</strong> Your {validation.type === 'youtube' ? 'YouTube' : 'Vimeo'} video will be embedded automatically.
+            </p>
+          </div>
+        )}
+        
         <div className="space-y-2">
-          <Label>Thumbnail Image URL (optional)</Label>
+          <Label htmlFor="video-thumbnail">Thumbnail Image URL (optional)</Label>
           <Input
+            id="video-thumbnail"
             value={content?.media?.thumbnail || ''}
             onChange={(e) => updateContent({ media: { ...content?.media, thumbnail: e.target.value } })}
-            placeholder="https://..."
+            placeholder="https://example.com/thumbnail.jpg"
           />
+          <p className="text-xs text-muted-foreground">
+            Custom thumbnail image (only used for direct video URLs)
+          </p>
         </div>
-        <div className="flex items-center space-x-4">
-          <div className="flex items-center space-x-2">
-            <Checkbox
-              id="autoplay"
-              checked={content?.media?.autoplay || false}
-              onCheckedChange={(checked) => updateContent({ media: { ...content?.media, autoplay: checked as boolean } })}
-            />
-            <Label htmlFor="autoplay" className="cursor-pointer">Autoplay</Label>
-          </div>
-          <div className="flex items-center space-x-2">
-            <Checkbox
-              id="loop"
-              checked={content?.media?.loop || false}
-              onCheckedChange={(checked) => updateContent({ media: { ...content?.media, loop: checked as boolean } })}
-            />
-            <Label htmlFor="loop" className="cursor-pointer">Loop</Label>
-          </div>
-          <div className="flex items-center space-x-2">
-            <Checkbox
-              id="controls"
-              checked={content?.media?.controls !== false}
-              onCheckedChange={(checked) => updateContent({ media: { ...content?.media, controls: checked as boolean } })}
-            />
-            <Label htmlFor="controls" className="cursor-pointer">Show Controls</Label>
+        
+        <div className="space-y-3">
+          <Label>Video Settings</Label>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div className="flex items-center space-x-2 p-3 border rounded-lg">
+              <Checkbox
+                id="autoplay"
+                checked={content?.media?.autoplay || false}
+                onCheckedChange={(checked) => updateContent({ media: { ...content?.media, autoplay: checked as boolean } })}
+              />
+              <Label htmlFor="autoplay" className="cursor-pointer text-sm">Autoplay</Label>
+            </div>
+            <div className="flex items-center space-x-2 p-3 border rounded-lg">
+              <Checkbox
+                id="loop"
+                checked={content?.media?.loop || false}
+                onCheckedChange={(checked) => updateContent({ media: { ...content?.media, loop: checked as boolean } })}
+              />
+              <Label htmlFor="loop" className="cursor-pointer text-sm">Loop</Label>
+            </div>
+            <div className="flex items-center space-x-2 p-3 border rounded-lg">
+              <Checkbox
+                id="controls"
+                checked={content?.media?.controls !== false}
+                onCheckedChange={(checked) => updateContent({ media: { ...content?.media, controls: checked as boolean } })}
+              />
+              <Label htmlFor="controls" className="cursor-pointer text-sm">Show Controls</Label>
+            </div>
           </div>
         </div>
       </div>
