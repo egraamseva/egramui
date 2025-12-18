@@ -11,12 +11,16 @@ import { ImageWithFallback } from '../figma/ImageWithFallback';
 import { Upload, X } from 'lucide-react';
 import { Checkbox } from '../ui/checkbox';
 import type { PlatformSectionType, PanchayatSectionType, LayoutType, ContentItem, BackgroundConfig, SpacingConfig, AnimationConfig, CTAConfig, FormField, SectionContent } from '../../types';
+import type { SectionSchema } from '../../utils/sectionSchemas';
+import { SchemaFormBuilder } from './SchemaFormBuilder';
+import { panchayatWebsiteApi, platformLandingPageApi } from '../../routes/api';
 
 interface SectionContentEditorProps {
   sectionType: PlatformSectionType | PanchayatSectionType | '';
   content: any;
   layoutType: LayoutType;
   isPlatform: boolean;
+  schema?: SectionSchema | null;
   onContentChange: (content: any) => void;
   onImageUpload: (file: File, itemIndex: number) => Promise<string | null>;
   onImageRemove: (itemIndex: number) => void;
@@ -27,6 +31,7 @@ export function SectionContentEditor({
   content,
   layoutType,
   isPlatform,
+  schema,
   onContentChange,
   onImageUpload,
   onImageRemove,
@@ -45,22 +50,44 @@ export function SectionContentEditor({
   const [expandedItems, setExpandedItems] = useState<Set<number>>(new Set());
 
   useEffect(() => {
-    const currentItems = content?.items || [];
+    // Ensure content is an object, not a string
+    let parsedContent = content;
+    if (typeof content === 'string') {
+      try {
+        parsedContent = JSON.parse(content);
+      } catch (e) {
+        console.warn('Failed to parse content in SectionContentEditor:', e);
+        parsedContent = {};
+      }
+    }
+    
+    const currentItems = parsedContent?.items || [];
     setItems(currentItems);
-    setColumns(content?.columns || 3);
-    setAutoPlay(content?.autoPlay || false);
-    setInterval(content?.interval || 5000);
-    setRichText(content?.richText || '');
-    setBackground(content?.background || { type: 'color', value: '#ffffff' });
-    setSpacing(content?.spacing || {});
-    setAnimation(content?.animation || { type: 'none' });
-    setCta(content?.cta || { text: 'Learn More', link: '#', style: 'primary', size: 'md' });
-    setFormFields(content?.formFields || []);
+    setColumns(parsedContent?.columns || 3);
+    setAutoPlay(parsedContent?.autoPlay || false);
+    setInterval(parsedContent?.interval || 5000);
+    setRichText(parsedContent?.richText || '');
+    setBackground(parsedContent?.background || { type: 'color', value: '#ffffff' });
+    setSpacing(parsedContent?.spacing || {});
+    setAnimation(parsedContent?.animation || { type: 'none' });
+    setCta(parsedContent?.cta || { text: 'Learn More', link: '#', style: 'primary', size: 'md' });
+    setFormFields(parsedContent?.formFields || []);
   }, [content]);
 
   const updateContent = (updates: Partial<SectionContent>) => {
+    // Ensure we're working with an object, not a string
+    let baseContent = content;
+    if (typeof content === 'string') {
+      try {
+        baseContent = JSON.parse(content);
+      } catch (e) {
+        console.warn('Failed to parse content in updateContent:', e);
+        baseContent = {};
+      }
+    }
+    
     const newContent = {
-      ...content,
+      ...baseContent,
       items,
       columns,
       autoPlay,
@@ -115,19 +142,107 @@ export function SectionContentEditor({
     setExpandedItems(newExpanded);
   };
 
+  // If schema is provided, use schema-based form builder
+  if (schema && schema.fieldDefinitions && schema.fieldDefinitions.length > 0) {
+    console.log('SectionContentEditor: Using schema-based form builder', {
+      schemaType: schema.schemaType,
+      fieldsCount: schema.fieldDefinitions.length,
+      hasContent: !!content,
+    });
+    return (
+      <div className="space-y-4">
+        <SchemaFormBuilder
+          fields={schema.fieldDefinitions}
+          content={content || {}}
+          onChange={onContentChange}
+          onImageUpload={async (file: File, fieldName: string) => {
+            // Parse fieldName to extract item index if it's in format "items[0].image"
+            // Otherwise, it's a direct field and we upload immediately
+            let itemIndex = -1;
+            
+            // Check if fieldName contains array index pattern: "fieldName[index].nestedField"
+            const arrayIndexMatch = fieldName.match(/^(\w+)\[(\d+)\]\.(.+)$/);
+            if (arrayIndexMatch) {
+              const arrayFieldName = arrayIndexMatch[1]; // e.g., "items"
+              itemIndex = parseInt(arrayIndexMatch[2], 10); // e.g., 0
+              const nestedFieldName = arrayIndexMatch[3]; // e.g., "image"
+              
+              console.log(`📸 Parsed array field: arrayField=${arrayFieldName}, itemIndex=${itemIndex}, nestedField=${nestedFieldName}`);
+              
+              // Call the parent onImageUpload with the item index
+              if (itemIndex >= 0 && onImageUpload) {
+                return await onImageUpload(file, itemIndex);
+              }
+            } else {
+              // Not an array field - this is a direct field (e.g., IMAGE_WITH_TEXT's "image" field)
+              console.log(`📸 Direct field upload: fieldName=${fieldName}`);
+              
+              try {
+                // Validate the image file
+                const { validateImageFile } = await import('../../utils/imageUtils');
+                await validateImageFile(file);
+                
+                // Upload immediately using the generic upload endpoint
+                const uploadApi = isPlatform ? platformLandingPageApi : panchayatWebsiteApi;
+                console.log(`📤 Uploading image for direct field "${fieldName}" using generic upload endpoint`);
+                
+                const result = await uploadApi.uploadImageGeneric(file, 'HIGH');
+                if (result?.imageUrl) {
+                  console.log(`✅ Image uploaded successfully for field "${fieldName}":`, result.imageUrl);
+                  return result.imageUrl;
+                } else {
+                  console.error('❌ Image upload failed: No imageUrl returned');
+                  throw new Error('Image upload failed: No URL returned');
+                }
+              } catch (error: any) {
+                console.error('❌ Error uploading image for direct field:', error);
+                // Show error toast if available
+                const { toast } = await import('sonner');
+                toast.error(error.message || 'Failed to upload image');
+                return null;
+              }
+            }
+            
+            return null;
+          }}
+          isPlatform={isPlatform}
+          sectionType={sectionType}
+        />
+      </div>
+    );
+  }
+  
+  // No schema - use fallback editor
+  console.log('SectionContentEditor: No schema, using fallback editor', {
+    sectionType,
+    hasContent: !!content,
+    itemsCount: content?.items?.length || 0,
+  });
+
   const handleItemImageChange = async (e: React.ChangeEvent<HTMLInputElement>, itemIndex: number) => {
     const file = e.target.files?.[0];
     if (file) {
-      if (!file.type.startsWith('image/')) {
-        return;
-      }
       try {
-        const imageUrl = await onImageUpload(file, itemIndex);
-        if (imageUrl) {
-          updateItem(itemIndex, 'image', imageUrl);
+        // Import and validate the image file before accepting it
+        const { validateImageFile } = await import('../../utils/imageUtils');
+        await validateImageFile(file);
+        
+        // Get preview URL (data URL) for display, but don't store it in content yet
+        // The actual server URL will be set after upload in SectionEditor
+        const previewUrl = await onImageUpload(file, itemIndex);
+        if (previewUrl) {
+          // Store preview URL temporarily for display only
+          // The actual server URL will replace this when the section is saved
+          updateItem(itemIndex, 'image', previewUrl);
         }
-      } catch (error) {
-        console.error('Error uploading item image:', error);
+      } catch (error: any) {
+        console.error('Error preparing item image:', error);
+        // Reset the input
+        e.target.value = '';
+        // Show error message if available (toast is handled in SectionEditor)
+        if (error.message) {
+          console.error('Image validation error:', error.message);
+        }
       }
     }
   };
@@ -833,7 +948,14 @@ export function SectionContentEditor({
 
       <TabsContent value="settings" className="space-y-4">
         {showCarouselSettings && (
-          <>
+          <div className="space-y-4 p-4 border rounded-lg bg-blue-50 border-blue-200">
+            <div className="space-y-2">
+              <Label className="text-base font-semibold">Carousel Auto-Scroll Settings</Label>
+              <p className="text-xs text-muted-foreground">
+                Enable automatic scrolling to advance through carousel items automatically
+              </p>
+            </div>
+            
             <div className="flex items-center space-x-2">
               <Checkbox
                 id="autoplay"
@@ -843,12 +965,16 @@ export function SectionContentEditor({
                   updateContent({ autoPlay: checked as boolean });
                 }}
               />
-              <Label htmlFor="autoplay" className="cursor-pointer">Auto-play carousel</Label>
+              <Label htmlFor="autoplay" className="cursor-pointer font-medium">
+                Enable Auto-Scrolling
+              </Label>
             </div>
+            
             {autoPlay && (
-              <div className="space-y-2">
-                <Label>Auto-play Interval (ms)</Label>
+              <div className="space-y-2 pl-6">
+                <Label htmlFor="carousel-interval">Auto-Scroll Interval (milliseconds)</Label>
                 <Input
+                  id="carousel-interval"
                   type="number"
                   min="1000"
                   step="500"
@@ -859,9 +985,12 @@ export function SectionContentEditor({
                     updateContent({ interval: newInterval });
                   }}
                 />
+                <p className="text-xs text-muted-foreground">
+                  Time between automatic slides (minimum: 1000ms). Current: {interval}ms ({Math.round(interval / 1000)} seconds)
+                </p>
               </div>
             )}
-          </>
+          </div>
         )}
         <CTAEditor cta={cta} onChange={(newCta) => { setCta(newCta); updateContent({ cta: newCta }); }} />
       </TabsContent>

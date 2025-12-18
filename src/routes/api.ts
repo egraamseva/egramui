@@ -1893,9 +1893,21 @@ class PlatformLandingPageApi {
     metadata?: Record<string, any>;
     imageFile?: File;
     compressionQuality?: string;
+    contentItemImages?: File[];
   }): Promise<PlatformSection> {
     const anyPayload: any = payload as any;
-    if (anyPayload.imageFile instanceof File) {
+    const hasImageFile = anyPayload.imageFile instanceof File;
+    const hasContentItemImages = anyPayload.contentItemImages && Array.isArray(anyPayload.contentItemImages) && anyPayload.contentItemImages.length > 0;
+    
+    console.log('Platform createSection API call:', {
+      hasImageFile,
+      hasContentItemImages,
+      contentItemImagesLength: anyPayload.contentItemImages?.length || 0
+    });
+    
+    // Use multipart if imageFile or contentItemImages are present
+    if (hasImageFile || hasContentItemImages) {
+      console.log('✅ Using multipart form data for platform:', { hasImageFile, hasContentItemImages, contentItemImagesCount: hasContentItemImages ? anyPayload.contentItemImages.length : 0 });
       const formData = new FormData();
       formData.append("sectionType", payload.sectionType);
       if (payload.title) formData.append("title", payload.title);
@@ -1919,12 +1931,22 @@ class PlatformLandingPageApi {
       if (payload.imageKey) formData.append("imageKey", payload.imageKey);
       if (payload.metadata)
         formData.append("metadata", JSON.stringify(payload.metadata));
-      formData.append("imageFile", anyPayload.imageFile);
+      if (anyPayload.imageFile instanceof File) {
+        formData.append("imageFile", anyPayload.imageFile);
+      }
+      if (anyPayload.contentItemImages && Array.isArray(anyPayload.contentItemImages)) {
+        console.log(`Appending ${anyPayload.contentItemImages.length} contentItemImages to FormData for platform create`);
+        anyPayload.contentItemImages.forEach((file: File, index: number) => {
+          console.log(`  - Appending contentItemImages[${index}]: ${file.name} (${file.size} bytes)`);
+          formData.append("contentItemImages", file);
+        });
+      }
       formData.append(
         "compressionQuality",
         payload.compressionQuality || "HIGH"
       );
 
+      console.log('Sending multipart FormData to POST /admin/platform/landing-page/sections');
       const data = await this.http.post<any>(
         "/admin/platform/landing-page/sections",
         formData,
@@ -1975,10 +1997,13 @@ class PlatformLandingPageApi {
       imageKey?: string;
       metadata?: Record<string, any>;
       imageFile?: File;
+      compressionQuality?: string;
+      contentItemImages?: File[];
     }>
   ): Promise<PlatformSection> {
     const anyPayload: any = payload as any;
-    if (anyPayload.imageFile instanceof File) {
+    // Use multipart if imageFile or contentItemImages are present
+    if (anyPayload.imageFile instanceof File || (anyPayload.contentItemImages && Array.isArray(anyPayload.contentItemImages) && anyPayload.contentItemImages.length > 0)) {
       const formData = new FormData();
       if (anyPayload.sectionType !== undefined)
         formData.append("sectionType", anyPayload.sectionType);
@@ -2009,8 +2034,24 @@ class PlatformLandingPageApi {
         formData.append("imageKey", anyPayload.imageKey);
       if (anyPayload.metadata !== undefined)
         formData.append("metadata", JSON.stringify(anyPayload.metadata));
-      formData.append("imageFile", anyPayload.imageFile);
+      if (anyPayload.imageFile instanceof File) {
+        formData.append("imageFile", anyPayload.imageFile);
+      }
+      if (anyPayload.contentItemImages && Array.isArray(anyPayload.contentItemImages)) {
+        console.log(`Appending ${anyPayload.contentItemImages.length} contentItemImages to FormData for platform update`);
+        anyPayload.contentItemImages.forEach((file: File, index: number) => {
+          console.log(`  - Appending contentItemImages[${index}]: ${file.name} (${file.size} bytes)`);
+          formData.append("contentItemImages", file);
+        });
+      }
+      // Add compressionQuality if not already set
+      if (anyPayload.compressionQuality !== undefined) {
+        formData.append("compressionQuality", anyPayload.compressionQuality);
+      } else {
+        formData.append("compressionQuality", "HIGH"); // Default
+      }
 
+      console.log('Sending multipart FormData to PUT /admin/platform/landing-page/sections/' + id);
       const data = await this.http.put<any>(
         `/admin/platform/landing-page/sections/${id}`,
         formData,
@@ -2101,7 +2142,13 @@ class PlatformLandingPageApi {
         headers: { "Content-Type": "multipart/form-data" },
       }
     );
-    return { imageUrl: data.imageUrl };
+    // Extract imageUrl from response - data is PlatformSectionResponseDTO after unwrapping
+    const imageUrl = data?.imageUrl || data?.data?.imageUrl || null;
+    if (!imageUrl) {
+      console.error('Failed to extract imageUrl from upload response:', data);
+      throw new Error('Image upload succeeded but no imageUrl returned');
+    }
+    return { imageUrl };
   }
 
   async uploadImageGeneric(
@@ -2118,7 +2165,13 @@ class PlatformLandingPageApi {
         headers: { "Content-Type": "multipart/form-data" },
       }
     );
-    return { imageUrl: data.imageUrl || (data as any).imageUrl || "" };
+    // Extract imageUrl from response - data is ApiResponse<ImageUploadResponse>
+    const imageUrl = data?.data?.imageUrl || data?.imageUrl || null;
+    if (!imageUrl) {
+      console.error('Failed to extract imageUrl from upload response:', data);
+      throw new Error('Image upload succeeded but no imageUrl returned');
+    }
+    return { imageUrl };
   }
 
   private mapSection(section: any): PlatformSection {
@@ -2180,9 +2233,24 @@ class PanchayatWebsiteApi {
     metadata?: Record<string, any>;
     imageFile?: File;
     compressionQuality?: string;
+    contentItemImages?: File[];
   }): Promise<PanchayatWebsiteSection> {
     const anyPayload: any = payload as any;
-    if (anyPayload.imageFile instanceof File) {
+    const hasImageFile = anyPayload.imageFile instanceof File;
+    const hasContentItemImages = anyPayload.contentItemImages && Array.isArray(anyPayload.contentItemImages) && anyPayload.contentItemImages.length > 0;
+    
+    console.log('createSection API call:', {
+      hasImageFile,
+      hasContentItemImages,
+      contentItemImages: anyPayload.contentItemImages,
+      contentItemImagesType: typeof anyPayload.contentItemImages,
+      contentItemImagesIsArray: Array.isArray(anyPayload.contentItemImages),
+      contentItemImagesLength: anyPayload.contentItemImages?.length || 0
+    });
+    
+    // Use multipart if imageFile or contentItemImages are present
+    if (hasImageFile || hasContentItemImages) {
+      console.log('✅ Using multipart form data:', { hasImageFile, hasContentItemImages, contentItemImagesCount: hasContentItemImages ? anyPayload.contentItemImages.length : 0 });
       const formData = new FormData();
       formData.append("sectionType", payload.sectionType);
       if (payload.title) formData.append("title", payload.title);
@@ -2206,12 +2274,24 @@ class PanchayatWebsiteApi {
       if (payload.imageKey) formData.append("imageKey", payload.imageKey);
       if (payload.metadata)
         formData.append("metadata", JSON.stringify(payload.metadata));
-      formData.append("imageFile", anyPayload.imageFile);
+      if (anyPayload.imageFile instanceof File) {
+        formData.append("imageFile", anyPayload.imageFile);
+      }
+      if (anyPayload.contentItemImages && Array.isArray(anyPayload.contentItemImages)) {
+        console.log(`Appending ${anyPayload.contentItemImages.length} contentItemImages to FormData`);
+        anyPayload.contentItemImages.forEach((file: File, index: number) => {
+          console.log(`  - Appending contentItemImages[${index}]: ${file.name} (${file.size} bytes)`);
+          formData.append("contentItemImages", file);
+        });
+      } else {
+        console.log('No contentItemImages to append to FormData');
+      }
       formData.append(
         "compressionQuality",
         payload.compressionQuality || "HIGH"
       );
 
+      console.log('Sending multipart FormData to /panchayat/website/sections');
       const data = await this.http.post<any>(
         "/panchayat/website/sections",
         formData,
@@ -2222,6 +2302,7 @@ class PanchayatWebsiteApi {
       return this.mapSection(data);
     }
 
+    console.log('⚠️ Using JSON payload (no imageFile or contentItemImages)');
     const jsonPayload: any = {
       sectionType: payload.sectionType,
       title: payload.title,
@@ -2262,10 +2343,12 @@ class PanchayatWebsiteApi {
       imageKey?: string;
       metadata?: Record<string, any>;
       imageFile?: File;
+      contentItemImages?: File[];
     }>
   ): Promise<PanchayatWebsiteSection> {
     const anyPayload: any = payload as any;
-    if (anyPayload.imageFile instanceof File) {
+    // Use multipart if imageFile or contentItemImages are present
+    if (anyPayload.imageFile instanceof File || (anyPayload.contentItemImages && Array.isArray(anyPayload.contentItemImages) && anyPayload.contentItemImages.length > 0)) {
       const formData = new FormData();
       if (anyPayload.sectionType !== undefined)
         formData.append("sectionType", anyPayload.sectionType);
@@ -2296,8 +2379,24 @@ class PanchayatWebsiteApi {
         formData.append("imageKey", anyPayload.imageKey);
       if (anyPayload.metadata !== undefined)
         formData.append("metadata", JSON.stringify(anyPayload.metadata));
-      formData.append("imageFile", anyPayload.imageFile);
+      if (anyPayload.imageFile instanceof File) {
+        formData.append("imageFile", anyPayload.imageFile);
+      }
+      if (anyPayload.contentItemImages && Array.isArray(anyPayload.contentItemImages)) {
+        console.log(`Appending ${anyPayload.contentItemImages.length} contentItemImages to FormData for update`);
+        anyPayload.contentItemImages.forEach((file: File, index: number) => {
+          console.log(`  - Appending contentItemImages[${index}]: ${file.name} (${file.size} bytes)`);
+          formData.append("contentItemImages", file);
+        });
+      }
+      // Add compressionQuality if not already set
+      if (anyPayload.compressionQuality !== undefined) {
+        formData.append("compressionQuality", anyPayload.compressionQuality);
+      } else {
+        formData.append("compressionQuality", "HIGH"); // Default
+      }
 
+      console.log('Sending multipart FormData to PUT /panchayat/website/sections/' + id);
       const data = await this.http.put<any>(
         `/panchayat/website/sections/${id}`,
         formData,
@@ -2387,7 +2486,36 @@ class PanchayatWebsiteApi {
         headers: { "Content-Type": "multipart/form-data" },
       }
     );
-    return { imageUrl: data.imageUrl };
+    // Extract imageUrl from response - data is PanchayatWebsiteSectionResponseDTO after unwrapping
+    const imageUrl = data?.imageUrl || data?.data?.imageUrl || null;
+    if (!imageUrl) {
+      console.error('Failed to extract imageUrl from upload response:', data);
+      throw new Error('Image upload succeeded but no imageUrl returned');
+    }
+    return { imageUrl };
+  }
+
+  async uploadImageGeneric(
+    file: File,
+    compressionQuality: string = "HIGH"
+  ): Promise<{ imageUrl: string }> {
+    const formData = new FormData();
+    formData.append("imageFile", file);
+    formData.append("compressionQuality", compressionQuality);
+    const data = await this.http.post<any>(
+      `/panchayat/website/upload-image`,
+      formData,
+      {
+        headers: { "Content-Type": "multipart/form-data" },
+      }
+    );
+    // Extract imageUrl from response - data is ApiResponse<ImageUploadResponse>
+    const imageUrl = data?.data?.imageUrl || data?.imageUrl || null;
+    if (!imageUrl) {
+      console.error('Failed to extract imageUrl from upload response:', data);
+      throw new Error('Image upload succeeded but no imageUrl returned');
+    }
+    return { imageUrl };
   }
 
   private mapSection(section: any): PanchayatWebsiteSection {

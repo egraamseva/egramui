@@ -76,6 +76,7 @@ import {
   applyTheme,
   type WebsiteTheme,
 } from "../../types/themes";
+import { processSectionContent } from "../../utils/imageUtils";
 
 type PageType =
   | "home"
@@ -168,7 +169,16 @@ export function PanchayatWebsite() {
         subdomain
       );
       if (sectionsData && sectionsData.length > 0) {
-        setSections(sectionsData);
+        // Process sections to clean any blob URLs that might have been stored
+        const processedSections = sectionsData.map(section => ({
+          ...section,
+          content: processSectionContent(section.content),
+          // Also clean section-level imageUrl if it's a blob URL
+          imageUrl: section.imageUrl && !section.imageUrl.startsWith('blob:') 
+            ? section.imageUrl 
+            : null,
+        }));
+        setSections(processedSections);
       } else {
         setSections([]);
       }
@@ -526,7 +536,8 @@ export function PanchayatWebsite() {
     if (sections.length === 0) return null;
 
     return sections.map((section) => {
-      let sectionContent = section.content;
+      // Ensure content is processed and cleaned
+      let sectionContent = processSectionContent(section.content);
 
       if (section.sectionType === "STATS" && panchayat) {
         sectionContent = {

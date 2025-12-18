@@ -3,6 +3,7 @@ import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { Label } from '../ui/label';
 import { Textarea } from '../ui/textarea';
+import { Checkbox } from '../ui/checkbox';
 import { SectionTypeSelector } from './SectionTypeSelector';
 import { LayoutTypeSelector } from './LayoutTypeSelector';
 import { SectionContentEditor } from './SectionContentEditor';
@@ -11,8 +12,11 @@ import { ImageWithFallback } from '../figma/ImageWithFallback';
 import { Upload, X } from 'lucide-react';
 import { toast } from 'sonner';
 import type { PlatformSection, PanchayatWebsiteSection, PlatformSectionType, PanchayatSectionType, LayoutType } from '../../types';
-import { getSectionTypeConfig, mapOldSectionType, mapToBackendSectionType } from '../../utils/sectionTypeConfig';
+import { mapOldSectionType, mapToBackendSectionType } from '../../utils/sectionTypeConfig';
 import { panchayatWebsiteApi, platformLandingPageApi } from '../../routes/api';
+import type { SectionSchema } from '../../utils/sectionSchemas';
+import { HARDCODED_SCHEMAS, getSchemaByType, getRenderingHint } from '../../utils/sectionSchemas';
+import { fileToDataURL, cleanContentBlobURLs, isBlobURL, isDataURL, validateImageFile } from '../../utils/imageUtils';
 
 interface SectionEditorProps {
   section?: PlatformSection | PanchayatWebsiteSection | null;
@@ -50,35 +54,118 @@ export  function SectionEditor({
   const [imagePreviews, setImagePreviews] = useState<string[]>([]);
   const [contentItemImages, setContentItemImages] = useState<Map<number, File>>(new Map());
   const [saving, setSaving] = useState(false);
+  const [schema, setSchema] = useState<SectionSchema | null>(null);
 
-  const sectionConfig = useMemo(() => {
-    if (!formData.sectionType) return null;
-    const mappedType = mapOldSectionType(formData.sectionType);
-    return getSectionTypeConfig(mappedType);
+  // Load schema when section type changes
+  useEffect(() => {
+    if (formData.sectionType) {
+      // TODO: Load from API when available
+      const foundSchema = getSchemaByType(HARDCODED_SCHEMAS, formData.sectionType);
+      if (foundSchema) {
+        console.log('Schema found for section type:', formData.sectionType, foundSchema);
+        setSchema(foundSchema);
+        // Set default layout from schema if not set
+        if (!formData.layoutType || formData.layoutType === 'GRID') {
+          setFormData(prev => ({ ...prev, layoutType: foundSchema.defaultLayout as LayoutType }));
+        }
+      } else {
+        console.warn('No schema found for section type:', formData.sectionType);
+        setSchema(null);
+      }
+    } else {
+      setSchema(null);
+    }
   }, [formData.sectionType]);
+
+  // Create section config from schema rendering hints
+  const sectionConfig = useMemo(() => {
+    if (!schema) return null;
+    
+    return {
+      supportsTitle: getRenderingHint(schema, 'supportsTitle'),
+      supportsSubtitle: getRenderingHint(schema, 'supportsSubtitle'),
+      supportsRichText: getRenderingHint(schema, 'supportsRichText'),
+      supportsItems: getRenderingHint(schema, 'supportsItems'),
+      supportsSingleImage: getRenderingHint(schema, 'supportsSingleImage'),
+      supportsMultipleImages: getRenderingHint(schema, 'supportsMultipleImages'),
+      supportedLayouts: schema.supportedLayouts,
+      defaultLayout: schema.defaultLayout,
+      supportsCTA: getRenderingHint(schema, 'supportsCTA'),
+      supportsForm: getRenderingHint(schema, 'supportsForm'),
+      supportsVideo: getRenderingHint(schema, 'supportsVideo'),
+      supportsMap: getRenderingHint(schema, 'supportsMap'),
+      supportsStatistics: getRenderingHint(schema, 'supportsStatistics'),
+      supportsTimeline: getRenderingHint(schema, 'supportsTimeline'),
+      supportsFAQ: getRenderingHint(schema, 'supportsFAQ'),
+      supportsTestimonials: getRenderingHint(schema, 'supportsTestimonials'),
+      supportsBackground: getRenderingHint(schema, 'supportsBackground'),
+      supportsSpacing: getRenderingHint(schema, 'supportsSpacing'),
+      supportsAnimation: getRenderingHint(schema, 'supportsAnimation'),
+      itemSupportsImage: getRenderingHint(schema, 'itemSupportsImage'),
+      itemSupportsLink: getRenderingHint(schema, 'itemSupportsLink'),
+      itemSupportsIcon: getRenderingHint(schema, 'itemSupportsIcon'),
+      itemSupportsValue: getRenderingHint(schema, 'itemSupportsValue'),
+      itemSupportsRating: getRenderingHint(schema, 'itemSupportsRating'),
+    };
+  }, [schema]);
 
   useEffect(() => {
     if (section) {
+      console.log('Loading section data for editing:', {
+        id: section.id,
+        sectionType: section.sectionType,
+        hasContent: !!section.content,
+        contentType: typeof section.content,
+      });
+      
+      // Parse content if it's a string
+      let parsedContent = section.content || {};
+      if (typeof parsedContent === 'string') {
+        try {
+          parsedContent = JSON.parse(parsedContent);
+          console.log('Parsed content from string:', parsedContent);
+        } catch (e) {
+          console.warn('Failed to parse section content:', e);
+          parsedContent = {};
+        }
+      }
+      
+      // Parse metadata if it's a string
+      let parsedMetadata = section.metadata || {};
+      if (typeof parsedMetadata === 'string') {
+        try {
+          parsedMetadata = JSON.parse(parsedMetadata);
+        } catch (e) {
+          console.warn('Failed to parse section metadata:', e);
+          parsedMetadata = {};
+        }
+      }
+      
       const mappedSectionType = mapOldSectionType(section.sectionType);
-      setFormData({
+      console.log('Mapped section type:', section.sectionType, '->', mappedSectionType);
+      
+      const newFormData = {
         sectionType: mappedSectionType as any,
         title: section.title || '',
         subtitle: section.subtitle || '',
-        content: section.content || {},
-        layoutType: section.layoutType,
-        displayOrder: section.displayOrder,
-        isVisible: section.isVisible,
+        content: parsedContent,
+        layoutType: section.layoutType || 'GRID',
+        displayOrder: section.displayOrder ?? 0,
+        isVisible: section.isVisible !== undefined ? section.isVisible : true,
         backgroundColor: section.backgroundColor || '',
         textColor: section.textColor || '',
         imageUrl: section.imageUrl || '',
         imageKey: section.imageKey || '',
         imageFit: (section.imageFit || 'cover') as 'cover' | 'contain' | 'fill' | 'none' | 'scale-down',
-        metadata: section.metadata || {},
-      });
+        metadata: parsedMetadata,
+      };
+      
+      console.log('Setting form data:', newFormData);
+      setFormData(newFormData);
       setImagePreview(section.imageUrl || null);
       
-      if (section.content && typeof section.content === 'object' && Array.isArray(section.content.items)) {
-        const itemsWithImages = section.content.items.filter((item: any) => item.image);
+      if (parsedContent && typeof parsedContent === 'object' && Array.isArray(parsedContent.items)) {
+        const itemsWithImages = parsedContent.items.filter((item: any) => item.image);
         setImagePreviews(itemsWithImages.map((item: any) => item.image));
       } else {
         setImagePreviews([]);
@@ -104,37 +191,66 @@ export  function SectionEditor({
     }
     setImageFile(null);
     setImageFiles([]);
+    console.log('🔄 Resetting contentItemImages Map (section or isOpen changed)', { sectionId: section?.id, isOpen });
     setContentItemImages(new Map());
   }, [section, isOpen]);
 
-  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      if (!file.type.startsWith('image/')) {
-        toast.error('Please select an image file');
-        return;
+      try {
+        // Validate the image file before accepting it
+        await validateImageFile(file);
+        setImageFile(file);
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          setImagePreview(reader.result as string);
+        };
+        reader.readAsDataURL(file);
+      } catch (error: any) {
+        console.error('Image validation failed:', error);
+        toast.error(error.message || 'Invalid image file. Please select a valid image.');
+        // Reset the input
+        e.target.value = '';
       }
-      setImageFile(file);
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setImagePreview(reader.result as string);
-      };
-      reader.readAsDataURL(file);
     }
   };
 
-  const handleMultipleImagesChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleMultipleImagesChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
     if (files.length === 0) return;
 
-    const imageFilesList = files.filter(file => file.type.startsWith('image/'));
-    if (imageFilesList.length !== files.length) {
-      toast.error('Some files are not images and were skipped');
+    const validFiles: File[] = [];
+    const errors: string[] = [];
+
+    // Validate each file
+    for (const file of files) {
+      try {
+        await validateImageFile(file);
+        validFiles.push(file);
+      } catch (error: any) {
+        console.error(`Validation failed for ${file.name}:`, error);
+        errors.push(`${file.name}: ${error.message || 'Invalid image file'}`);
+      }
     }
 
-    setImageFiles(prev => [...prev, ...imageFilesList]);
+    if (errors.length > 0) {
+      toast.error(`Some files were rejected:\n${errors.join('\n')}`);
+    }
+
+    if (validFiles.length === 0) {
+      toast.error('No valid image files selected. Please select valid image files.');
+      e.target.value = '';
+      return;
+    }
+
+    if (validFiles.length < files.length) {
+      toast.warning(`${validFiles.length} of ${files.length} files were accepted.`);
+    }
+
+    setImageFiles(prev => [...prev, ...validFiles]);
     
-    imageFilesList.forEach(file => {
+    validFiles.forEach(file => {
       const reader = new FileReader();
       reader.onloadend = () => {
         setImagePreviews(prev => [...prev, reader.result as string]);
@@ -167,6 +283,16 @@ export  function SectionEditor({
       return;
     }
 
+    // Log contentItemImages Map state at the start of submit
+    console.log('🚀 handleSubmit called - contentItemImages Map state:', {
+      size: contentItemImages.size,
+      entries: Array.from(contentItemImages.entries()).map(([idx, file]) => ({
+        itemIndex: idx,
+        fileName: file.name,
+        fileSize: file.size
+      }))
+    });
+
     setSaving(true);
     try {
       let parsedContent: any = formData.content || {};
@@ -180,21 +306,49 @@ export  function SectionEditor({
 
       // Handle multiple images uploaded via the "Multiple Images" section
       // These create new items automatically
+      // Don't store data URLs in content - they will be replaced with server URLs after upload
       if (imageFiles.length > 0) {
         if (!parsedContent.items || !Array.isArray(parsedContent.items)) {
           parsedContent.items = [];
         }
-        // Add new items for each uploaded image
+        // Add new items for each uploaded image (without image URL - will be set after upload)
         imageFiles.forEach((file, index) => {
-          const previewUrl = imagePreviews[index];
           parsedContent.items.push({
             id: `item-${Date.now()}-${index}`,
             title: `Image ${parsedContent.items.length + 1}`,
             description: '',
-            image: previewUrl, // Use preview URL temporarily, will be replaced with actual URL after upload
+            // Don't store data URL - will be replaced with server URL after upload
+            image: null,
           });
         });
       }
+
+      // Log contentItemImages BEFORE cleaning content
+      console.log('Before cleaning - contentItemImages Map:', {
+        size: contentItemImages.size,
+        entries: Array.from(contentItemImages.entries()).map(([idx, file]) => ({
+          itemIndex: idx,
+          fileName: file.name,
+          fileSize: file.size
+        })),
+        contentItems: parsedContent?.items?.map((item: any, idx: number) => ({
+          index: idx,
+          hasImage: !!item.image,
+          image: item.image?.substring(0, 50) || null
+        })) || []
+      });
+
+      // Clean any blob/data URLs from content before saving
+      parsedContent = cleanContentBlobURLs(parsedContent);
+
+      // Log after cleaning
+      console.log('After cleaning - content items:', {
+        items: parsedContent?.items?.map((item: any, idx: number) => ({
+          index: idx,
+          hasImage: !!item.image,
+          image: item.image
+        })) || []
+      });
 
       let parsedMetadata: any = formData.metadata || {};
       if (typeof parsedMetadata === 'string') {
@@ -206,40 +360,134 @@ export  function SectionEditor({
       }
 
       // Use section type directly (database constraint now supports both legacy and new types)
+      // For updates, include all fields to ensure nothing is lost
       const sectionData: any = {
         sectionType: formData.sectionType || (section?.sectionType as any),
-        layoutType: formData.layoutType || (section?.layoutType as any),
-        title: formData.title || undefined,
-        subtitle: formData.subtitle || undefined,
+        layoutType: formData.layoutType || (section?.layoutType as any) || 'GRID',
         content: parsedContent,
-        displayOrder: formData.displayOrder,
-        isVisible: formData.isVisible,
-        backgroundColor: formData.backgroundColor || undefined,
-        textColor: formData.textColor || undefined,
+        displayOrder: formData.displayOrder ?? (section?.displayOrder ?? 0),
+        isVisible: formData.isVisible !== undefined ? formData.isVisible : (section?.isVisible ?? true),
         metadata: parsedMetadata,
       };
-
+      
+      // Handle optional string fields - include them even if empty (to allow clearing)
+      if (formData.title !== undefined) {
+        sectionData.title = formData.title || null; // Allow empty string or null
+      } else if (section?.title !== undefined) {
+        sectionData.title = section.title;
+      }
+      
+      if (formData.subtitle !== undefined) {
+        sectionData.subtitle = formData.subtitle || null;
+      } else if (section?.subtitle !== undefined) {
+        sectionData.subtitle = section.subtitle;
+      }
+      
+      if (formData.backgroundColor !== undefined) {
+        sectionData.backgroundColor = formData.backgroundColor || null;
+      } else if (section?.backgroundColor !== undefined) {
+        sectionData.backgroundColor = section.backgroundColor;
+      }
+      
+      if (formData.textColor !== undefined) {
+        sectionData.textColor = formData.textColor || null;
+      } else if (section?.textColor !== undefined) {
+        sectionData.textColor = section.textColor;
+      }
+      
+      // Handle section main image upload
       if (imageFile) {
         sectionData.imageFile = imageFile;
         sectionData.compressionQuality = 'HIGH';
-      } else if (formData.imageUrl) {
-        sectionData.imageUrl = formData.imageUrl;
-        sectionData.imageKey = formData.imageKey;
+        // Clear imageUrl/imageKey when uploading new file - backend will set them
+        sectionData.imageUrl = undefined;
+        sectionData.imageKey = undefined;
+      } else if (formData.imageUrl !== undefined) {
+        // User provided imageUrl directly
+        sectionData.imageUrl = formData.imageUrl || null;
+        sectionData.imageKey = formData.imageKey || null;
+      } else if (section) {
+        // Preserve existing image data for updates
+        sectionData.imageUrl = section.imageUrl || null;
+        sectionData.imageKey = section.imageKey || null;
       }
       
       // Include imageFit in section data
-      if (formData.imageFit) {
+      if (formData.imageFit !== undefined) {
         sectionData.imageFit = formData.imageFit;
+      } else if (section?.imageFit !== undefined) {
+        sectionData.imageFit = section.imageFit;
       }
 
+      // Add contentItemImages to sectionData - convert Map to array in order
+      // IMPORTANT: Only send images for items that have null/empty image in content
+      // Backend matches images to items with null images in order
+      if (contentItemImages.size > 0) {
+        console.log(`Processing ${contentItemImages.size} contentItemImages from Map`);
+        const contentItemImageArray: File[] = [];
+        const sortedEntries = Array.from(contentItemImages.entries()).sort((a, b) => a[0] - b[0]);
+        
+        // Filter to only include images for items that actually have null/empty image in content (after cleaning)
+        const items = parsedContent?.items || [];
+        console.log(`Checking ${items.length} items for null images`);
+        
+        sortedEntries.forEach(([itemIndex, file]) => {
+          const item = items[itemIndex];
+          const hasNullImage = !item || !item.image || item.image === null || item.image === '' || item.image === 'null';
+          
+          console.log(`Item ${itemIndex}: hasNullImage=${hasNullImage}, image=${item?.image || 'null'}, fileName=${file.name}`);
+          
+          if (hasNullImage) {
+            contentItemImageArray.push(file);
+            console.log(`✓ Including image for item ${itemIndex}`);
+          } else {
+            console.log(`✗ Skipping image for item ${itemIndex} (already has image: ${item?.image})`);
+          }
+        });
+        
+        if (contentItemImageArray.length > 0) {
+          sectionData.contentItemImages = contentItemImageArray;
+          sectionData.compressionQuality = 'HIGH'; // Ensure compressionQuality is set when sending images
+          console.log(`✅ Sending ${contentItemImageArray.length} contentItemImages to backend with compressionQuality: HIGH`);
+        } else {
+          console.warn('⚠️ No contentItemImages to send (all items already have images or Map is empty)');
+        }
+      } else {
+        console.warn('⚠️ contentItemImages Map is empty (size=0)');
+      }
+
+      // Log section data for debugging
+      console.log('Saving section:', {
+        isUpdate: !!section,
+        sectionId: section?.id,
+        sectionType: sectionData.sectionType,
+        hasContent: !!sectionData.content,
+        contentItemsCount: sectionData.content?.items?.length || 0,
+        hasImageFile: !!imageFile,
+        hasImageUrl: !!sectionData.imageUrl,
+        contentItemImagesCount: contentItemImages.size,
+        contentItemImagesToSend: sectionData.contentItemImages?.length || 0,
+        contentItems: parsedContent?.items?.map((item: any, idx: number) => ({
+          index: idx,
+          hasImage: !!item.image,
+          image: item.image
+        })) || []
+      });
+      
+      // Save section with contentItemImages - backend will upload and update content
+      // Note: contentItemImages are sent in multipart form data and backend handles upload
       const savedSection = await onSave(sectionData);
       
-      // Upload multiple images (from "Multiple Images" section) if any
-      const totalImagesToUpload = imageFiles.length + contentItemImages.size;
-      if (totalImagesToUpload > 0 && savedSection) {
-        const uploadToastId = toast.loading(`Uploading ${totalImagesToUpload} image(s)...`);
+      console.log('Section saved successfully:', {
+        sectionId: savedSection.id,
+        hasContent: !!savedSection.content,
+      });
+      
+      // Handle imageFiles (multiple images) - these create new items
+      // We still need to upload these separately since they create new items
+      if (imageFiles.length > 0 && savedSection) {
+        const uploadToastId = toast.loading(`Uploading ${imageFiles.length} image(s)...`);
         try {
-          // Use the correct API based on platform or panchayat section
           const uploadApi = isPlatform ? platformLandingPageApi : panchayatWebsiteApi;
           const updateApi = isPlatform ? platformLandingPageApi : panchayatWebsiteApi;
           
@@ -247,108 +495,117 @@ export  function SectionEditor({
           const originalImageUrl = savedSection.imageUrl;
           const originalImageKey = savedSection.imageKey;
           
-          // Upload multiple images and create items for them
-          if (imageFiles.length > 0) {
-            const uploadPromises = imageFiles.map(async (file, index) => {
-              try {
-                // Use generic upload if available, otherwise use section upload and restore
-                let result;
-                if (isPlatform && (uploadApi as any).uploadImageGeneric) {
-                  result = await (uploadApi as any).uploadImageGeneric(file);
-                } else {
-                  // For panchayat or if generic not available, use section upload
-                  result = await uploadApi.uploadImage(savedSection.id, file);
-                }
-                // Update the corresponding item's image URL
-                if (parsedContent.items && parsedContent.items[parsedContent.items.length - imageFiles.length + index]) {
-                  parsedContent.items[parsedContent.items.length - imageFiles.length + index].image = result.imageUrl;
-                }
-              } catch (error) {
-                console.error(`Error uploading image ${index + 1}:`, error);
-                throw error;
+          // Track uploaded image URLs
+          const uploadedUrls: Array<{ index: number, imageUrl: string }> = [];
+          
+          // Upload multiple images
+          const uploadPromises = imageFiles.map(async (file, index) => {
+            try {
+              const result = await uploadApi.uploadImage(savedSection.id, file);
+              const imageUrl = result?.imageUrl;
+              if (!imageUrl) {
+                throw new Error(`Image upload failed: No imageUrl returned for image ${index + 1}`);
               }
-            });
-            await Promise.all(uploadPromises);
-          }
+              console.log(`Uploaded image ${index + 1}, URL:`, imageUrl);
+              uploadedUrls.push({ index, imageUrl });
+            } catch (error) {
+              console.error(`Error uploading image ${index + 1}:`, error);
+              throw error;
+            }
+          });
+          await Promise.all(uploadPromises);
           
-          // Upload content item images
-          if (contentItemImages.size > 0) {
-            const uploadPromises: Promise<void>[] = [];
-            contentItemImages.forEach((file, itemIndex) => {
-              const uploadPromise = (async () => {
-                try {
-                  // Use generic upload if available, otherwise use section upload and restore
-                  let result;
-                  if (isPlatform && (uploadApi as any).uploadImageGeneric) {
-                    result = await (uploadApi as any).uploadImageGeneric(file);
-                  } else {
-                    // For panchayat or if generic not available, use section upload
-                    result = await uploadApi.uploadImage(savedSection.id, file);
-                  }
-                  // Update the item's image URL in the content
-                  if (parsedContent.items && parsedContent.items[itemIndex]) {
-                    parsedContent.items[itemIndex].image = result.imageUrl;
-                  }
-                } catch (error) {
-                  console.error(`Error uploading image for item ${itemIndex}:`, error);
-                  throw error;
-                }
-              })();
-              uploadPromises.push(uploadPromise);
-            });
-            await Promise.all(uploadPromises);
-          }
-          
-          // Restore original section imageUrl if it was overwritten
-          if ((imageFiles.length > 0 || contentItemImages.size > 0) && originalImageUrl && 
-              (!isPlatform || !(uploadApi as any).uploadImageGeneric)) {
-            // Only restore if we used the section upload method (not generic)
+          // Restore the original section image if it was overwritten
+          if (originalImageUrl && originalImageUrl !== null) {
             try {
               await updateApi.updateSection(savedSection.id, {
                 imageUrl: originalImageUrl,
-                imageKey: originalImageKey,
+                imageKey: originalImageKey || undefined,
               });
+              console.log('Restored original section image after multiple image uploads');
             } catch (error) {
-              console.warn('Failed to restore original section image:', error);
+              console.warn('Failed to restore original section image after multiple image uploads:', error);
+            }
+          } else {
+            // Clear the section's image after uploading multiple images
+            try {
+              await updateApi.updateSection(savedSection.id, {
+                imageUrl: undefined,
+                imageKey: undefined,
+              });
+              console.log('Cleared section image after multiple image uploads');
+            } catch (error) {
+              console.warn('Failed to clear section image after multiple image uploads:', error);
             }
           }
           
-          // Update section with final image URLs
-          if (imageFiles.length > 0 || contentItemImages.size > 0) {
-            // Ensure content is properly structured before updating
-            const contentToUpdate = {
-              ...parsedContent,
-              items: parsedContent.items || []
-            };
-            
-            // Log for debugging
-            console.log('Updating section content with images:', {
-              sectionId: savedSection.id,
-              itemsCount: contentToUpdate.items.length,
-              itemsWithImages: contentToUpdate.items.filter((item: any) => item.image).length
-            });
-            
-            const updatedSection = await updateApi.updateSection(savedSection.id, {
-              content: contentToUpdate,
-            });
-            
-            // Verify the update was successful
-            if (updatedSection && updatedSection.content) {
-              const updatedContent = typeof updatedSection.content === 'string' 
-                ? JSON.parse(updatedSection.content) 
-                : updatedSection.content;
-              console.log('Section updated successfully. Content items:', updatedContent.items?.length || 0);
+          // Update content with uploaded server URLs for multiple images
+          if (!parsedContent.items) parsedContent.items = [];
+          
+          // Find items that need images (the ones we just created with image: null)
+          let multipleImageStartIndex = parsedContent.items.length - imageFiles.length;
+          
+          uploadedUrls.forEach(({ index, imageUrl }) => {
+            if (!imageUrl) {
+              console.warn(`Skipping null imageUrl for multiple image at index ${index}`);
+              return;
             }
-          }
+            
+            const itemIndex = multipleImageStartIndex + index;
+            if (itemIndex >= 0 && itemIndex < parsedContent.items.length && parsedContent.items[itemIndex]) {
+              console.log(`Setting image for multiple item at index ${itemIndex}:`, imageUrl);
+              parsedContent.items[itemIndex].image = imageUrl;
+            } else {
+              console.warn(`Item at index ${itemIndex} not found for multiple image ${index}. Total items: ${parsedContent.items.length}`);
+            }
+          });
+          
+          // Clean content and update section
+          const contentToUpdate = cleanContentBlobURLs({
+            ...parsedContent,
+            items: parsedContent.items || []
+          });
+          
+          // Ensure all uploaded image URLs are properly set
+          uploadedUrls.forEach(({ index, imageUrl }) => {
+            if (!imageUrl) return;
+            const itemIndex = multipleImageStartIndex + index;
+            if (itemIndex >= 0 && itemIndex < contentToUpdate.items.length) {
+              contentToUpdate.items[itemIndex].image = imageUrl;
+            }
+          });
+          
+          // Update section with final content
+          await updateApi.updateSection(savedSection.id, {
+            content: contentToUpdate,
+          });
           
           toast.dismiss(uploadToastId);
-          toast.success(`Successfully uploaded ${totalImagesToUpload} image(s)`);
+          toast.success(`Successfully uploaded ${imageFiles.length} image(s)`);
         } catch (error: any) {
           toast.dismiss(uploadToastId);
           console.error('Error uploading images:', error);
           toast.error(`Failed to upload images: ${error.message || 'Unknown error'}`);
         }
       } else {
+        // No new images to upload, but ensure content is cleaned if it was modified
+        // The onSave already handled the update, but we should verify content is clean
+        if (section) {
+          // For updates, ensure content doesn't have blob/data URLs
+          const cleanedContent = cleanContentBlobURLs(parsedContent);
+          // Only update if content was actually cleaned (had blob/data URLs)
+          const contentChanged = JSON.stringify(cleanedContent) !== JSON.stringify(parsedContent);
+          if (contentChanged) {
+            try {
+              const updateApi = isPlatform ? platformLandingPageApi : panchayatWebsiteApi;
+              await updateApi.updateSection(section.id, {
+                content: cleanedContent,
+              });
+            } catch (error) {
+              console.warn('Failed to clean content on update:', error);
+            }
+          }
+        }
         toast.success(section ? 'Section updated' : 'Section created');
       }
     } catch (error: any) {
@@ -358,19 +615,44 @@ export  function SectionEditor({
     }
   };
 
-  if (!isOpen) return null;
+  if (!isOpen) {
+    console.log('SectionEditor: isOpen is false, not rendering');
+    return null;
+  }
+
+  console.log('SectionEditor: Rendering form', {
+    hasSection: !!section,
+    sectionType: formData.sectionType,
+    hasSchema: !!schema,
+    hasSectionConfig: !!sectionConfig,
+  });
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6 p-6 bg-white rounded-lg">
+      {/* Debug info - remove in production */}
+      {process.env.NODE_ENV === 'development' && (
+        <div className="mb-4 p-3 bg-gray-100 rounded text-xs font-mono">
+          <div>Section ID: {section?.id || 'NEW'}</div>
+          <div>Section Type: {formData.sectionType || 'NONE'}</div>
+          <div>Has Schema: {schema ? 'YES' : 'NO'}</div>
+          <div>Has Content: {formData.content ? 'YES' : 'NO'}</div>
+          <div>Content Items: {formData.content?.items?.length || 0}</div>
+        </div>
+      )}
+      
       <SectionTypeSelector
         value={formData.sectionType}
-        onValueChange={(value: string) => setFormData({ ...formData, sectionType: value })}
+        onValueChange={(value: string) => {
+          console.log('Section type changed to:', value);
+          setFormData({ ...formData, sectionType: value });
+        }}
         isPlatform={isPlatform}
       />
 
-      {sectionConfig && (sectionConfig.supportsTitle || sectionConfig.supportsSubtitle) && (
+      {/* Title and Subtitle - Always show for editing, or if schema supports it */}
+      {(section || (sectionConfig && (sectionConfig.supportsTitle || sectionConfig.supportsSubtitle))) && (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 w-full">
-          {sectionConfig.supportsTitle && (
+          {(section || (sectionConfig && sectionConfig.supportsTitle)) && (
             <div className="space-y-2">
               <Label htmlFor="title">Section Title</Label>
               <Input
@@ -383,7 +665,7 @@ export  function SectionEditor({
             </div>
           )}
 
-          {sectionConfig.supportsSubtitle && (
+          {(section || (sectionConfig && sectionConfig.supportsSubtitle)) && (
             <div className="space-y-2">
               <Label htmlFor="subtitle">Section Subtitle</Label>
               <Input
@@ -398,53 +680,179 @@ export  function SectionEditor({
         </div>
       )}
 
-      {sectionConfig && sectionConfig.supportedLayouts.length > 1 && (
+      {schema && schema.supportedLayouts.length > 1 && (
         <LayoutTypeSelector
           value={formData.layoutType}
           onValueChange={(value: string) => setFormData({ ...formData, layoutType: value as LayoutType })}
-          supportedLayouts={sectionConfig.supportedLayouts}
+          supportedLayouts={schema.supportedLayouts}
         />
+      )}
+
+      {/* Carousel Auto-Scroll Settings - Show when carousel layout is selected */}
+      {formData.layoutType === 'CAROUSEL' && (
+        <div className="space-y-4 p-4 border rounded-lg bg-blue-50 border-blue-200">
+          <div className="space-y-2">
+            <Label className="text-base font-semibold">Carousel Auto-Scroll Settings</Label>
+            <p className="text-xs text-muted-foreground">
+              Configure automatic scrolling behavior for the carousel
+            </p>
+          </div>
+          
+          <div className="flex items-center space-x-2">
+            <Checkbox
+              id="carousel-auto-scroll"
+              checked={formData.content?.autoPlay || false}
+              onCheckedChange={(checked) => {
+                const newContent = {
+                  ...formData.content,
+                  autoPlay: checked as boolean,
+                };
+                setFormData({ ...formData, content: newContent });
+              }}
+            />
+            <Label htmlFor="carousel-auto-scroll" className="cursor-pointer font-medium">
+              Enable Auto-Scrolling
+            </Label>
+          </div>
+          
+          {formData.content?.autoPlay && (
+            <div className="space-y-2 pl-6">
+              <Label htmlFor="carousel-interval">Auto-Scroll Interval (milliseconds)</Label>
+              <Input
+                id="carousel-interval"
+                type="number"
+                min="1000"
+                step="500"
+                value={formData.content?.interval || 5000}
+                onChange={(e) => {
+                  const newContent = {
+                    ...formData.content,
+                    interval: parseInt(e.target.value) || 5000,
+                  };
+                  setFormData({ ...formData, content: newContent });
+                }}
+                className="w-full"
+              />
+              <p className="text-xs text-muted-foreground">
+                Time between automatic slides (minimum: 1000ms). Current: {formData.content?.interval || 5000}ms
+              </p>
+            </div>
+          )}
+        </div>
       )}
 
       <div className="space-y-2">
         <Label>Content</Label>
         {formData.sectionType ? (
-          <div className="border rounded-lg p-4 bg-gray-50">
-            <SectionContentEditor
-              sectionType={formData.sectionType}
-              content={formData.content}
-              layoutType={formData.layoutType}
-              isPlatform={isPlatform}
-              onContentChange={(newContent: any) => setFormData({ ...formData, content: newContent })}
-              onImageUpload={async (file: File, itemIndex: number) => {
-                try {
-                  // Store file temporarily for upload on save
+          schema ? (
+            <div className="border rounded-lg p-4 bg-gray-50">
+              <SectionContentEditor
+                sectionType={formData.sectionType}
+                content={formData.content}
+                layoutType={formData.layoutType}
+                isPlatform={isPlatform}
+                schema={schema}
+                onContentChange={(newContent: any) => setFormData({ ...formData, content: newContent })}
+                onImageUpload={async (file: File, itemIndex: number) => {
+                  try {
+                    console.log(`📸 onImageUpload called for item ${itemIndex}:`, {
+                      fileName: file.name,
+                      fileSize: file.size,
+                      fileType: file.type
+                    });
+                    
+                    // Validate the image file before accepting it
+                    await validateImageFile(file);
+                    
+                    // Store file temporarily for upload on save
+                    setContentItemImages(prev => {
+                      const newMap = new Map(prev);
+                      newMap.set(itemIndex, file);
+                      console.log(`✅ Stored file in Map for item ${itemIndex}. Map size now: ${newMap.size}`, {
+                        mapEntries: Array.from(newMap.entries()).map(([idx, f]) => ({ itemIndex: idx, fileName: f.name }))
+                      });
+                      return newMap;
+                    });
+                    
+                    // Convert to data URL for persistent preview (doesn't expire like blob URLs)
+                    const previewUrl = await fileToDataURL(file);
+                    console.log(`✅ Generated preview URL for item ${itemIndex}`);
+                    return previewUrl;
+                  } catch (error: any) {
+                    console.error('❌ Error preparing image upload:', error);
+                    toast.error(error.message || 'Invalid image file. Please select a valid image.');
+                    return null;
+                  }
+                }}
+                onImageRemove={(itemIndex: number) => {
                   setContentItemImages(prev => {
                     const newMap = new Map(prev);
-                    newMap.set(itemIndex, file);
+                    newMap.delete(itemIndex);
                     return newMap;
                   });
-                  
-                  // Create a preview URL for immediate display
-                  const previewUrl = URL.createObjectURL(file);
-                  return previewUrl;
-                } catch (error) {
-                  console.error('Error preparing image upload:', error);
-                  return null;
-                }
-              }}
-              onImageRemove={(itemIndex: number) => {
-                setContentItemImages(prev => {
-                  const newMap = new Map(prev);
-                  newMap.delete(itemIndex);
-                  return newMap;
-                });
-              }}
-            />
-          </div>
+                }}
+              />
+            </div>
+          ) : (
+            <div className="border rounded-lg p-4 bg-yellow-50 border-yellow-200">
+              <p className="text-sm text-yellow-800 mb-2">
+                ⚠️ No schema found for section type: <strong>{formData.sectionType}</strong>
+              </p>
+              <p className="text-xs text-yellow-700 mb-4">
+                The section type exists but no schema configuration is available. 
+                You can still edit the content manually below.
+              </p>
+              <div className="mt-4 border rounded-lg p-4 bg-white">
+                <SectionContentEditor
+                  sectionType={formData.sectionType}
+                  content={formData.content}
+                  layoutType={formData.layoutType}
+                  isPlatform={isPlatform}
+                  schema={null}
+                  onContentChange={(newContent: any) => setFormData({ ...formData, content: newContent })}
+                  onImageUpload={async (file: File, itemIndex: number) => {
+                    try {
+                      console.log(`📸 onImageUpload called for item ${itemIndex}:`, {
+                        fileName: file.name,
+                        fileSize: file.size,
+                        fileType: file.type
+                      });
+                      
+                      // Validate the image file before accepting it
+                      await validateImageFile(file);
+                      
+                      setContentItemImages(prev => {
+                        const newMap = new Map(prev);
+                        newMap.set(itemIndex, file);
+                        console.log(`✅ Stored file in Map for item ${itemIndex}. Map size now: ${newMap.size}`, {
+                          mapEntries: Array.from(newMap.entries()).map(([idx, f]) => ({ itemIndex: idx, fileName: f.name }))
+                        });
+                        return newMap;
+                      });
+                      const previewUrl = await fileToDataURL(file);
+                      console.log(`✅ Generated preview URL for item ${itemIndex}`);
+                      return previewUrl;
+                    } catch (error: any) {
+                      console.error('❌ Error preparing image upload:', error);
+                      toast.error(error.message || 'Invalid image file. Please select a valid image.');
+                      return null;
+                    }
+                  }}
+                  onImageRemove={(itemIndex: number) => {
+                    setContentItemImages(prev => {
+                      const newMap = new Map(prev);
+                      newMap.delete(itemIndex);
+                      return newMap;
+                    });
+                  }}
+                />
+              </div>
+            </div>
+          )
         ) : (
           <div className="border rounded-lg p-4 text-center text-gray-500">
-            Please select a section type
+            <p className="mb-2">Please select a section type above</p>
+            <p className="text-xs text-gray-400">Once you select a section type, the content editor will appear here</p>
           </div>
         )}
       </div>

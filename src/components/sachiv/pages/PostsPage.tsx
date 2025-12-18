@@ -29,7 +29,13 @@ export function PostsPage() {
     setLoading(true);
     try {
       const result = await postApi.list({ pageSize: 50 });
-      setPosts(result.items);
+      // Filter posts to only show posts from the logged-in user's panchayat
+      const userPanchayatId = String(user.panchayatId);
+      const filteredPosts = result.items.filter(post => {
+        if (!post.panchayatId) return false;
+        return String(post.panchayatId) === userPanchayatId;
+      });
+      setPosts(filteredPosts);
     } catch (error) {
       console.error("Error fetching posts:", error);
       toast.error("Failed to load posts");

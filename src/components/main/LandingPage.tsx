@@ -39,7 +39,16 @@ export function LandingPage() {
         setLoading(true);
         // Fetch dynamic sections
         const sectionsData = await publicPlatformLandingPageApi.getSections();
-        setSections(sectionsData);
+        // Process sections to clean any blob URLs
+        const { processSectionContent, isBlobURL } = await import('../../utils/imageUtils');
+        const processedSections = sectionsData.map(section => ({
+          ...section,
+          content: processSectionContent(section.content),
+          imageUrl: section.imageUrl && !isBlobURL(section.imageUrl) 
+            ? section.imageUrl 
+            : null,
+        }));
+        setSections(processedSections);
         
         // Fetch panchayats for ACTIVE_PANCHAYATS section if needed
         const data = await panchayatAPI.getAll();

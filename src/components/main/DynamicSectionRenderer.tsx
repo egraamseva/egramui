@@ -3,6 +3,7 @@ import type { PlatformSection, PanchayatWebsiteSection, LayoutType, ContentItem,
 import { mapOldSectionType } from '../../utils/sectionTypeConfig';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';
 import { ImageWithFallback } from '../figma/ImageWithFallback';
+import { processSectionContent, isBlobURL } from '../../utils/imageUtils';
 import { Button } from '../ui/button';
 import { Badge } from '../ui/badge';
 import { Progress } from '../ui/progress';
@@ -27,10 +28,20 @@ interface DynamicSectionRendererProps {
 }
 
 export function DynamicSectionRenderer({ section, children }: DynamicSectionRendererProps) {
+  // Process section to clean any blob URLs
+  const processedSection = {
+    ...section,
+    content: processSectionContent(section.content),
+    // Clean section-level imageUrl if it's a blob URL
+    imageUrl: section.imageUrl && !isBlobURL(section.imageUrl) 
+      ? section.imageUrl 
+      : null,
+  };
+  
   // Use imageUrl directly - Cloudflare public URLs don't expire
-  const imageUrl = section.imageUrl || null;
+  const imageUrl = processedSection.imageUrl || null;
 
-  const content = typeof section.content === 'object' ? section.content : {};
+  const content = typeof processedSection.content === 'object' ? processedSection.content : {};
   const background = content.background || { type: 'color', value: section.backgroundColor || '#ffffff' };
   const spacing = content.spacing || {};
   const animation = content.animation || { type: 'none' };
@@ -522,42 +533,85 @@ export function DynamicSectionRenderer({ section, children }: DynamicSectionRend
 
   const renderSplitContentSection = (content: any) => {
     const items = content.items || [];
-    if (items.length === 0 && section.imageUrl) {
-      // Single image with text layout
-      return (
-        <div className="grid md:grid-cols-2 gap-8 items-center">
-          <div>
-            {section.imageUrl && (
-              <ImageWithFallback
-                src={section.imageUrl}
-                alt={section.title || 'Section image'}
-                className="w-full h-auto rounded-lg"
-              />
-            )}
-          </div>
-          <div>
-            {section.title && <h3 className="text-2xl font-bold mb-4">{section.title}</h3>}
-            {section.subtitle && <p className="text-muted-foreground mb-4">{section.subtitle}</p>}
-            {content.richText && (
-              <div 
-                className="prose prose-lg max-w-none"
-                dangerouslySetInnerHTML={{ __html: content.richText }}
-              />
-            )}
-            {content.cta && (
-              <Button
-                size={content.cta.size as any}
-                variant={content.cta.style === 'primary' ? 'default' : content.cta.style === 'secondary' ? 'secondary' : 'outline'}
-                onClick={() => window.location.href = content.cta.link}
-                className="mt-4"
-              >
-                {content.cta.text}
-                {content.cta.icon && <ExternalLink className="ml-2 h-4 w-4" />}
-              </Button>
-            )}
-          </div>
+    // For IMAGE_WITH_TEXT, check content.image first, then section.imageUrl, then items
+    const imageUrl = content.image || section.imageUrl;
+    const imagePosition = content.imagePosition || 'left';
+    
+    if (items.length === 0 && imageUrl) {
+      // Single image with text layout (IMAGE_WITH_TEXT)
+      const imageElement = (
+        <div>
+          <ImageWithFallback
+            src={imageUrl}
+            alt={section.title || content.title || 'Section image'}
+            className="w-full h-auto rounded-lg"
+          />
         </div>
       );
+      
+      const textElement = (
+        <div>
+          {(section.title || content.title) && (
+            <h3 className="text-2xl font-bold mb-4">{section.title || content.title}</h3>
+          )}
+          {section.subtitle && <p className="text-muted-foreground mb-4">{section.subtitle}</p>}
+          {content.content && (
+            <div 
+              className="prose prose-lg max-w-none"
+              dangerouslySetInnerHTML={{ __html: content.content }}
+            />
+          )}
+          {content.richText && (
+            <div 
+              className="prose prose-lg max-w-none"
+              dangerouslySetInnerHTML={{ __html: content.richText }}
+            />
+          )}
+          {content.cta && (
+            <Button
+              size={content.cta.size as any}
+              variant={content.cta.style === 'primary' ? 'default' : content.cta.style === 'secondary' ? 'secondary' : 'outline'}
+              onClick={() => window.location.href = content.cta.link}
+              className="mt-4"
+            >
+              {content.cta.text}
+              {content.cta.icon && <ExternalLink className="ml-2 h-4 w-4" />}
+            </Button>
+          )}
+        </div>
+      );
+      
+      // Render based on image position
+      if (imagePosition === 'right') {
+        return (
+          <div className="grid md:grid-cols-2 gap-8 items-center">
+            {textElement}
+            {imageElement}
+          </div>
+        );
+      } else if (imagePosition === 'top') {
+        return (
+          <div className="space-y-8">
+            {imageElement}
+            {textElement}
+          </div>
+        );
+      } else if (imagePosition === 'bottom') {
+        return (
+          <div className="space-y-8">
+            {textElement}
+            {imageElement}
+          </div>
+        );
+      } else {
+        // Default: left
+        return (
+          <div className="grid md:grid-cols-2 gap-8 items-center">
+            {imageElement}
+            {textElement}
+          </div>
+        );
+      }
     }
     // Use layout-based rendering
     return renderByLayout(content, section.layoutType, 'SPLIT_CONTENT');

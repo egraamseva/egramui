@@ -12,6 +12,7 @@ import { toast } from 'sonner';
 import { platformLandingPageApi } from '../../routes/api';
 import type { PlatformSection } from '../../types';
 import { ImageWithFallback } from '../figma/ImageWithFallback';
+import { processSectionContent, isBlobURL } from '../../utils/imageUtils';
 
 function SectionItem({
   section,
@@ -233,7 +234,17 @@ export function PlatformLandingPageManager() {
     try {
       setLoading(true);
       const data = await platformLandingPageApi.getSections();
-      setSections(data.sort((a, b) => a.displayOrder - b.displayOrder));
+      // Process sections to clean any blob URLs
+      const processedData = data.map(section => ({
+        ...section,
+        content: typeof section.content === 'object' 
+          ? processSectionContent(section.content)
+          : section.content,
+        imageUrl: section.imageUrl && !isBlobURL(section.imageUrl) 
+          ? section.imageUrl 
+          : null,
+      }));
+      setSections(processedData.sort((a, b) => a.displayOrder - b.displayOrder));
     } catch (error: any) {
       toast.error('Failed to load sections: ' + (error.message || 'Unknown error'));
     } finally {
@@ -527,7 +538,7 @@ export function PlatformLandingPageManager() {
       )}
 
       <Dialog open={isEditorOpen} onOpenChange={setIsEditorOpen}>
-        <DialogContent className="max-w-[95vw] sm:max-w-5xl max-h-[90vh] overflow-y-auto p-4 sm:p-6">
+        <DialogContent className="max-w-[95vw] sm:max-w-7xl lg:max-w-[90vw] max-h-[95vh] overflow-y-auto p-4 sm:p-6 lg:p-8">
           <DialogHeader>
             <DialogTitle>
               {editingSection ? 'Edit Section' : 'Create New Section'}
