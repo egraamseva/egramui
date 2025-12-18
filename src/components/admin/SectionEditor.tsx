@@ -131,6 +131,7 @@ export  function SectionEditor({
       }
       
       // Parse metadata if it's a string
+      //parse
       let parsedMetadata = section.metadata || {};
       if (typeof parsedMetadata === 'string') {
         try {
