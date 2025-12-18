@@ -372,6 +372,7 @@ export type SectionType =
   | "IMAGE_GALLERY" // Image gallery section (grid/masonry/carousel)
   | "VIDEO_SECTION" // Video embed section
   | "CARD_SECTION" // Card-based content section
+  | "CARD_GRID" // Enhanced card grid with styling options
   | "STATISTICS_SECTION" // Statistics/metrics display section
   | "TESTIMONIALS_SECTION" // Testimonials/reviews section
   | "FAQ_SECTION" // FAQ/accordion section

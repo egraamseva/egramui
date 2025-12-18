@@ -75,6 +75,7 @@ import type {
 import { formatTimeAgo } from "../../utils/format";
 import { superAdminAPI } from "@/services/api";
 import { PlatformLandingPageManager } from "./PlatformLandingPageManager";
+import { adminPanchayatApi } from "@/routes/api";
 
 export function SuperAdminDashboard() {
   const navigate = useNavigate();
@@ -177,7 +178,6 @@ export function SuperAdminDashboard() {
     // Fetch stats to show user count warning
     let userCount = 0;
     try {
-      const { adminPanchayatApi } = await import("@/routes/api");
       const stats = await adminPanchayatApi.getStats(parseInt(id));
       userCount = stats.totalUsers || 0;
     } catch (error) {
@@ -186,8 +186,8 @@ export function SuperAdminDashboard() {
 
     // Show confirmation dialog with user count warning
     const message = userCount > 0
-      ? `Are you sure you want to DELETE "${panchayatName}"?\n\n⚠️ WARNING: This will permanently delete:\n• The panchayat\n• All ${userCount} user(s) associated with this panchayat\n• All posts, schemes, announcements, and other data\n\nThis action CANNOT be undone.`
-      : `Are you sure you want to DELETE "${panchayatName}"?\n\n⚠️ WARNING: This will permanently delete the panchayat and all associated data.\n\nThis action CANNOT be undone.`;
+      ? `Are you sure you want to DEACTIVATE "${panchayatName}"?\n\n⚠️ WARNING: This will:\n• Mark the panchayat as inactive\n• Mark all ${userCount} user(s) associated with this panchayat as inactive\n• Users will be deactivated in the background\n\nThe panchayat and users can be reactivated later if needed.`
+      : `Are you sure you want to DEACTIVATE "${panchayatName}"?\n\n⚠️ WARNING: This will mark the panchayat as inactive.\n\nThe panchayat can be reactivated later if needed.`;
 
     if (!confirm(message)) return;
 
@@ -195,12 +195,12 @@ export function SuperAdminDashboard() {
       await superAdminAPI.deletePanchayat(id);
       toast.success(
         userCount > 0
-          ? `Panchayat and ${userCount} user(s) deleted successfully`
-          : "Panchayat deleted successfully"
+          ? `Panchayat deactivated successfully. ${userCount} user(s) are being deactivated in the background.`
+          : "Panchayat deactivated successfully"
       );
       fetchDashboardData();
     } catch (error: any) {
-      toast.error(error.message || "Failed to delete panchayat");
+      toast.error(error.message || "Failed to deactivate panchayat");
     }
   };
 
@@ -221,7 +221,6 @@ export function SuperAdminDashboard() {
 
   const openEditPanchayatDialog = async (panchayat: SuperAdminPanchayat) => {
     try {
-      const { adminPanchayatApi } = await import("@/routes/api");
       const fullPanchayat = await adminPanchayatApi.getById(
         parseInt(panchayat.id)
       );
@@ -817,7 +816,7 @@ export function SuperAdminDashboard() {
                                           }
                                         >
                                           <Trash2 className="h-4 w-4 mr-2" />
-                                          Delete
+                                          Deactivate
                                         </DropdownMenuItem>
                                       </DropdownMenuContent>
                                     </DropdownMenu>
@@ -911,7 +910,7 @@ export function SuperAdminDashboard() {
                                         }
                                       >
                                         <Trash2 className="h-4 w-4 mr-2" />
-                                        Delete
+                                        Deactivate
                                       </DropdownMenuItem>
                                     </DropdownMenuContent>
                                   </DropdownMenu>

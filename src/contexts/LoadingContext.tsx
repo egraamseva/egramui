@@ -4,6 +4,7 @@
  */
 
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { getLoadingManager } from '../routes/api';
 
 interface LoadingContextType {
   loading: boolean;
@@ -20,26 +21,20 @@ export function LoadingProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     // Subscribe to global loading manager from HttpClient
-    let unsubscribe: (() => void) | undefined;
+    const manager = getLoadingManager();
     
-    import('../routes/api').then((module) => {
-      const manager = module.getLoadingManager();
-      
-      unsubscribe = manager.subscribe((loading: boolean) => {
-        setLoadingCount((prev) => {
-          if (loading) {
-            return prev + 1;
-          } else {
-            return Math.max(0, prev - 1);
-          }
-        });
+    const unsubscribe = manager.subscribe((loading: boolean) => {
+      setLoadingCount((prev) => {
+        if (loading) {
+          return prev + 1;
+        } else {
+          return Math.max(0, prev - 1);
+        }
       });
     });
 
     return () => {
-      if (unsubscribe) {
-        unsubscribe();
-      }
+      unsubscribe();
     };
   }, []);
 

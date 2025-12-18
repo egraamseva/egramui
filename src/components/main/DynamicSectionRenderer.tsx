@@ -29,9 +29,12 @@ interface DynamicSectionRendererProps {
 
 export function DynamicSectionRenderer({ section, children }: DynamicSectionRendererProps) {
   // Process section to clean any blob URLs
+  // IMPORTANT: processSectionContent handles JSON string parsing and preserves valid server URLs
+  const processedContent = processSectionContent(section.content);
+  
   const processedSection = {
     ...section,
-    content: processSectionContent(section.content),
+    content: processedContent,
     // Clean section-level imageUrl if it's a blob URL
     imageUrl: section.imageUrl && !isBlobURL(section.imageUrl) 
       ? section.imageUrl 
@@ -41,7 +44,18 @@ export function DynamicSectionRenderer({ section, children }: DynamicSectionRend
   // Use imageUrl directly - Cloudflare public URLs don't expire
   const imageUrl = processedSection.imageUrl || null;
 
-  const content = typeof processedSection.content === 'object' ? processedSection.content : {};
+  // Ensure content is an object (processSectionContent should handle this, but double-check)
+  const content = typeof processedContent === 'object' && processedContent !== null 
+    ? processedContent 
+    : (typeof processedContent === 'string' && processedContent.trim().startsWith('{'))
+      ? (() => {
+          try {
+            return JSON.parse(processedContent);
+          } catch {
+            return {};
+          }
+        })()
+      : {};
   const background = content.background || { type: 'color', value: section.backgroundColor || '#ffffff' };
   const spacing = content.spacing || {};
   const animation = content.animation || { type: 'none' };
@@ -85,6 +99,7 @@ export function DynamicSectionRenderer({ section, children }: DynamicSectionRend
       
       // Content Sections
       case 'PARAGRAPH_CONTENT':
+      case 'CONTENT_SECTION': // Alias for PARAGRAPH_CONTENT
       case 'RICH_TEXT': // Backward compatibility
         return renderRichTextSection(content);
       
@@ -103,6 +118,7 @@ export function DynamicSectionRenderer({ section, children }: DynamicSectionRend
       
       // Card & Grid Sections
       case 'CARD_SECTION':
+      case 'CARD_GRID': // Enhanced card grid with styling options
       case 'CARDS': // Backward compatibility
         return renderByLayout(content, section.layoutType, mappedSectionType);
       
@@ -321,27 +337,55 @@ export function DynamicSectionRenderer({ section, children }: DynamicSectionRend
     const embedUrl = getVideoEmbedUrl(videoUrl);
     if (!embedUrl) return null;
 
+    // Determine if it's an embedded video (YouTube/Vimeo) or direct video
+    const isEmbedded = embedUrl.includes('youtube.com/embed') || embedUrl.includes('vimeo.com');
+
     return (
-      <div className="relative aspect-video w-full">
-        {embedUrl.includes('youtube.com/embed') || embedUrl.includes('vimeo.com') ? (
-          <iframe
-            src={embedUrl}
-            className="w-full h-full rounded-lg"
-            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-            allowFullScreen
-            autoPlay={media.autoplay}
-            loop={media.loop}
-            controls={media.controls !== false}
-          />
-        ) : (
-          <video
-            src={embedUrl}
-            className="w-full h-full rounded-lg"
-            controls={media.controls !== false}
-            autoPlay={media.autoplay}
-            loop={media.loop}
-          />
-        )}
+      <div className="flex justify-center">
+        <div className="relative w-full max-w-5xl mx-auto px-4">
+          <div className="relative aspect-video w-full max-h-[450px] md:max-h-[500px] bg-black rounded-xl overflow-hidden shadow-2xl">
+            {isEmbedded ? (
+              <iframe
+                src={embedUrl}
+                className="absolute inset-0 w-full h-full"
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                allowFullScreen
+                title="Video player"
+              />
+            ) : (
+              <video
+                src={embedUrl}
+                className="w-full h-full object-contain"
+                controls={media.controls !== false}
+                autoPlay={media.autoplay}
+                loop={media.loop}
+                playsInline
+              >
+                Your browser does not support the video tag.
+              </video>
+            )}
+            {/* Optional thumbnail overlay for direct videos */}
+            {!isEmbedded && media.thumbnail && (
+              <div 
+                className="absolute inset-0 bg-cover bg-center"
+                style={{ backgroundImage: `url(${media.thumbnail})` }}
+              />
+            )}
+          </div>
+          {/* Video metadata display (optional) */}
+          {(media.title || media.description) && (
+            <div className="mt-4 text-center space-y-2">
+              {media.title && (
+                <h3 className="text-lg md:text-xl font-semibold text-foreground">{media.title}</h3>
+              )}
+              {media.description && (
+                <p className="text-sm md:text-base text-muted-foreground max-w-2xl mx-auto">
+                  {media.description}
+                </p>
+              )}
+            </div>
+          )}
+        </div>
       </div>
     );
   };
@@ -534,8 +578,42 @@ export function DynamicSectionRenderer({ section, children }: DynamicSectionRend
   const renderSplitContentSection = (content: any) => {
     const items = content.items || [];
     // For IMAGE_WITH_TEXT, check content.image first, then section.imageUrl, then items
-    const imageUrl = content.image || section.imageUrl;
-    const imagePosition = content.imagePosition || 'left';
+    // Ensure content.image is properly extracted (handle both string and object content)
+    let imageUrl = null;
+    
+    // Try to extract image from content object
+    if (content && typeof content === 'object') {
+      imageUrl = content.image || null;
+      // Handle case where image might be stored as empty string or "null" string
+      if (imageUrl && (imageUrl === '' || imageUrl === 'null' || imageUrl === 'undefined')) {
+        imageUrl = null;
+      }
+    }
+    
+    // Fallback to section.imageUrl if content.image is not available
+    if (!imageUrl) {
+      imageUrl = section.imageUrl || null;
+    }
+    
+    const imagePosition = content?.imagePosition || 'left';
+    
+    // Debug logging for production issues (only in development or when image is missing)
+    if (section.sectionType === 'IMAGE_WITH_TEXT' && (!imageUrl || import.meta.env.DEV)) {
+      console.log('IMAGE_WITH_TEXT render debug:', {
+        sectionType: section.sectionType,
+        sectionId: section.id,
+        hasContent: !!content,
+        contentType: typeof content,
+        contentKeys: content && typeof content === 'object' ? Object.keys(content) : [],
+        contentImage: content?.image,
+        contentImageType: typeof content?.image,
+        sectionImageUrl: section.imageUrl,
+        finalImageUrl: imageUrl,
+        itemsLength: items.length,
+        imagePosition,
+        rawContent: typeof section.content === 'string' ? section.content.substring(0, 200) : 'not a string'
+      });
+    }
     
     if (items.length === 0 && imageUrl) {
       // Single image with text layout (IMAGE_WITH_TEXT)
@@ -783,8 +861,8 @@ export function DynamicSectionRenderer({ section, children }: DynamicSectionRend
     };
 
     return (
-      <div className="relative">
-        <div className="relative overflow-hidden rounded-lg">
+      <div className="relative max-w-5xl mx-auto px-4">
+        <div className="relative overflow-hidden rounded-xl shadow-lg bg-gray-100">
           {items.map((item: ContentItem, index: number) => (
             <div
               key={index}
@@ -793,8 +871,8 @@ export function DynamicSectionRenderer({ section, children }: DynamicSectionRend
               }`}
             >
               {sectionType === 'TESTIMONIALS' ? (
-                <Card className="h-full">
-                  <CardContent className="p-8">
+                <Card className="h-full max-h-[400px]">
+                  <CardContent className="p-6 md:p-8">
                     <div className="flex items-center gap-1 mb-4">
                       {Array.from({ length: parseInt(item.value || '5') }).map((_, i) => (
                         <Star key={i} className="h-5 w-5 fill-yellow-400 text-yellow-400" />
@@ -813,19 +891,30 @@ export function DynamicSectionRenderer({ section, children }: DynamicSectionRend
                   </CardContent>
                 </Card>
               ) : item.image ? (
-                <div className="aspect-video w-full">
+                <div className="aspect-[16/9] w-full max-h-[450px] md:max-h-[500px]">
                   <ImageWithFallback
                     src={item.image}
                     alt={item.title || ''}
-                    className="h-full w-full"
+                    className="h-full w-full object-cover"
                     style={{ objectFit: item.imageFit || 'cover' }}
                   />
+                  {/* Overlay with title/description if available */}
+                  {(item.title || item.description) && (
+                    <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/75 via-black/50 to-transparent p-4 md:p-6">
+                      {item.title && (
+                        <h3 className="text-white text-base md:text-lg lg:text-xl font-semibold mb-1 drop-shadow-lg">{item.title}</h3>
+                      )}
+                      {item.description && (
+                        <p className="text-white/95 text-sm md:text-base line-clamp-2 drop-shadow-md">{item.description}</p>
+                      )}
+                    </div>
+                  )}
                 </div>
               ) : (
-                <Card className="h-full">
-                  <CardContent className="p-8">
-                    {item.title && <h3 className="text-2xl font-bold mb-2">{item.title}</h3>}
-                    {item.description && <p>{item.description}</p>}
+                <Card className="h-full max-h-[400px]">
+                  <CardContent className="p-6 md:p-8">
+                    {item.title && <h3 className="text-xl md:text-2xl font-bold mb-2">{item.title}</h3>}
+                    {item.description && <p className="text-base">{item.description}</p>}
                   </CardContent>
                 </Card>
               )}
@@ -837,17 +926,17 @@ export function DynamicSectionRenderer({ section, children }: DynamicSectionRend
           <>
             <button
               onClick={prevSlide}
-              className="absolute left-4 top-1/2 -translate-y-1/2 bg-white/80 hover:bg-white rounded-full p-2 shadow-lg z-10"
+              className="absolute left-2 md:left-4 top-1/2 -translate-y-1/2 bg-white/95 hover:bg-white rounded-full p-2 md:p-2.5 shadow-xl z-10 transition-all hover:scale-110 border border-gray-200"
               aria-label="Previous slide"
             >
-              <ChevronLeft className="h-5 w-5" />
+              <ChevronLeft className="h-4 w-4 md:h-5 md:w-5 text-gray-700" />
             </button>
             <button
               onClick={nextSlide}
-              className="absolute right-4 top-1/2 -translate-y-1/2 bg-white/80 hover:bg-white rounded-full p-2 shadow-lg z-10"
+              className="absolute right-2 md:right-4 top-1/2 -translate-y-1/2 bg-white/95 hover:bg-white rounded-full p-2 md:p-2.5 shadow-xl z-10 transition-all hover:scale-110 border border-gray-200"
               aria-label="Next slide"
             >
-              <ChevronRight className="h-5 w-5" />
+              <ChevronRight className="h-4 w-4 md:h-5 md:w-5 text-gray-700" />
             </button>
             
             <div className="flex justify-center gap-2 mt-4">
@@ -855,8 +944,10 @@ export function DynamicSectionRenderer({ section, children }: DynamicSectionRend
                 <button
                   key={index}
                   onClick={() => setCurrentIndex(index)}
-                  className={`w-2 h-2 rounded-full transition-colors ${
-                    index === currentIndex ? 'bg-primary' : 'bg-gray-300'
+                  className={`h-2 md:h-2.5 rounded-full transition-all duration-300 ${
+                    index === currentIndex 
+                      ? 'bg-primary w-8 md:w-10 shadow-md' 
+                      : 'bg-gray-300 hover:bg-gray-400 w-2 md:w-2.5'
                   }`}
                   aria-label={`Go to slide ${index + 1}`}
                 />

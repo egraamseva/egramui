@@ -2175,17 +2175,39 @@ class PlatformLandingPageApi {
   }
 
   private mapSection(section: any): PlatformSection {
+    // Parse content - handle both string and object
+    let parsedContent: any = {};
+    if (typeof section.content === "string") {
+      if (section.content && section.content.trim()) {
+        try {
+          parsedContent = JSON.parse(section.content);
+        } catch (e) {
+          console.warn('Failed to parse section content as JSON:', e, 'Content:', section.content.substring(0, 100));
+          parsedContent = {};
+        }
+      }
+    } else if (section.content && typeof section.content === 'object') {
+      parsedContent = section.content;
+    }
+    
+    // Debug logging for IMAGE_WITH_TEXT
+    if (section.sectionType === 'IMAGE_WITH_TEXT') {
+      console.log('Platform mapSection - IMAGE_WITH_TEXT:', {
+        sectionId: section.id,
+        rawContentType: typeof section.content,
+        parsedContentType: typeof parsedContent,
+        parsedContentImage: parsedContent?.image,
+        sectionImageUrl: section.imageUrl,
+        contentKeys: parsedContent && typeof parsedContent === 'object' ? Object.keys(parsedContent) : []
+      });
+    }
+    
     return {
       id: String(section.id),
       sectionType: section.sectionType,
       title: section.title,
       subtitle: section.subtitle,
-      content:
-        typeof section.content === "string"
-          ? section.content
-            ? JSON.parse(section.content)
-            : {}
-          : section.content,
+      content: parsedContent,
       layoutType: section.layoutType,
       displayOrder: section.displayOrder,
       isVisible: section.isVisible,
@@ -2519,18 +2541,40 @@ class PanchayatWebsiteApi {
   }
 
   private mapSection(section: any): PanchayatWebsiteSection {
+    // Parse content - handle both string and object
+    let parsedContent: any = {};
+    if (typeof section.content === "string") {
+      if (section.content && section.content.trim()) {
+        try {
+          parsedContent = JSON.parse(section.content);
+        } catch (e) {
+          console.warn('Failed to parse panchayat section content as JSON:', e, 'Content:', section.content.substring(0, 100));
+          parsedContent = {};
+        }
+      }
+    } else if (section.content && typeof section.content === 'object') {
+      parsedContent = section.content;
+    }
+    
+    // Debug logging for IMAGE_WITH_TEXT
+    if (section.sectionType === 'IMAGE_WITH_TEXT') {
+      console.log('Panchayat mapSection - IMAGE_WITH_TEXT:', {
+        sectionId: section.id,
+        rawContentType: typeof section.content,
+        parsedContentType: typeof parsedContent,
+        parsedContentImage: parsedContent?.image,
+        sectionImageUrl: section.imageUrl,
+        contentKeys: parsedContent && typeof parsedContent === 'object' ? Object.keys(parsedContent) : []
+      });
+    }
+    
     return {
       id: String(section.id),
       panchayatId: String(section.panchayatId),
       sectionType: section.sectionType,
       title: section.title,
       subtitle: section.subtitle,
-      content:
-        typeof section.content === "string"
-          ? section.content
-            ? JSON.parse(section.content)
-            : {}
-          : section.content,
+      content: parsedContent,
       layoutType: section.layoutType,
       displayOrder: section.displayOrder,
       isVisible: section.isVisible,

@@ -14,34 +14,86 @@ const RouteLoader = () => (
   </div>
 );
 
+// Helper function to create lazy-loaded components with error handling and retry logic
+const createLazyComponent = (importFn: () => Promise<any>, componentName: string) => {
+  return lazy(async () => {
+    try {
+      const module = await importFn();
+      // Handle both default and named exports
+      const component = module.default || module[componentName];
+      if (!component) {
+        throw new Error(`Component ${componentName} not found in module`);
+      }
+      return { default: component };
+    } catch (error: any) {
+      console.error(`Failed to load ${componentName}:`, error);
+      
+      // Retry once after a short delay
+      if (error.message?.includes('Failed to fetch') || error.message?.includes('dynamically imported')) {
+        console.log(`Retrying load for ${componentName}...`);
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        try {
+          const module = await importFn();
+          const component = module.default || module[componentName];
+          if (component) {
+            return { default: component };
+          }
+        } catch (retryError) {
+          console.error(`Retry failed for ${componentName}:`, retryError);
+        }
+      }
+      
+      // Return a fallback component that shows an error message
+      return {
+        default: () => (
+          <div className="flex items-center justify-center min-h-screen">
+            <div className="text-center">
+              <h2 className="text-2xl font-bold mb-4">Failed to load page</h2>
+              <p className="text-muted-foreground mb-4">
+                The page failed to load. Please refresh the page or contact support if the problem persists.
+              </p>
+              <button
+                onClick={() => window.location.reload()}
+                className="px-4 py-2 bg-primary text-white rounded hover:bg-primary/90"
+              >
+                Refresh Page
+              </button>
+            </div>
+          </div>
+        )
+      };
+    }
+  });
+};
+
 // Lazy load pages - these will be split into separate chunks
 // Public pages (loaded on demand)
-const LandingPage = lazy(() => import('@/components/main/LandingPage').then(m => ({ default: m.LandingPage })));
-const RegistrationFlow = lazy(() => import('@/components/main/RegistrationFlow').then(m => ({ default: m.RegistrationFlow })));
-const AllPanchayatsPage = lazy(() => import('@/components/main/AllPanchayatsPage').then(m => ({ default: m.AllPanchayatsPage })));
-const PanchayatWebsite = lazy(() => import('@/components/public/PanchayatWebsite').then(m => ({ default: m.PanchayatWebsite })));
-const Login = lazy(() => import('@/components/main/Login').then(m => ({ default: m.Login })));
-const ForgotPassword = lazy(() => import('@/components/main/ForgotPassword').then(m => ({ default: m.ForgotPassword })));
-const ResetPassword = lazy(() => import('@/components/main/ResetPassword').then(m => ({ default: m.ResetPassword })));
-const SuccessPage = lazy(() => import('../pages/SuccessPage').then(m => ({ default: m.SuccessPage })));
-const TestAPIPage = lazy(() => import('../pages/TestAPIPage').then(m => ({ default: m.TestAPIPage })));
+const LandingPage = createLazyComponent(() => import('@/components/main/LandingPage'), 'LandingPage');
+const RegistrationFlow = createLazyComponent(() => import('@/components/main/RegistrationFlow'), 'RegistrationFlow');
+const AllPanchayatsPage = createLazyComponent(() => import('@/components/main/AllPanchayatsPage'), 'AllPanchayatsPage');
+const PanchayatWebsite = createLazyComponent(() => import('@/components/public/PanchayatWebsite'), 'PanchayatWebsite');
+const Login = createLazyComponent(() => import('@/components/main/Login'), 'Login');
+const ForgotPassword = createLazyComponent(() => import('@/components/main/ForgotPassword'), 'ForgotPassword');
+const ResetPassword = createLazyComponent(() => import('@/components/main/ResetPassword'), 'ResetPassword');
+const SuccessPage = createLazyComponent(() => import('../pages/SuccessPage'), 'SuccessPage');
+const TestAPIPage = createLazyComponent(() => import('../pages/TestAPIPage'), 'TestAPIPage');
 
 // Dashboard pages (heavy components - definitely should be lazy loaded)
-const SachivDashboardLayout = lazy(() => import('@/components/sachiv/SachivDashboardLayout').then(m => ({ default: m.SachivDashboardLayout })));
-const DashboardPage = lazy(() => import('@/components/sachiv/pages/DashboardPage').then(m => ({ default: m.DashboardPage })));
-const PostsPage = lazy(() => import('@/components/sachiv/pages/PostsPage').then(m => ({ default: m.PostsPage })));
-const AnnouncementsPage = lazy(() => import('@/components/sachiv/pages/AnnouncementsPage').then(m => ({ default: m.AnnouncementsPage })));
-const SchemesPage = lazy(() => import('@/components/sachiv/pages/SchemesPage').then(m => ({ default: m.SchemesPage })));
-const GalleryPage = lazy(() => import('@/components/sachiv/pages/GalleryPage').then(m => ({ default: m.GalleryPage })));
-const AlbumsPage = lazy(() => import('@/components/sachiv/pages/AlbumsPage').then(m => ({ default: m.AlbumsPage })));
-const NewsletterPage = lazy(() => import('@/components/sachiv/pages/NewsletterPage').then(m => ({ default: m.NewsletterPage })));
-const DocumentsPage = lazy(() => import('@/components/sachiv/pages/DocumentsPage').then(m => ({ default: m.DocumentsPage })));
-const CommentsPage = lazy(() => import('@/components/sachiv/pages/CommentsPage').then(m => ({ default: m.CommentsPage })));
-const TeamPage = lazy(() => import('@/components/sachiv/pages/TeamPage').then(m => ({ default: m.TeamPage })));
-const AnalyticsPage = lazy(() => import('@/components/sachiv/pages/AnalyticsPage').then(m => ({ default: m.AnalyticsPage })));
-const SettingsPage = lazy(() => import('@/components/sachiv/pages/SettingsPage').then(m => ({ default: m.SettingsPage })));
-const WebsitePage = lazy(() => import('@/components/sachiv/PanchayatWebsiteManager').then(m => ({ default: m.PanchayatWebsiteManager })));
-const SuperAdminDashboard = lazy(() => import('@/components/admin/SuperAdminDashboard').then(m => ({ default: m.SuperAdminDashboard })));
+const SachivDashboardLayout = createLazyComponent(() => import('@/components/sachiv/SachivDashboardLayout'), 'SachivDashboardLayout');
+const DashboardPage = createLazyComponent(() => import('@/components/sachiv/pages/DashboardPage'), 'DashboardPage');
+const PostsPage = createLazyComponent(() => import('@/components/sachiv/pages/PostsPage'), 'PostsPage');
+const AnnouncementsPage = createLazyComponent(() => import('@/components/sachiv/pages/AnnouncementsPage'), 'AnnouncementsPage');
+const SchemesPage = createLazyComponent(() => import('@/components/sachiv/pages/SchemesPage'), 'SchemesPage');
+const GalleryPage = createLazyComponent(() => import('@/components/sachiv/pages/GalleryPage'), 'GalleryPage');
+const AlbumsPage = createLazyComponent(() => import('@/components/sachiv/pages/AlbumsPage'), 'AlbumsPage');
+const NewsletterPage = createLazyComponent(() => import('@/components/sachiv/pages/NewsletterPage'), 'NewsletterPage');
+const DocumentsPage = createLazyComponent(() => import('@/components/sachiv/pages/DocumentsPage'), 'DocumentsPage');
+const CommentsPage = createLazyComponent(() => import('@/components/sachiv/pages/CommentsPage'), 'CommentsPage');
+const TeamPage = createLazyComponent(() => import('@/components/sachiv/pages/TeamPage'), 'TeamPage');
+const AnalyticsPage = createLazyComponent(() => import('@/components/sachiv/pages/AnalyticsPage'), 'AnalyticsPage');
+const SettingsPage = createLazyComponent(() => import('@/components/sachiv/pages/SettingsPage'), 'SettingsPage');
+const WebsitePage = createLazyComponent(() => import('@/components/sachiv/PanchayatWebsiteManager'), 'PanchayatWebsiteManager');
+const SuperAdminDashboard = createLazyComponent(() => import('@/components/admin/SuperAdminDashboard'), 'SuperAdminDashboard');
 
 export function AppRoutes() {
   return (

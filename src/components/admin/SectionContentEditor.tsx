@@ -14,6 +14,8 @@ import type { PlatformSectionType, PanchayatSectionType, LayoutType, ContentItem
 import type { SectionSchema } from '../../utils/sectionSchemas';
 import { SchemaFormBuilder } from './SchemaFormBuilder';
 import { panchayatWebsiteApi, platformLandingPageApi } from '../../routes/api';
+import { validateImageFile } from '../../utils/imageUtils';
+import { toast } from 'sonner';
 
 interface SectionContentEditorProps {
   sectionType: PlatformSectionType | PanchayatSectionType | '';
@@ -179,7 +181,6 @@ export function SectionContentEditor({
               
               try {
                 // Validate the image file
-                const { validateImageFile } = await import('../../utils/imageUtils');
                 await validateImageFile(file);
                 
                 // Upload immediately using the generic upload endpoint
@@ -196,8 +197,6 @@ export function SectionContentEditor({
                 }
               } catch (error: any) {
                 console.error('❌ Error uploading image for direct field:', error);
-                // Show error toast if available
-                const { toast } = await import('sonner');
                 toast.error(error.message || 'Failed to upload image');
                 return null;
               }
@@ -223,8 +222,7 @@ export function SectionContentEditor({
     const file = e.target.files?.[0];
     if (file) {
       try {
-        // Import and validate the image file before accepting it
-        const { validateImageFile } = await import('../../utils/imageUtils');
+        // Validate the image file before accepting it
         await validateImageFile(file);
         
         // Get preview URL (data URL) for display, but don't store it in content yet

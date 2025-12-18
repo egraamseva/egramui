@@ -17,6 +17,7 @@ import { toast } from "sonner";
 import type { ActivePanchayat, PlatformSection } from "../../types";
 import { useTranslation } from "react-i18next";
 import { DynamicSectionRenderer } from "./DynamicSectionRenderer";
+import { processSectionContent, isBlobURL } from '../../utils/imageUtils';
 
 export function LandingPage() {
   const navigate = useNavigate();
@@ -40,14 +41,30 @@ export function LandingPage() {
         // Fetch dynamic sections
         const sectionsData = await publicPlatformLandingPageApi.getSections();
         // Process sections to clean any blob URLs
-        const { processSectionContent, isBlobURL } = await import('../../utils/imageUtils');
-        const processedSections = sectionsData.map(section => ({
-          ...section,
-          content: processSectionContent(section.content),
-          imageUrl: section.imageUrl && !isBlobURL(section.imageUrl) 
-            ? section.imageUrl 
-            : null,
-        }));
+        const processedSections = sectionsData.map(section => {
+          const processedContent = processSectionContent(section.content);
+          
+          // Debug logging for IMAGE_WITH_TEXT sections
+          if (section.sectionType === 'IMAGE_WITH_TEXT') {
+            console.log('LandingPage - IMAGE_WITH_TEXT section loaded:', {
+              sectionId: section.id,
+              sectionType: section.sectionType,
+              rawContentType: typeof section.content,
+              processedContentType: typeof processedContent,
+              processedContentImage: processedContent?.image,
+              sectionImageUrl: section.imageUrl,
+              contentKeys: processedContent && typeof processedContent === 'object' ? Object.keys(processedContent) : []
+            });
+          }
+          
+          return {
+            ...section,
+            content: processedContent,
+            imageUrl: section.imageUrl && !isBlobURL(section.imageUrl) 
+              ? section.imageUrl 
+              : null,
+          };
+        });
         setSections(processedSections);
         
         // Fetch panchayats for ACTIVE_PANCHAYATS section if needed

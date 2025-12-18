@@ -81,12 +81,24 @@ export function cleanContentBlobURLs(content: any): any {
             console.warn(`Removed temporary URL (blob/data) from ${key}:`, value.substring(0, 50) + '...');
             cleaned[key] = null; // Set to null so ImageWithFallback can handle it
           } else if (isValidServerURL(value)) {
-            // Only store valid server URLs
+            // Valid server URL - preserve it
             cleaned[key] = value;
-          } else {
-            // Invalid URL format - set to null
-            console.warn(`Invalid URL format in ${key}, setting to null:`, value.substring(0, 50));
+          } else if (value.trim() === '' || value === 'null' || value === 'undefined') {
+            // Empty or null string - set to null
             cleaned[key] = null;
+          } else {
+            // Might be a valid URL that doesn't start with http/https (e.g., relative URL or CDN URL)
+            // In production, preserve it if it looks like a URL
+            // Only set to null if it's clearly invalid
+            if (value.includes('/') || value.includes('.')) {
+              // Looks like it might be a URL - preserve it
+              console.warn(`Preserving potentially valid URL in ${key} (not http/https):`, value.substring(0, 50));
+              cleaned[key] = value;
+            } else {
+              // Clearly invalid - set to null
+              console.warn(`Invalid URL format in ${key}, setting to null:`, value.substring(0, 50));
+              cleaned[key] = null;
+            }
           }
         } else {
           // Recursively clean nested objects/arrays
@@ -103,25 +115,64 @@ export function cleanContentBlobURLs(content: any): any {
 
 /**
  * Process section content to ensure all image URLs are valid
+ * Handles both direct image fields (like IMAGE_WITH_TEXT's content.image) and items array
+ * IMPORTANT: Only removes blob/data URLs, preserves all valid server URLs (http/https)
  */
 export function processSectionContent(content: any): any {
   if (!content) return content;
   
-  // First, clean any blob URLs
-  const cleaned = cleanContentBlobURLs(content);
+  // Handle string content (JSON string from backend)
+  let parsedContent = content;
+  if (typeof content === 'string' && content.trim().startsWith('{')) {
+    try {
+      parsedContent = JSON.parse(content);
+    } catch (e) {
+      console.warn('Failed to parse content as JSON, using as-is:', e);
+      return content;
+    }
+  }
+  
+  // First, clean any blob URLs (this handles content.image, content.imageUrl, etc.)
+  const cleaned = cleanContentBlobURLs(parsedContent);
+  
+  // Ensure direct image field (for IMAGE_WITH_TEXT) is preserved if it's a valid server URL
+  if (cleaned && typeof cleaned === 'object' && cleaned.image) {
+    const imageValue = cleaned.image;
+    if (typeof imageValue === 'string') {
+      if (isBlobURL(imageValue) || isDataURL(imageValue)) {
+        console.warn('Removed temporary URL from content.image:', imageValue.substring(0, 50) + '...');
+        cleaned.image = null;
+      } else if (isValidServerURL(imageValue)) {
+        // Valid server URL - preserve it
+        cleaned.image = imageValue;
+      } else {
+        // Check if it's an empty string or "null" string
+        if (imageValue.trim() === '' || imageValue === 'null') {
+          cleaned.image = null;
+        } else {
+          // Might be a relative URL or other format - preserve it for now
+          console.warn('Unusual URL format in content.image, preserving:', imageValue.substring(0, 50));
+          cleaned.image = imageValue;
+        }
+      }
+    }
+  }
   
   // If content has items array, ensure all image URLs are valid
-  if (cleaned.items && Array.isArray(cleaned.items)) {
+  if (cleaned && cleaned.items && Array.isArray(cleaned.items)) {
     cleaned.items = cleaned.items.map((item: any) => {
       if (item && typeof item === 'object') {
         // Remove blob/data URLs from item images - only server URLs should be stored
-        if (item.image && (isBlobURL(item.image) || isDataURL(item.image))) {
-          console.warn('Removed temporary URL from item image:', item.image.substring(0, 50) + '...');
-          item.image = null;
-        } else if (item.image && !isValidServerURL(item.image)) {
-          // Invalid URL format
-          console.warn('Invalid URL format in item image, setting to null:', item.image.substring(0, 50));
-          item.image = null;
+        if (item.image && typeof item.image === 'string') {
+          if (isBlobURL(item.image) || isDataURL(item.image)) {
+            console.warn('Removed temporary URL from item image:', item.image.substring(0, 50) + '...');
+            item.image = null;
+          } else if (!isValidServerURL(item.image) && item.image.trim() !== '' && item.image !== 'null') {
+            // Invalid URL format but not empty/null - preserve for now
+            console.warn('Unusual URL format in item image, preserving:', item.image.substring(0, 50));
+          } else if (item.image.trim() === '' || item.image === 'null') {
+            item.image = null;
+          }
         }
         // Clean nested structures
         return cleanContentBlobURLs(item);

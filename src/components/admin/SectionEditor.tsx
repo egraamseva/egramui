@@ -340,9 +340,22 @@ export  function SectionEditor({
       });
 
       // Clean any blob/data URLs from content before saving
+      // IMPORTANT: For IMAGE_WITH_TEXT, preserve content.image if it's a valid server URL
+      const beforeClean = JSON.stringify(parsedContent);
       parsedContent = cleanContentBlobURLs(parsedContent);
-
-      // Log after cleaning
+      const afterClean = JSON.stringify(parsedContent);
+      
+      // Log after cleaning - especially important for IMAGE_WITH_TEXT
+      if (formData.sectionType === 'IMAGE_WITH_TEXT') {
+        console.log('IMAGE_WITH_TEXT content cleaning:', {
+          beforeCleanImage: JSON.parse(beforeClean)?.image,
+          afterCleanImage: parsedContent?.image,
+          imagePreserved: !!parsedContent?.image,
+          contentType: typeof parsedContent,
+          contentKeys: parsedContent && typeof parsedContent === 'object' ? Object.keys(parsedContent) : []
+        });
+      }
+      
       console.log('After cleaning - content items:', {
         items: parsedContent?.items?.map((item: any, idx: number) => ({
           index: idx,
@@ -472,7 +485,13 @@ export  function SectionEditor({
           index: idx,
           hasImage: !!item.image,
           image: item.image
-        })) || []
+        })) || [],
+        // For IMAGE_WITH_TEXT, log content.image specifically
+        ...(sectionData.sectionType === 'IMAGE_WITH_TEXT' ? {
+          contentImage: sectionData.content?.image,
+          contentImageType: typeof sectionData.content?.image,
+          contentStringified: typeof sectionData.content === 'object' ? JSON.stringify(sectionData.content).substring(0, 200) : sectionData.content?.substring(0, 200)
+        } : {})
       });
       
       // Save section with contentItemImages - backend will upload and update content

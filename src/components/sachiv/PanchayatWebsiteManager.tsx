@@ -13,6 +13,7 @@ import { toast } from 'sonner';
 import { panchayatWebsiteApi } from '../../routes/api';
 import type { PanchayatWebsiteSection } from '../../types';
 import { ImageWithFallback } from '../figma/ImageWithFallback';
+import { processSectionContent, isBlobURL } from '../../utils/imageUtils';
 
 function SectionItem({
   section,
@@ -238,7 +239,6 @@ export function PanchayatWebsiteManager() {
       setLoading(true);
       const data = await panchayatWebsiteApi.getSections();
       // Process sections to clean any blob URLs
-      const { processSectionContent, isBlobURL } = await import('../../utils/imageUtils');
       const processedData = data.map(section => ({
         ...section,
         content: typeof section.content === 'object' 
