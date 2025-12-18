@@ -50,39 +50,69 @@ export function TipTapEditor({
   const [tableExtensions, setTableExtensions] = useState<any[]>([]);
   const [hasTableSupport, setHasTableSupport] = useState(false);
 
-  // Load table extensions dynamically
+  // Load table extensions dynamically with retry logic
   useEffect(() => {
     let mounted = true;
-    
-    Promise.all([
-      import('@tiptap/extension-table'),
-      import('@tiptap/extension-table-row'),
-      import('@tiptap/extension-table-cell'),
-      import('@tiptap/extension-table-header')
-    ]).then(([tableMod, rowMod, cellMod, headerMod]) => {
-      if (!mounted) return;
-      
-      const Table = (tableMod as any).default || tableMod;
-      const TableRow = (rowMod as any).default || rowMod;
-      const TableCell = (cellMod as any).default || cellMod;
-      const TableHeader = (headerMod as any).default || headerMod;
-      
-      setTableExtensions([
-        Table.configure({
-          resizable: true,
-          HTMLAttributes: {
-            class: 'border-collapse border border-gray-300',
-          },
-        }),
-        TableRow,
-        TableHeader,
-        TableCell,
-      ]);
-      setHasTableSupport(true);
-    }).catch((e) => {
-      console.warn('Table extensions could not be loaded:', e);
-      setHasTableSupport(false);
-    });
+    let retryCount = 0;
+    const maxRetries = 3;
+
+    const loadTableExtensions = async (): Promise<void> => {
+      try {
+        const [tableMod, rowMod, cellMod, headerMod] = await Promise.all([
+          import('@tiptap/extension-table'),
+          import('@tiptap/extension-table-row'),
+          import('@tiptap/extension-table-cell'),
+          import('@tiptap/extension-table-header')
+        ]);
+
+        if (!mounted) return;
+
+        const Table = (tableMod as any).default || tableMod;
+        const TableRow = (rowMod as any).default || rowMod;
+        const TableCell = (cellMod as any).default || cellMod;
+        const TableHeader = (headerMod as any).default || headerMod;
+
+        setTableExtensions([
+          Table.configure({
+            resizable: true,
+            HTMLAttributes: {
+              class: 'border-collapse border border-gray-300',
+            },
+          }),
+          TableRow,
+          TableHeader,
+          TableCell,
+        ]);
+        setHasTableSupport(true);
+      } catch (error: any) {
+        const errorMessage = error?.message || String(error);
+        const isNetworkError = 
+          errorMessage?.includes('Failed to fetch') || 
+          errorMessage?.includes('dynamically imported') ||
+          errorMessage?.includes('NetworkError') ||
+          errorMessage?.includes('Load failed') ||
+          error?.name === 'TypeError';
+
+        if (isNetworkError && retryCount < maxRetries && mounted) {
+          retryCount++;
+          const delay = Math.min(1000 * Math.pow(2, retryCount - 1), 4000);
+          console.warn(
+            `Table extensions failed to load (attempt ${retryCount}/${maxRetries + 1}). Retrying in ${delay}ms...`,
+            error
+          );
+          setTimeout(() => {
+            if (mounted) {
+              loadTableExtensions();
+            }
+          }, delay);
+        } else {
+          console.warn('Table extensions could not be loaded after retries:', error);
+          setHasTableSupport(false);
+        }
+      }
+    };
+
+    loadTableExtensions();
 
     return () => {
       mounted = false;

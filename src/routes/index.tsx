@@ -17,52 +17,98 @@ const RouteLoader = () => (
 // Helper function to create lazy-loaded components with error handling and retry logic
 const createLazyComponent = (importFn: () => Promise<any>, componentName: string) => {
   return lazy(async () => {
-    try {
-      const module = await importFn();
-      // Handle both default and named exports
-      const component = module.default || module[componentName];
-      if (!component) {
-        throw new Error(`Component ${componentName} not found in module`);
-      }
-      return { default: component };
-    } catch (error: any) {
-      console.error(`Failed to load ${componentName}:`, error);
-      
-      // Retry once after a short delay
-      if (error.message?.includes('Failed to fetch') || error.message?.includes('dynamically imported')) {
-        console.log(`Retrying load for ${componentName}...`);
-        await new Promise(resolve => setTimeout(resolve, 1000));
-        try {
-          const module = await importFn();
-          const component = module.default || module[componentName];
-          if (component) {
-            return { default: component };
-          }
-        } catch (retryError) {
-          console.error(`Retry failed for ${componentName}:`, retryError);
+    const maxRetries = 3;
+    let lastError: any = null;
+
+    for (let attempt = 0; attempt <= maxRetries; attempt++) {
+      try {
+        const module = await importFn();
+        // Handle both default and named exports
+        const component = module.default || module[componentName];
+        if (!component) {
+          throw new Error(`Component ${componentName} not found in module`);
+        }
+        return { default: component };
+      } catch (error: any) {
+        lastError = error;
+        const errorMessage = error?.message || String(error);
+        const isNetworkError = 
+          errorMessage?.includes('Failed to fetch') || 
+          errorMessage?.includes('dynamically imported') ||
+          errorMessage?.includes('NetworkError') ||
+          errorMessage?.includes('Load failed') ||
+          error?.name === 'TypeError';
+
+        if (isNetworkError && attempt < maxRetries) {
+          // Exponential backoff: 1s, 2s, 4s
+          const delay = Math.min(1000 * Math.pow(2, attempt), 4000);
+          console.warn(
+            `Failed to load ${componentName} (attempt ${attempt + 1}/${maxRetries + 1}). Retrying in ${delay}ms...`,
+            error
+          );
+          await new Promise(resolve => setTimeout(resolve, delay));
+          continue;
+        }
+
+        // If it's not a network error or we've exhausted retries, log and break
+        if (!isNetworkError) {
+          console.error(`Failed to load ${componentName}:`, error);
+          break;
         }
       }
-      
-      // Return a fallback component that shows an error message
-      return {
-        default: () => (
-          <div className="flex items-center justify-center min-h-screen">
-            <div className="text-center">
-              <h2 className="text-2xl font-bold mb-4">Failed to load page</h2>
-              <p className="text-muted-foreground mb-4">
-                The page failed to load. Please refresh the page or contact support if the problem persists.
-              </p>
+    }
+
+    // All retries failed - return a fallback component
+    console.error(`Failed to load ${componentName} after ${maxRetries + 1} attempts:`, lastError);
+    
+    return {
+      default: () => (
+        <div className="flex items-center justify-center min-h-screen bg-background">
+          <div className="text-center max-w-md mx-auto p-6">
+            <div className="mb-4">
+              <svg
+                className="mx-auto h-12 w-12 text-destructive"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+                />
+              </svg>
+            </div>
+            <h2 className="text-2xl font-bold mb-2">Something went wrong</h2>
+            <p className="text-muted-foreground mb-2">
+              We're sorry, but something unexpected happened.
+            </p>
+            <p className="text-sm text-muted-foreground mb-6">
+              Failed to load {componentName}. Please try again.
+            </p>
+            <div className="flex gap-3 justify-center">
               <button
                 onClick={() => window.location.reload()}
-                className="px-4 py-2 bg-primary text-white rounded hover:bg-primary/90"
+                className="px-4 py-2 bg-destructive text-destructive-foreground rounded-md hover:bg-destructive/90 transition-colors"
               >
-                Refresh Page
+                Reload Page
+              </button>
+              <button
+                onClick={() => {
+                  // Try to reload just the component
+                  window.location.hash = '';
+                  window.location.reload();
+                }}
+                className="px-4 py-2 bg-secondary text-secondary-foreground rounded-md hover:bg-secondary/80 transition-colors border"
+              >
+                Try Again
               </button>
             </div>
           </div>
-        )
-      };
-    }
+        </div>
+      )
+    };
   });
 };
 
