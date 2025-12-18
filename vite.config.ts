@@ -6,6 +6,10 @@ export default defineConfig({
   // Base public path when served in production
   base: '/',
   plugins: [react()],
+  define: {
+    // Ensure proper global object for React Router and other libraries
+    'global': 'globalThis',
+  },
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),
@@ -13,6 +17,9 @@ export default defineConfig({
   },
   optimizeDeps: {
     include: [
+      'react',
+      'react-dom',
+      'react-router-dom',
       '@tiptap/react',
       '@tiptap/starter-kit',
       '@tiptap/extension-image',
@@ -41,7 +48,13 @@ export default defineConfig({
         manualChunks: (id) => {
           // Split vendor chunks for better caching
           if (id.includes('node_modules')) {
-            if (id.includes('react') || id.includes('react-dom') || id.includes('react-router')) {
+            // Keep React and React DOM together (they're tightly coupled)
+            // But separate React Router to avoid initialization order issues
+            if (id.includes('react-router')) {
+              return 'vendor-router';
+            }
+            // React core (react + react-dom together)
+            if ((id.includes('react') || id.includes('react-dom')) && !id.includes('react-router')) {
               return 'vendor-react';
             }
             if (id.includes('@tiptap')) {
