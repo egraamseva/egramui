@@ -10,7 +10,7 @@ import { Plus, Trash2, GripVertical, Image as ImageIcon, Video, FileText, HelpCi
 import { ImageWithFallback } from '../figma/ImageWithFallback';
 import { Upload, X } from 'lucide-react';
 import { Checkbox } from '../ui/checkbox';
-import type { PlatformSectionType, PanchayatSectionType, LayoutType, ContentItem, BackgroundConfig, SpacingConfig, AnimationConfig, CTAConfig, FormField, SectionContent } from '../../types';
+import type { PlatformSectionType, PanchayatSectionType, LayoutType, ContentItem, BackgroundConfig, SpacingConfig, AnimationConfig, CTAConfig, FormField, SectionContent, CarouselConfig, CarouselLayoutType, CarouselIndicatorType } from '../../types';
 import type { SectionSchema } from '../../utils/sectionSchemas';
 import { SchemaFormBuilder } from './SchemaFormBuilder';
 import { panchayatWebsiteApi, platformLandingPageApi } from '../../routes/api';
@@ -50,6 +50,23 @@ export function SectionContentEditor({
   const [cta, setCta] = useState<CTAConfig>(content?.cta || { text: 'Learn More', link: '#', style: 'primary', size: 'md' });
   const [formFields, setFormFields] = useState<FormField[]>(content?.formFields || []);
   const [expandedItems, setExpandedItems] = useState<Set<number>>(new Set());
+  const [carouselConfig, setCarouselConfig] = useState<CarouselConfig>(content?.carouselConfig || {
+    layoutType: 'single',
+    indicatorType: 'dots',
+    itemsPerView: 1,
+    itemsPerViewMobile: 1,
+    itemsPerViewTablet: 2,
+    autoPlay: false,
+    interval: 5000,
+    pauseOnHover: true,
+    loop: true,
+    showArrows: true,
+    showIndicators: true,
+    transitionDuration: 500,
+    gap: 16,
+    centeredSlides: false,
+    partialVisible: false,
+  });
 
   useEffect(() => {
     // Ensure content is an object, not a string
@@ -74,6 +91,23 @@ export function SectionContentEditor({
     setAnimation(parsedContent?.animation || { type: 'none' });
     setCta(parsedContent?.cta || { text: 'Learn More', link: '#', style: 'primary', size: 'md' });
     setFormFields(parsedContent?.formFields || []);
+    setCarouselConfig(parsedContent?.carouselConfig || {
+      layoutType: 'single',
+      indicatorType: 'dots',
+      itemsPerView: 1,
+      itemsPerViewMobile: 1,
+      itemsPerViewTablet: 2,
+      autoPlay: false,
+      interval: 5000,
+      pauseOnHover: true,
+      loop: true,
+      showArrows: true,
+      showIndicators: true,
+      transitionDuration: 500,
+      gap: 16,
+      centeredSlides: false,
+      partialVisible: false,
+    });
   }, [content]);
 
   const updateContent = (updates: Partial<SectionContent>) => {
@@ -100,6 +134,7 @@ export function SectionContentEditor({
       animation,
       cta,
       formFields,
+      carouselConfig,
       ...updates,
     };
     onContentChange(newContent);
@@ -144,70 +179,111 @@ export function SectionContentEditor({
     setExpandedItems(newExpanded);
   };
 
-  // If schema is provided, use schema-based form builder
+  // Carousel settings - show if layout is CAROUSEL or if schema supports CAROUSEL layout
+  const showCarouselSettings = layoutType === 'CAROUSEL' || 
+    (schema && schema.supportedLayouts && schema.supportedLayouts.includes('CAROUSEL'));
+
+  // If schema is provided, use schema-based form builder with tabs
   if (schema && schema.fieldDefinitions && schema.fieldDefinitions.length > 0) {
     console.log('SectionContentEditor: Using schema-based form builder', {
       schemaType: schema.schemaType,
       fieldsCount: schema.fieldDefinitions.length,
       hasContent: !!content,
+      showCarouselSettings,
     });
     return (
-      <div className="space-y-4">
-        <SchemaFormBuilder
-          fields={schema.fieldDefinitions}
-          content={content || {}}
-          onChange={onContentChange}
-          onImageUpload={async (file: File, fieldName: string) => {
-            // Parse fieldName to extract item index if it's in format "items[0].image"
-            // Otherwise, it's a direct field and we upload immediately
-            let itemIndex = -1;
-            
-            // Check if fieldName contains array index pattern: "fieldName[index].nestedField"
-            const arrayIndexMatch = fieldName.match(/^(\w+)\[(\d+)\]\.(.+)$/);
-            if (arrayIndexMatch) {
-              const arrayFieldName = arrayIndexMatch[1]; // e.g., "items"
-              itemIndex = parseInt(arrayIndexMatch[2], 10); // e.g., 0
-              const nestedFieldName = arrayIndexMatch[3]; // e.g., "image"
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+        <TabsList className="grid w-full grid-cols-3">
+          <TabsTrigger value="content">Content</TabsTrigger>
+          <TabsTrigger value="design">Design</TabsTrigger>
+          <TabsTrigger value="settings">Settings</TabsTrigger>
+        </TabsList>
+        
+        <TabsContent value="content" className="space-y-4">
+          <SchemaFormBuilder
+            fields={schema.fieldDefinitions}
+            content={content || {}}
+            onChange={onContentChange}
+            onImageUpload={async (file: File, fieldName: string) => {
+              // Parse fieldName to extract item index if it's in format "items[0].image"
+              // Otherwise, it's a direct field and we upload immediately
+              let itemIndex = -1;
               
-              console.log(`📸 Parsed array field: arrayField=${arrayFieldName}, itemIndex=${itemIndex}, nestedField=${nestedFieldName}`);
-              
-              // Call the parent onImageUpload with the item index
-              if (itemIndex >= 0 && onImageUpload) {
-                return await onImageUpload(file, itemIndex);
-              }
-            } else {
-              // Not an array field - this is a direct field (e.g., IMAGE_WITH_TEXT's "image" field)
-              console.log(`📸 Direct field upload: fieldName=${fieldName}`);
-              
-              try {
-                // Validate the image file
-                await validateImageFile(file);
+              // Check if fieldName contains array index pattern: "fieldName[index].nestedField"
+              const arrayIndexMatch = fieldName.match(/^(\w+)\[(\d+)\]\.(.+)$/);
+              if (arrayIndexMatch) {
+                const arrayFieldName = arrayIndexMatch[1]; // e.g., "items"
+                itemIndex = parseInt(arrayIndexMatch[2], 10); // e.g., 0
+                const nestedFieldName = arrayIndexMatch[3]; // e.g., "image"
                 
-                // Upload immediately using the generic upload endpoint
-                const uploadApi = isPlatform ? platformLandingPageApi : panchayatWebsiteApi;
-                console.log(`📤 Uploading image for direct field "${fieldName}" using generic upload endpoint`);
+                console.log(`📸 Parsed array field: arrayField=${arrayFieldName}, itemIndex=${itemIndex}, nestedField=${nestedFieldName}`);
                 
-                const result = await uploadApi.uploadImageGeneric(file, 'HIGH');
-                if (result?.imageUrl) {
-                  console.log(`✅ Image uploaded successfully for field "${fieldName}":`, result.imageUrl);
-                  return result.imageUrl;
-                } else {
-                  console.error('❌ Image upload failed: No imageUrl returned');
-                  throw new Error('Image upload failed: No URL returned');
+                // Call the parent onImageUpload with the item index
+                if (itemIndex >= 0 && onImageUpload) {
+                  return await onImageUpload(file, itemIndex);
                 }
-              } catch (error: any) {
-                console.error('❌ Error uploading image for direct field:', error);
-                toast.error(error.message || 'Failed to upload image');
-                return null;
+              } else {
+                // Not an array field - this is a direct field (e.g., IMAGE_WITH_TEXT's "image" field)
+                console.log(`📸 Direct field upload: fieldName=${fieldName}`);
+                
+                try {
+                  // Validate the image file
+                  await validateImageFile(file);
+                  
+                  // Upload immediately using the generic upload endpoint
+                  const uploadApi = isPlatform ? platformLandingPageApi : panchayatWebsiteApi;
+                  console.log(`📤 Uploading image for direct field "${fieldName}" using generic upload endpoint`);
+                  
+                  const result = await uploadApi.uploadImageGeneric(file, 'HIGH');
+                  if (result?.imageUrl) {
+                    console.log(`✅ Image uploaded successfully for field "${fieldName}":`, result.imageUrl);
+                    return result.imageUrl;
+                  } else {
+                    console.error('❌ Image upload failed: No imageUrl returned');
+                    throw new Error('Image upload failed: No URL returned');
+                  }
+                } catch (error: any) {
+                  console.error('❌ Error uploading image for direct field:', error);
+                  toast.error(error.message || 'Failed to upload image');
+                  return null;
+                }
               }
-            }
-            
-            return null;
-          }}
-          isPlatform={isPlatform}
-          sectionType={sectionType}
-        />
-      </div>
+              
+              return null;
+            }}
+            isPlatform={isPlatform}
+            sectionType={sectionType}
+          />
+        </TabsContent>
+
+        <TabsContent value="design" className="space-y-4">
+          <BackgroundEditor background={background} onChange={(bg) => { setBackground(bg); updateContent({ background: bg }); }} />
+          <SpacingEditor spacing={spacing} onChange={(sp) => { setSpacing(sp); updateContent({ spacing: sp }); }} />
+          <AnimationEditor animation={animation} onChange={(anim) => { setAnimation(anim); updateContent({ animation: anim }); }} />
+        </TabsContent>
+
+        <TabsContent value="settings" className="space-y-4">
+          {showCarouselSettings && (
+            <>
+              {layoutType !== 'CAROUSEL' && (
+                <div className="p-3 border rounded-lg bg-yellow-50 border-yellow-200">
+                  <p className="text-sm text-yellow-800">
+                    <strong>Note:</strong> Carousel settings are available. Switch to <strong>CAROUSEL</strong> layout type above to use these settings.
+                  </p>
+                </div>
+              )}
+              <CarouselConfigEditor 
+                config={carouselConfig} 
+                onChange={(newConfig) => {
+                  setCarouselConfig(newConfig);
+                  updateContent({ carouselConfig: newConfig });
+                }}
+              />
+            </>
+          )}
+          <CTAEditor cta={cta} onChange={(newCta) => { setCta(newCta); updateContent({ cta: newCta }); }} />
+        </TabsContent>
+      </Tabs>
     );
   }
   
@@ -886,9 +962,6 @@ export function SectionContentEditor({
     sectionType === 'CARDS' || sectionType === 'STATS' || !sectionType
   );
 
-  // Carousel settings
-  const showCarouselSettings = layoutType === 'CAROUSEL';
-
   return (
     <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
       <TabsList className="grid w-full grid-cols-3">
@@ -946,49 +1019,22 @@ export function SectionContentEditor({
 
       <TabsContent value="settings" className="space-y-4">
         {showCarouselSettings && (
-          <div className="space-y-4 p-4 border rounded-lg bg-blue-50 border-blue-200">
-            <div className="space-y-2">
-              <Label className="text-base font-semibold">Carousel Auto-Scroll Settings</Label>
-              <p className="text-xs text-muted-foreground">
-                Enable automatic scrolling to advance through carousel items automatically
-              </p>
-            </div>
-            
-            <div className="flex items-center space-x-2">
-              <Checkbox
-                id="autoplay"
-                checked={autoPlay}
-                onCheckedChange={(checked) => {
-                  setAutoPlay(checked as boolean);
-                  updateContent({ autoPlay: checked as boolean });
-                }}
-              />
-              <Label htmlFor="autoplay" className="cursor-pointer font-medium">
-                Enable Auto-Scrolling
-              </Label>
-            </div>
-            
-            {autoPlay && (
-              <div className="space-y-2 pl-6">
-                <Label htmlFor="carousel-interval">Auto-Scroll Interval (milliseconds)</Label>
-                <Input
-                  id="carousel-interval"
-                  type="number"
-                  min="1000"
-                  step="500"
-                  value={interval}
-                  onChange={(e) => {
-                    const newInterval = parseInt(e.target.value) || 5000;
-                    setInterval(newInterval);
-                    updateContent({ interval: newInterval });
-                  }}
-                />
-                <p className="text-xs text-muted-foreground">
-                  Time between automatic slides (minimum: 1000ms). Current: {interval}ms ({Math.round(interval / 1000)} seconds)
+          <>
+            {layoutType !== 'CAROUSEL' && (
+              <div className="p-3 border rounded-lg bg-yellow-50 border-yellow-200">
+                <p className="text-sm text-yellow-800">
+                  <strong>Note:</strong> Carousel settings are available. Switch to <strong>CAROUSEL</strong> layout type above to use these settings.
                 </p>
               </div>
             )}
-          </div>
+            <CarouselConfigEditor 
+              config={carouselConfig} 
+              onChange={(newConfig) => {
+                setCarouselConfig(newConfig);
+                updateContent({ carouselConfig: newConfig });
+              }}
+            />
+          </>
         )}
         <CTAEditor cta={cta} onChange={(newCta) => { setCta(newCta); updateContent({ cta: newCta }); }} />
       </TabsContent>
@@ -1139,6 +1185,237 @@ function AnimationEditor({ animation, onChange }: { animation: AnimationConfig; 
           </div>
         </>
       )}
+    </div>
+  );
+}
+
+// Carousel Config Editor Component
+function CarouselConfigEditor({ config, onChange }: { config: CarouselConfig; onChange: (config: CarouselConfig) => void }) {
+  return (
+    <div className="space-y-6 p-4 border rounded-lg bg-blue-50 border-blue-200">
+      <div className="space-y-2">
+        <Label className="text-base font-semibold">Carousel Configuration</Label>
+        <p className="text-xs text-muted-foreground">
+          Configure carousel layout, indicators, and behavior
+        </p>
+      </div>
+
+      {/* Layout Type */}
+      <div className="space-y-2">
+        <Label htmlFor="carousel-layout-type">Layout Type</Label>
+        <Select
+          value={config.layoutType || 'single'}
+          onValueChange={(value) => onChange({ ...config, layoutType: value as CarouselLayoutType })}
+        >
+          <SelectTrigger id="carousel-layout-type">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="single">Single - One item visible at a time</SelectItem>
+            <SelectItem value="multi">Multi - Multiple items visible (configurable)</SelectItem>
+            <SelectItem value="centered">Centered - Active item centered with partial prev/next</SelectItem>
+            <SelectItem value="full-width">Full Width - Slide occupies entire viewport</SelectItem>
+            <SelectItem value="thumbnail">Thumbnail - Main carousel with thumbnail navigation</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+
+      {/* Items Per View (for multi layout) */}
+      {(config.layoutType === 'multi' || config.layoutType === 'centered') && (
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="space-y-2">
+            <Label htmlFor="items-per-view-desktop">Items Per View (Desktop)</Label>
+            <Input
+              id="items-per-view-desktop"
+              type="number"
+              min="1"
+              max="6"
+              value={config.itemsPerView || 1}
+              onChange={(e) => onChange({ ...config, itemsPerView: parseInt(e.target.value) || 1 })}
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="items-per-view-tablet">Items Per View (Tablet)</Label>
+            <Input
+              id="items-per-view-tablet"
+              type="number"
+              min="1"
+              max="4"
+              value={config.itemsPerViewTablet || 2}
+              onChange={(e) => onChange({ ...config, itemsPerViewTablet: parseInt(e.target.value) || 2 })}
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="items-per-view-mobile">Items Per View (Mobile)</Label>
+            <Input
+              id="items-per-view-mobile"
+              type="number"
+              min="1"
+              max="2"
+              value={config.itemsPerViewMobile || 1}
+              onChange={(e) => onChange({ ...config, itemsPerViewMobile: parseInt(e.target.value) || 1 })}
+            />
+          </div>
+        </div>
+      )}
+
+      {/* Indicator Type */}
+      <div className="space-y-2">
+        <Label htmlFor="carousel-indicator-type">Indicator Type</Label>
+        <Select
+          value={config.indicatorType || 'dots'}
+          onValueChange={(value) => onChange({ ...config, indicatorType: value as CarouselIndicatorType })}
+        >
+          <SelectTrigger id="carousel-indicator-type">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="dots">Dots - Dot indicators (default)</SelectItem>
+            <SelectItem value="progress">Progress - Progress bar indicator</SelectItem>
+            <SelectItem value="numbered">Numbered - Numbered indicators (e.g., 1 / 5)</SelectItem>
+            <SelectItem value="arrows-only">Arrows Only - No indicators, arrows only</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+
+      {/* Auto-play Settings */}
+      <div className="space-y-4 p-3 border rounded-lg bg-white">
+        <div className="flex items-center space-x-2">
+          <Checkbox
+            id="carousel-autoplay"
+            checked={config.autoPlay || false}
+            onCheckedChange={(checked) => onChange({ ...config, autoPlay: checked as boolean })}
+          />
+          <Label htmlFor="carousel-autoplay" className="cursor-pointer font-medium">
+            Enable Auto-Play
+          </Label>
+        </div>
+        
+        {config.autoPlay && (
+          <div className="space-y-2 pl-6">
+            <Label htmlFor="carousel-interval">Auto-Play Interval (milliseconds)</Label>
+            <Input
+              id="carousel-interval"
+              type="number"
+              min="1000"
+              step="500"
+              value={config.interval || 5000}
+              onChange={(e) => onChange({ ...config, interval: parseInt(e.target.value) || 5000 })}
+            />
+            <p className="text-xs text-muted-foreground">
+              Time between automatic slides (minimum: 1000ms). Current: {config.interval || 5000}ms
+            </p>
+            
+            <div className="flex items-center space-x-2 mt-2">
+              <Checkbox
+                id="carousel-pause-on-hover"
+                checked={config.pauseOnHover !== false}
+                onCheckedChange={(checked) => onChange({ ...config, pauseOnHover: checked as boolean })}
+              />
+              <Label htmlFor="carousel-pause-on-hover" className="cursor-pointer text-sm">
+                Pause on Hover
+              </Label>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Navigation Settings */}
+      <div className="space-y-4 p-3 border rounded-lg bg-white">
+        <Label className="text-sm font-semibold">Navigation Settings</Label>
+        
+        <div className="flex items-center space-x-2">
+          <Checkbox
+            id="carousel-show-arrows"
+            checked={config.showArrows !== false}
+            onCheckedChange={(checked) => onChange({ ...config, showArrows: checked as boolean })}
+          />
+          <Label htmlFor="carousel-show-arrows" className="cursor-pointer text-sm">
+            Show Navigation Arrows
+          </Label>
+        </div>
+        
+        <div className="flex items-center space-x-2">
+          <Checkbox
+            id="carousel-show-indicators"
+            checked={config.showIndicators !== false}
+            onCheckedChange={(checked) => onChange({ ...config, showIndicators: checked as boolean })}
+          />
+          <Label htmlFor="carousel-show-indicators" className="cursor-pointer text-sm">
+            Show Indicators
+          </Label>
+        </div>
+        
+        <div className="flex items-center space-x-2">
+          <Checkbox
+            id="carousel-loop"
+            checked={config.loop !== false}
+            onCheckedChange={(checked) => onChange({ ...config, loop: checked as boolean })}
+          />
+          <Label htmlFor="carousel-loop" className="cursor-pointer text-sm">
+            Infinite Loop
+          </Label>
+        </div>
+      </div>
+
+      {/* Advanced Settings */}
+      <div className="space-y-4 p-3 border rounded-lg bg-white">
+        <Label className="text-sm font-semibold">Advanced Settings</Label>
+        
+        <div className="grid grid-cols-2 gap-4">
+          <div className="space-y-2">
+            <Label htmlFor="carousel-transition-duration">Transition Duration (ms)</Label>
+            <Input
+              id="carousel-transition-duration"
+              type="number"
+              min="100"
+              max="2000"
+              step="100"
+              value={config.transitionDuration || 500}
+              onChange={(e) => onChange({ ...config, transitionDuration: parseInt(e.target.value) || 500 })}
+            />
+          </div>
+          
+          <div className="space-y-2">
+            <Label htmlFor="carousel-gap">Gap Between Items (px)</Label>
+            <Input
+              id="carousel-gap"
+              type="number"
+              min="0"
+              max="48"
+              step="4"
+              value={config.gap || 16}
+              onChange={(e) => onChange({ ...config, gap: parseInt(e.target.value) || 16 })}
+            />
+          </div>
+        </div>
+
+        {config.layoutType === 'centered' && (
+          <>
+            <div className="flex items-center space-x-2">
+              <Checkbox
+                id="carousel-centered-slides"
+                checked={config.centeredSlides || false}
+                onCheckedChange={(checked) => onChange({ ...config, centeredSlides: checked as boolean })}
+              />
+              <Label htmlFor="carousel-centered-slides" className="cursor-pointer text-sm">
+                Center Slides
+              </Label>
+            </div>
+            
+            <div className="flex items-center space-x-2">
+              <Checkbox
+                id="carousel-partial-visible"
+                checked={config.partialVisible || false}
+                onCheckedChange={(checked) => onChange({ ...config, partialVisible: checked as boolean })}
+              />
+              <Label htmlFor="carousel-partial-visible" className="cursor-pointer text-sm">
+                Show Partial Previous/Next Slides
+              </Label>
+            </div>
+          </>
+        )}
+      </div>
     </div>
   );
 }

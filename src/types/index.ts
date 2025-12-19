@@ -491,6 +491,37 @@ export interface FormField {
   validation?: Record<string, any>;
 }
 
+export type CarouselLayoutType = 
+  | 'single'           // One item visible at a time
+  | 'multi'            // Multiple items visible (configurable)
+  | 'centered'          // Active item centered with partial prev/next visible
+  | 'full-width'       // Slide occupies entire viewport width
+  | 'thumbnail';        // Main carousel synced with thumbnail navigation
+
+export type CarouselIndicatorType = 
+  | 'dots'             // Dot indicators (default)
+  | 'progress'          // Progress bar indicator
+  | 'numbered'          // Numbered indicators (e.g., 1 / 5)
+  | 'arrows-only';      // Arrow-only mode (no indicators)
+
+export interface CarouselConfig {
+  layoutType?: CarouselLayoutType;
+  indicatorType?: CarouselIndicatorType;
+  itemsPerView?: number;        // For multi layout: number of items visible
+  itemsPerViewMobile?: number;  // Mobile override
+  itemsPerViewTablet?: number;  // Tablet override
+  autoPlay?: boolean;
+  interval?: number;            // Auto-play interval in ms
+  pauseOnHover?: boolean;
+  loop?: boolean;                // Infinite loop
+  showArrows?: boolean;
+  showIndicators?: boolean;
+  transitionDuration?: number;   // Transition duration in ms
+  gap?: number;                  // Gap between items in pixels
+  centeredSlides?: boolean;      // Center slides (for centered layout)
+  partialVisible?: boolean;      // Show partial prev/next slides
+}
+
 export interface SectionContent {
   items?: ContentItem[];
   background?: BackgroundConfig;
@@ -504,6 +535,7 @@ export interface SectionContent {
   autoPlay?: boolean;
   interval?: number;
   limit?: number;
+  carouselConfig?: CarouselConfig; // Carousel-specific configuration
   customSettings?: Record<string, any>;
   [key: string]: any;
 }

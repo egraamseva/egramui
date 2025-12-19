@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import type { PlatformSection, PanchayatWebsiteSection, LayoutType, ContentItem, BackgroundConfig, AnimationConfig, CTAConfig, FormField } from '../../types';
+import type { PlatformSection, PanchayatWebsiteSection, LayoutType, ContentItem, BackgroundConfig, AnimationConfig, CTAConfig, FormField, CarouselConfig } from '../../types';
+import { Carousel } from '../ui/carousel';
 import { mapOldSectionType } from '../../utils/sectionTypeConfig';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';
 import { ImageWithFallback } from '../figma/ImageWithFallback';
@@ -837,124 +838,92 @@ export function DynamicSectionRenderer({ section, children }: DynamicSectionRend
 
   const renderCarouselLayout = (content: any, sectionType?: string) => {
     const items = content.items || [];
-    const [currentIndex, setCurrentIndex] = useState(0);
-    const autoPlay = content.autoPlay || false;
-    const interval = content.interval || 5000;
-
-    useEffect(() => {
-      if (autoPlay && items.length > 1) {
-        const timer = setInterval(() => {
-          setCurrentIndex((prev) => (prev + 1) % items.length);
-        }, interval);
-        return () => clearInterval(timer);
-      }
-    }, [autoPlay, interval, items.length]);
-
     if (items.length === 0) return null;
 
-    const nextSlide = () => {
-      setCurrentIndex((prev) => (prev + 1) % items.length);
+    // Get carousel config from content, with fallback to legacy autoPlay/interval
+    const carouselConfig: CarouselConfig = content.carouselConfig || {
+      layoutType: 'single',
+      indicatorType: 'dots',
+      itemsPerView: 1,
+      itemsPerViewMobile: 1,
+      itemsPerViewTablet: 2,
+      autoPlay: content.autoPlay || false,
+      interval: content.interval || 5000,
+      pauseOnHover: true,
+      loop: true,
+      showArrows: true,
+      showIndicators: true,
+      transitionDuration: 500,
+      gap: 16,
+      centeredSlides: false,
+      partialVisible: false,
     };
 
-    const prevSlide = () => {
-      setCurrentIndex((prev) => (prev - 1 + items.length) % items.length);
-    };
+    // Render carousel items
+    const carouselItems = items.map((item: ContentItem, index: number) => {
+      if (sectionType === 'TESTIMONIALS') {
+        return (
+          <Card key={index} className="h-full max-h-[400px]">
+            <CardContent className="p-6 md:p-8">
+              <div className="flex items-center gap-1 mb-4">
+                {Array.from({ length: parseInt(item.value || '5') }).map((_, i) => (
+                  <Star key={i} className="h-5 w-5 fill-yellow-400 text-yellow-400" />
+                ))}
+              </div>
+              <p className="text-lg mb-4">{item.description}</p>
+              <div className="flex items-center gap-3">
+                {item.image && (
+                  <ImageWithFallback src={item.image} alt={item.title || ''} className="w-12 h-12 rounded-full" />
+                )}
+                <div>
+                  <div className="font-semibold">{item.title}</div>
+                  {item.subtitle && <div className="text-sm text-muted-foreground">{item.subtitle}</div>}
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        );
+      } else if (item.image) {
+        return (
+          <div key={index} className="aspect-[16/9] w-full max-h-[450px] md:max-h-[500px] relative">
+            <ImageWithFallback
+              src={item.image}
+              alt={item.title || ''}
+              className="h-full w-full object-cover rounded-lg"
+              style={{ objectFit: item.imageFit || 'cover' }}
+            />
+            {/* Overlay with title/description if available */}
+            {(item.title || item.description) && (
+              <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/75 via-black/50 to-transparent p-4 md:p-6 rounded-b-lg">
+                {item.title && (
+                  <h3 className="text-white text-base md:text-lg lg:text-xl font-semibold mb-1 drop-shadow-lg">{item.title}</h3>
+                )}
+                {item.description && (
+                  <p className="text-white/95 text-sm md:text-base line-clamp-2 drop-shadow-md">{item.description}</p>
+                )}
+              </div>
+            )}
+          </div>
+        );
+      } else {
+        return (
+          <Card key={index} className="h-full max-h-[400px]">
+            <CardContent className="p-6 md:p-8">
+              {item.title && <h3 className="text-xl md:text-2xl font-bold mb-2">{item.title}</h3>}
+              {item.description && <p className="text-base">{item.description}</p>}
+            </CardContent>
+          </Card>
+        );
+      }
+    });
 
     return (
       <div className="relative max-w-5xl mx-auto px-4">
-        <div className="relative overflow-hidden rounded-xl shadow-lg bg-gray-100">
-          {items.map((item: ContentItem, index: number) => (
-            <div
-              key={index}
-              className={`transition-opacity duration-500 ${
-                index === currentIndex ? 'opacity-100' : 'opacity-0 absolute inset-0'
-              }`}
-            >
-              {sectionType === 'TESTIMONIALS' ? (
-                <Card className="h-full max-h-[400px]">
-                  <CardContent className="p-6 md:p-8">
-                    <div className="flex items-center gap-1 mb-4">
-                      {Array.from({ length: parseInt(item.value || '5') }).map((_, i) => (
-                        <Star key={i} className="h-5 w-5 fill-yellow-400 text-yellow-400" />
-                      ))}
-                    </div>
-                    <p className="text-lg mb-4">{item.description}</p>
-                    <div className="flex items-center gap-3">
-                      {item.image && (
-                        <ImageWithFallback src={item.image} alt={item.title || ''} className="w-12 h-12 rounded-full" />
-                      )}
-                      <div>
-                        <div className="font-semibold">{item.title}</div>
-                        {item.subtitle && <div className="text-sm text-muted-foreground">{item.subtitle}</div>}
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              ) : item.image ? (
-                <div className="aspect-[16/9] w-full max-h-[450px] md:max-h-[500px]">
-                  <ImageWithFallback
-                    src={item.image}
-                    alt={item.title || ''}
-                    className="h-full w-full object-cover"
-                    style={{ objectFit: item.imageFit || 'cover' }}
-                  />
-                  {/* Overlay with title/description if available */}
-                  {(item.title || item.description) && (
-                    <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/75 via-black/50 to-transparent p-4 md:p-6">
-                      {item.title && (
-                        <h3 className="text-white text-base md:text-lg lg:text-xl font-semibold mb-1 drop-shadow-lg">{item.title}</h3>
-                      )}
-                      {item.description && (
-                        <p className="text-white/95 text-sm md:text-base line-clamp-2 drop-shadow-md">{item.description}</p>
-                      )}
-                    </div>
-                  )}
-                </div>
-              ) : (
-                <Card className="h-full max-h-[400px]">
-                  <CardContent className="p-6 md:p-8">
-                    {item.title && <h3 className="text-xl md:text-2xl font-bold mb-2">{item.title}</h3>}
-                    {item.description && <p className="text-base">{item.description}</p>}
-                  </CardContent>
-                </Card>
-              )}
-            </div>
-          ))}
-        </div>
-        
-        {items.length > 1 && (
-          <>
-            <button
-              onClick={prevSlide}
-              className="absolute left-2 md:left-4 top-1/2 -translate-y-1/2 bg-white/95 hover:bg-white rounded-full p-2 md:p-2.5 shadow-xl z-10 transition-all hover:scale-110 border border-gray-200"
-              aria-label="Previous slide"
-            >
-              <ChevronLeft className="h-4 w-4 md:h-5 md:w-5 text-gray-700" />
-            </button>
-            <button
-              onClick={nextSlide}
-              className="absolute right-2 md:right-4 top-1/2 -translate-y-1/2 bg-white/95 hover:bg-white rounded-full p-2 md:p-2.5 shadow-xl z-10 transition-all hover:scale-110 border border-gray-200"
-              aria-label="Next slide"
-            >
-              <ChevronRight className="h-4 w-4 md:h-5 md:w-5 text-gray-700" />
-            </button>
-            
-            <div className="flex justify-center gap-2 mt-4">
-              {items.map((_, index) => (
-                <button
-                  key={index}
-                  onClick={() => setCurrentIndex(index)}
-                  className={`h-2 md:h-2.5 rounded-full transition-all duration-300 ${
-                    index === currentIndex 
-                      ? 'bg-primary w-8 md:w-10 shadow-md' 
-                      : 'bg-gray-300 hover:bg-gray-400 w-2 md:w-2.5'
-                  }`}
-                  aria-label={`Go to slide ${index + 1}`}
-                />
-              ))}
-            </div>
-          </>
-        )}
+        <Carousel
+          items={carouselItems}
+          config={carouselConfig}
+          className="w-full"
+        />
       </div>
     );
   };

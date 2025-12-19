@@ -708,58 +708,7 @@ export  function SectionEditor({
         />
       )}
 
-      {/* Carousel Auto-Scroll Settings - Show when carousel layout is selected */}
-      {formData.layoutType === 'CAROUSEL' && (
-        <div className="space-y-4 p-4 border rounded-lg bg-blue-50 border-blue-200">
-          <div className="space-y-2">
-            <Label className="text-base font-semibold">Carousel Auto-Scroll Settings</Label>
-            <p className="text-xs text-muted-foreground">
-              Configure automatic scrolling behavior for the carousel
-            </p>
-          </div>
-          
-          <div className="flex items-center space-x-2">
-            <Checkbox
-              id="carousel-auto-scroll"
-              checked={formData.content?.autoPlay || false}
-              onCheckedChange={(checked) => {
-                const newContent = {
-                  ...formData.content,
-                  autoPlay: checked as boolean,
-                };
-                setFormData({ ...formData, content: newContent });
-              }}
-            />
-            <Label htmlFor="carousel-auto-scroll" className="cursor-pointer font-medium">
-              Enable Auto-Scrolling
-            </Label>
-          </div>
-          
-          {formData.content?.autoPlay && (
-            <div className="space-y-2 pl-6">
-              <Label htmlFor="carousel-interval">Auto-Scroll Interval (milliseconds)</Label>
-              <Input
-                id="carousel-interval"
-                type="number"
-                min="1000"
-                step="500"
-                value={formData.content?.interval || 5000}
-                onChange={(e) => {
-                  const newContent = {
-                    ...formData.content,
-                    interval: parseInt(e.target.value) || 5000,
-                  };
-                  setFormData({ ...formData, content: newContent });
-                }}
-                className="w-full"
-              />
-              <p className="text-xs text-muted-foreground">
-                Time between automatic slides (minimum: 1000ms). Current: {formData.content?.interval || 5000}ms
-              </p>
-            </div>
-          )}
-        </div>
-      )}
+      {/* Carousel settings are now configured in SectionContentEditor under Settings tab */}
 
       <div className="space-y-2">
         <Label>Content</Label>
