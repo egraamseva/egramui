@@ -669,7 +669,14 @@
       "withPopulation": "With a population of over",
       "spreadAcross": "residents spread across",
       "committedTo": "we are committed to sustainable development, preserving our traditions while embracing modern governance practices."
-    }
+    },
+    "documents": "Documents",
+    "resources": "Resources",
+    "documentsDescription": "Browse and download official documents and resources from the panchayat.",
+    "loadingDocuments": "Loading documents...",
+    "noDocumentsAvailable": "No documents available at the moment.",
+    "unavailable": "Unavailable",
+    "openInDrive": "Open in Google Drive"
   },
   "documents": {
     "title": "Documents",

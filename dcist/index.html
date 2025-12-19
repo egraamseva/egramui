@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="favicon" href="/favicon.ico" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="e-GramSeva - Digital Platform for Gram Panchayats" />
+    <title>e-GramSeva - Digital Platform for Gram Panchayats</title>
+    <!-- React Router 7 + React 19 compatibility fix - must run before any modules load -->
+    <script>
+      // Fix for React Router 7 trying to set Activity property on undefined
+      (function() {
+        'use strict';
+        const originalDefineProperty = Object.defineProperty;
+        Object.defineProperty = function(obj, prop, descriptor) {
+          if (obj === undefined || obj === null) {
+            if (prop === 'Activity' || String(prop).includes('Activity')) {
+              return {}; // Silently ignore Activity on undefined
+            }
+            console.warn('[React Router Fix] Attempted to define property "' + String(prop) + '" on ' + obj);
+            obj = {};
+          }
+          try {
+            return originalDefineProperty.call(this, obj, prop, descriptor);
+          } catch (e) {
+            console.warn('[React Router Fix] Failed to define property:', e);
+            return {};
+          }
+        };
+      })();
+    </script>
+    <script type="module" crossorigin src="/assets/index-B5GP4ZU0.js"></script>
+    <link rel="stylesheet" crossorigin href="/assets/index-Bd_dN0sZ.css">
+  </head>
+  <body>
+    <div id="root"></div>
+  </body>
+</html>

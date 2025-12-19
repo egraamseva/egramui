@@ -26,6 +26,7 @@ import {
   Contact,
   Globe,
   ExternalLink,
+  Eye,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -51,7 +52,8 @@ import { Label } from "../ui/label";
 import { ImageWithFallback } from "../figma/ImageWithFallback";
 import { ImageModal } from "../ui/image-modal";
 import { PostCard } from "../sachiv/PostCard";
-import { panchayatAPI, publicAPI } from "../../services/api";
+import { DocumentViewer } from "../sachiv/DocumentViewer";
+import { panchayatAPI, publicAPI, documentsAPI } from "../../services/api";
 import {
   publicNewsletterApi,
   publicPanchayatWebsiteApi,
@@ -84,6 +86,7 @@ type PageType =
   | "about"
   | "gallery"
   | "newsletter"
+  | "documents"
   | "contact";
 
 export function PanchayatWebsite() {
@@ -113,6 +116,10 @@ export function PanchayatWebsite() {
   const [selectedNewsletter, setSelectedNewsletter] = useState<any | null>(
     null
   );
+  const [documents, setDocuments] = useState<any[]>([]);
+  const [loadingDocuments, setLoadingDocuments] = useState(false);
+  const [viewingDocument, setViewingDocument] = useState<any | null>(null);
+  const [isViewerOpen, setIsViewerOpen] = useState(false);
   const [selectedAlbum, setSelectedAlbum] = useState<Album | null>(null);
   const [albumImages, setAlbumImages] = useState<GalleryItem[]>([]);
   const [loadingAlbumImages, setLoadingAlbumImages] = useState(false);
@@ -197,6 +204,83 @@ export function PanchayatWebsite() {
       setAlbumImages([]);
     }
   }, [selectedAlbum]);
+
+  // Fetch public documents when documents page is active
+  useEffect(() => {
+    const fetchPublicDocuments = async () => {
+      if (activePage === "documents" && subdomain) {
+        setLoadingDocuments(true);
+        try {
+          const docs = await documentsAPI.getPublicDocuments(subdomain);
+          console.log("Fetched public documents:", docs);
+          setDocuments(docs || []);
+        } catch (error) {
+          console.error("Error fetching public documents:", error);
+          setDocuments([]);
+        } finally {
+          setLoadingDocuments(false);
+        }
+      } else if (activePage !== "documents") {
+        // Clear documents when navigating away from documents page
+        setDocuments([]);
+      }
+    };
+
+    fetchPublicDocuments();
+  }, [activePage, subdomain]);
+
+  const handleViewDocument = async (doc: any) => {
+    if (!doc.isAvailable && !doc.viewLink) {
+      return;
+    }
+
+    // If view link is already available, use it
+    if (doc.viewLink) {
+      setViewingDocument(doc);
+      setIsViewerOpen(true);
+      return;
+    }
+
+    // Otherwise, try to fetch it using public API
+    if (doc.id || doc.documentId) {
+      try {
+        if (subdomain) {
+          const viewData = await documentsAPI.getPublicDocumentView(
+            subdomain,
+            doc.id || String(doc.documentId)
+          );
+          if (viewData?.viewLink) {
+            const docWithLink = { ...doc, viewLink: viewData.viewLink };
+            setViewingDocument(docWithLink);
+            setIsViewerOpen(true);
+          } else {
+            // Fallback: open in new tab
+            if (doc.googleDriveFileId) {
+              window.open(
+                `https://drive.google.com/file/d/${doc.googleDriveFileId}/view`,
+                "_blank"
+              );
+            }
+          }
+        }
+      } catch (error: any) {
+        console.error("Error fetching document view:", error);
+        // Fallback: open in new tab
+        if (doc.googleDriveFileId) {
+          window.open(
+            `https://drive.google.com/file/d/${doc.googleDriveFileId}/view`,
+            "_blank"
+          );
+        }
+      }
+    } else if (doc.googleDriveFileId) {
+      // Fallback: open in new tab
+      window.open(
+        `https://drive.google.com/file/d/${doc.googleDriveFileId}/view`,
+        "_blank"
+      );
+    }
+  };
 
   const fetchAlbumImages = async (albumId: string) => {
     if (!subdomain) return;
@@ -679,6 +763,11 @@ export function PanchayatWebsite() {
         icon: FileText,
       },
       {
+        id: "documents" as PageType,
+        label: t("panchayatWebsite.documents") || "Documents",
+        icon: Download,
+      },
+      {
         id: "contact" as PageType,
         label: t("panchayatWebsite.contact"),
         icon: Contact,
@@ -1020,7 +1109,12 @@ export function PanchayatWebsite() {
                   >
                     {panchayat?.logoUrl && (
                       <div className="absolute inset-0 opacity-10">
-                        <div className="absolute inset-0 bg-[url('/pattern.svg')] bg-repeat opacity-20"></div>
+                        <div 
+                          className="absolute inset-0 opacity-20"
+                          style={{
+                            backgroundImage: `repeating-linear-gradient(45deg, transparent, transparent 10px, rgba(255,255,255,0.1) 10px, rgba(255,255,255,0.1) 20px)`,
+                          }}
+                        ></div>
                       </div>
                     )}
                   </div>
@@ -2071,6 +2165,143 @@ export function PanchayatWebsite() {
           </div>
         )}
 
+        {/* Documents Page */}
+        {activePage === "documents" && (
+          <div className="pt-12 pb-8 lg:pt-20 lg:pb-16 bg-gradient-to-br from-[#F5F5F5] to-white min-h-[calc(100vh-4rem)]">
+            <div className="container mx-auto px-4 lg:px-8">
+              <div className="text-center mb-12">
+                <h2 
+                  className="text-3xl lg:text-4xl font-bold mb-4 scroll-mt-24"
+                  style={{ color: theme?.colors.text || "#1B2B5E" }}
+                >
+                  {t("panchayatWebsite.documents") || "Documents"} &{" "}
+                  <span style={{ color: theme?.colors.primary || "#E31E24" }}>
+                    {t("panchayatWebsite.resources") || "Resources"}
+                  </span>
+                </h2>
+                <div 
+                  className="w-24 h-1 mx-auto mb-4"
+                  style={{ backgroundColor: theme?.colors.primary || "#E31E24" }}
+                ></div>
+                <p className="text-[#666] max-w-2xl mx-auto">
+                  {t("panchayatWebsite.documentsDescription") || "Browse and download official documents and resources from the panchayat."}
+                </p>
+              </div>
+
+              {loadingDocuments ? (
+                <div className="text-center py-12">
+                  <Loader2 
+                    className="h-8 w-8 animate-spin mx-auto" 
+                    style={{ color: theme?.colors.primary || "#E31E24" }}
+                  />
+                  <p className="mt-2 text-[#666]">
+                    {t("panchayatWebsite.loadingDocuments") || "Loading documents..."}
+                  </p>
+                </div>
+              ) : documents.length === 0 ? (
+                <Card>
+                  <CardContent className="p-12 text-center">
+                    <FileText className="h-12 w-12 mx-auto mb-4 text-[#666] opacity-50" />
+                    <p className="text-[#666]">
+                      {t("panchayatWebsite.noDocumentsAvailable") || "No documents available at the moment."}
+                    </p>
+                    <p className="text-sm text-[#999] mt-2">
+                      {t("panchayatWebsite.checkBackLater") || "Please check back later."}
+                    </p>
+                  </CardContent>
+                </Card>
+              ) : (
+                <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+                  {documents.map((doc) => (
+                    <Card
+                      key={doc.documentId || doc.id}
+                      className="overflow-hidden transition-all hover:shadow-xl hover:scale-[1.02] border-2 border-[#E5E5E5] hover:border-[#1B2B5E] bg-white group"
+                    >
+                      <CardContent className="p-6">
+                        <div className="flex items-start gap-4 mb-4">
+                          <div 
+                            className="p-3 rounded-lg flex-shrink-0"
+                            style={{ 
+                              backgroundColor: `${theme?.colors.primary || "#E31E24"}1A`,
+                            }}
+                          >
+                            <FileText 
+                              className="h-6 w-6" 
+                              style={{ color: theme?.colors.primary || "#E31E24" }}
+                            />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <h3 
+                              className="font-bold text-lg mb-2 line-clamp-2"
+                              style={{ color: theme?.colors.text || "#1B2B5E" }}
+                            >
+                              {doc.title}
+                            </h3>
+                            <Badge variant="outline" className="text-xs mb-2">
+                              {doc.category}
+                            </Badge>
+                          </div>
+                        </div>
+                        
+                        {doc.description && (
+                          <p className="text-sm text-[#666] mb-4 line-clamp-2">
+                            {doc.description}
+                          </p>
+                        )}
+
+                        <div className="flex items-center justify-between text-xs text-[#999] mb-4 pb-4 border-b border-[#E5E5E5]">
+                          <span>
+                            {doc.fileSize 
+                              ? `${(doc.fileSize / 1024).toFixed(1)} KB`
+                              : "Unknown size"}
+                          </span>
+                          {doc.createdAt && (
+                            <span>
+                              {new Date(doc.createdAt).toLocaleDateString("en-IN", {
+                                month: "short",
+                                year: "numeric",
+                              })}
+                            </span>
+                          )}
+                        </div>
+
+                        <div className="flex gap-2">
+                          <Button
+                            variant="outline"
+                            className="flex-1"
+                            onClick={() => handleViewDocument(doc)}
+                            disabled={!doc.isAvailable && !doc.viewLink && !doc.googleDriveFileId}
+                            style={{
+                              borderColor: theme?.colors.primary || "#E31E24",
+                              color: theme?.colors.primary || "#E31E24",
+                            }}
+                          >
+                            <Eye className="h-4 w-4 mr-2" />
+                            {t("panchayatWebsite.view") || "View"}
+                          </Button>
+                          {doc.googleDriveFileId && (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => window.open(
+                                `https://drive.google.com/file/d/${doc.googleDriveFileId}/view`,
+                                "_blank"
+                              )}
+                              title={t("panchayatWebsite.openInDrive") || "Open in Google Drive"}
+                            >
+                              <ExternalLink className="h-4 w-4" />
+                            </Button>
+                          )}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
         {/* Contact Page */}
         {activePage === "contact" && (
           <div className="pt-12 pb-8 lg:pt-20 lg:pb-16 bg-gradient-to-br from-[#F5F5F5] to-white min-h-[calc(100vh-4rem)]">
@@ -2515,6 +2746,13 @@ export function PanchayatWebsite() {
         onClose={() => setIsNewsletterImageModalOpen(false)}
         imageUrl={selectedNewsletterImageUrl}
         alt="Newsletter cover"
+      />
+
+      {/* Document Viewer */}
+      <DocumentViewer
+        document={viewingDocument}
+        open={isViewerOpen}
+        onOpenChange={setIsViewerOpen}
       />
     </div>
   );

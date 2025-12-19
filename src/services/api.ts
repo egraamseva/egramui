@@ -32,6 +32,15 @@ import type {
   AuditLog,
   PanchayatStatus,
 } from "../types";
+import {
+  galleryApi,
+  albumApi,
+  settingsApi,
+  adminPanchayatApi,
+  adminUserApi,
+  adminAnalyticsApi,
+  adminAuditLogApi,
+} from "@/routes/api";
 
 // Create axios instance
 const api: AxiosInstance = axios.create({
@@ -811,7 +820,6 @@ export const galleryAPI = {
     return [];
   },
   create: async (data: Omit<GalleryItem, "id">): Promise<GalleryItem> => {
-    const { galleryApi } = await import("@/routes/api");
     return await galleryApi.create({
       imageUrl: data.image,
       caption: data.title !== "Gallery Image" ? data.title : undefined,
@@ -822,7 +830,6 @@ export const galleryAPI = {
     id: string,
     updates: Partial<GalleryItem>
   ): Promise<GalleryItem> => {
-    const { galleryApi } = await import("@/routes/api");
     return await galleryApi.update(id, {
       imageUrl: updates.image,
       caption: updates.title !== "Gallery Image" ? updates.title : undefined,
@@ -830,7 +837,6 @@ export const galleryAPI = {
     });
   },
   delete: async (id: string): Promise<void> => {
-    const { galleryApi } = await import("@/routes/api");
     await galleryApi.delete(id);
   },
 };
@@ -885,41 +891,224 @@ export const analyticsAPI = {
   },
 };
 
-// Documents API - placeholder (not in backend yet)
+// Consent API
+export const consentAPI = {
+  grant: async (): Promise<void> => {
+    const response = await api.post<ApiResponse<any>>("/consent/grant");
+    return response.data.data;
+  },
+  getStatus: async (): Promise<{ hasConsent: boolean; consentTimestamp?: string }> => {
+    // Response interceptor extracts response.data, so response is already the ApiResponse
+    const response = await api.get<ApiResponse<{ hasConsent: boolean; consentTimestamp?: string }>>("/consent/status");
+    // response is ApiResponse<{ hasConsent: boolean; ... }>, so response.data is { hasConsent: boolean; ... }
+    const data = response.data as { hasConsent?: boolean; consentTimestamp?: string };
+    return { 
+      hasConsent: data?.hasConsent === true,
+      consentTimestamp: data?.consentTimestamp
+    };
+  },
+  revoke: async (reason?: string): Promise<void> => {
+    await api.post<ApiResponse<any>>("/consent/revoke", null, {
+      params: reason ? { reason } : undefined,
+    });
+  },
+};
+
+// Google OAuth API
+export const googleOAuthAPI = {
+  getAuthorizationUrl: async (): Promise<string> => {
+    // Response interceptor extracts response.data, so response is already the ApiResponse
+    const response = await api.get<ApiResponse<{ authorizationUrl: string }>>("/auth/google/authorize");
+    // response is ApiResponse<{ authorizationUrl: string }>, so response.data is { authorizationUrl: string }
+    const data = response.data as { authorizationUrl?: string };
+    const authUrl = data?.authorizationUrl;
+    if (!authUrl) {
+      console.error("Full API response:", response);
+      throw new Error("Authorization URL not received from server. Response: " + JSON.stringify(response));
+    }
+    return authUrl;
+  },
+  getConnectionStatus: async (): Promise<{ isConnected: boolean }> => {
+    // Response interceptor extracts response.data, so response is already the ApiResponse
+    const response = await api.get<ApiResponse<{ isConnected: boolean }>>("/auth/google/status");
+    // response is ApiResponse<{ isConnected: boolean }>, so response.data is { isConnected: boolean }
+    const data = response.data as { isConnected?: boolean };
+    return { isConnected: data?.isConnected === true };
+  },
+  revokeAccess: async (): Promise<void> => {
+    await api.post<ApiResponse<any>>("/auth/google/revoke");
+  },
+};
+
+// Documents API with Google Drive integration
 export const documentsAPI = {
   upload: async (
-    _panchayatId: string,
-    _file: File,
-    _data: any
-  ): Promise<Document> => {
-    throw new Error("Not implemented in backend yet");
+    panchayatId: string,
+    file: File,
+    data: {
+      title: string;
+      description?: string;
+      category: string;
+      visibility?: "PUBLIC" | "PRIVATE";
+    }
+  ): Promise<any> => {
+    const formData = new FormData();
+    formData.append("file", file);
+    formData.append("title", data.title);
+    if (data.description) formData.append("description", data.description);
+    formData.append("category", data.category);
+    formData.append("visibility", data.visibility || "PRIVATE");
+
+    const response = await api.post<ApiResponse<any>>(
+      "/panchayat/documents",
+      formData,
+      {
+        headers: {
+          "Content-Type": "multipart/form-data",
+        },
+      }
+    );
+    return response.data.data;
   },
-  getAll: async (_panchayatId: string): Promise<Document[]> => {
-    return [];
+  getAll: async (
+    panchayatId: string,
+    category?: string,
+    visibility?: "PUBLIC" | "PRIVATE"
+  ): Promise<any[]> => {
+    const params: any = {};
+    if (category) params.category = category;
+    if (visibility) params.visibility = visibility;
+
+    // Response interceptor extracts response.data, so response is already the ApiResponse
+    const response = await api.get<ApiResponse<PaginatedResponse<any>>>(
+      "/panchayat/documents",
+      { params }
+    );
+    // After interceptor, response is ApiResponse<PaginatedResponse<any>>
+    // So response.data is PaginatedResponse<any>, and response.data.content is the array
+    const documents = (response.data as any)?.content || [];
+    
+    // Map documentId to id for compatibility with Document interface
+    return documents.map((doc: any) => ({
+      ...doc,
+      id: doc.id || String(doc.documentId),
+      uploadedAt: doc.uploadedAt || doc.createdAt,
+      panchayatId: panchayatId, // Ensure panchayatId is set
+    }));
   },
-  delete: async (_id: string): Promise<void> => {
-    throw new Error("Not implemented in backend yet");
+  getById: async (id: string): Promise<any> => {
+    const response = await api.get<ApiResponse<any>>(`/panchayat/documents/${id}`);
+    return response.data.data;
+  },
+  getViewLink: async (id: string): Promise<string> => {
+    const response = await api.get<ApiResponse<any>>(`/panchayat/documents/${id}/view`);
+    return response.data.data?.viewLink || "";
+  },
+  updateVisibility: async (
+    id: string,
+    visibility: "PUBLIC" | "PRIVATE"
+  ): Promise<any> => {
+    const response = await api.patch<ApiResponse<any>>(
+      `/panchayat/documents/${id}/visibility`,
+      null,
+      { params: { visibility } }
+    );
+    return response.data.data;
+  },
+  update: async (
+    id: string,
+    data: {
+      title: string;
+      description?: string;
+      category: string;
+      visibility?: "PUBLIC" | "PRIVATE";
+    }
+  ): Promise<any> => {
+    const params: any = {
+      title: data.title,
+      category: data.category,
+    };
+    if (data.description) params.description = data.description;
+    if (data.visibility) params.visibility = data.visibility;
+
+    const response = await api.put<ApiResponse<any>>(
+      `/panchayat/documents/${id}`,
+      null,
+      { params }
+    );
+    return response.data.data;
+  },
+  toggleShowOnWebsite: async (id: string): Promise<any> => {
+    const response = await api.patch<ApiResponse<any>>(
+      `/panchayat/documents/${id}/show-on-website`,
+      null
+    );
+    return response.data.data;
+  },
+  delete: async (id: string): Promise<void> => {
+    await api.delete<ApiResponse<any>>(`/panchayat/documents/${id}`);
+  },
+  // Public endpoints
+  getPublicDocuments: async (
+    slug: string,
+    category?: string
+  ): Promise<any[]> => {
+    const params: any = {};
+    if (category) params.category = category;
+
+    // Response interceptor extracts response.data, so response is already the ApiResponse
+    const response = await api.get<ApiResponse<PaginatedResponse<any>>>(
+      `/public/${slug}/documents`,
+      { params }
+    );
+    // After interceptor, response is ApiResponse<PaginatedResponse<any>>
+    // So response.data is PaginatedResponse<any>, and response.data.content is the array
+    const paginatedData = (response as any).data as PaginatedResponse<any>;
+    const documents = paginatedData?.content || [];
+    
+    // Map documentId to id for compatibility with Document interface
+    return documents.map((doc: any) => ({
+      ...doc,
+      id: doc.id || String(doc.documentId),
+      uploadedAt: doc.uploadedAt || doc.createdAt,
+    }));
+  },
+  getPublicDocumentView: async (slug: string, id: string): Promise<any> => {
+    const response = await api.get<ApiResponse<any>>(
+      `/public/${slug}/documents/${id}/view`
+    );
+    return response.data.data;
+  },
+  // Website documents (shown on public website)
+  getWebsiteDocuments: async (
+    slug: string,
+    category?: string
+  ): Promise<any[]> => {
+    const params: any = {};
+    if (category) params.category = category;
+
+    const response = await api.get<ApiResponse<PaginatedResponse<any>>>(
+      `/public/${slug}/website-documents`,
+      { params }
+    );
+    return response.data.data?.content || [];
   },
 };
 
 // Albums API - uses routes/api.ts albumApi
 export const albumsAPI = {
   create: async (data: any): Promise<Album> => {
-    const { albumApi } = await import("@/routes/api");
     return await albumApi.create(data);
   },
   getAll: async (): Promise<Album[]> => {
-    const { albumApi } = await import("@/routes/api");
     const result = await albumApi.list();
     return result.items;
   },
   update: async (id: string, updates: any): Promise<Album> => {
-    const { albumApi } = await import("@/routes/api");
     // Note: panchayatId is not needed as it uses TenantContext
     return await albumApi.update(id, updates);
   },
   delete: async (id: string): Promise<void> => {
-    const { albumApi } = await import("@/routes/api");
     await albumApi.delete(id);
   },
 };
@@ -927,7 +1116,6 @@ export const albumsAPI = {
 // Settings API - uses routes/api.ts settingsApi
 export const settingsAPI = {
   get: async (): Promise<PanchayatSettings> => {
-    const { settingsApi } = await import("@/routes/api");
     const data = await settingsApi.get();
 
     // Parse aboutFeatures JSON string to array
@@ -979,7 +1167,6 @@ export const settingsAPI = {
   update: async (
     updates: Partial<PanchayatSettings>
   ): Promise<PanchayatSettings> => {
-    const { settingsApi } = await import("@/routes/api");
     const payload: any = {};
 
     // Handle themeId update
@@ -1072,7 +1259,6 @@ export const settingsAPI = {
     return await settingsAPI.update({ contact });
   },
   uploadLogo: async (file: File): Promise<PanchayatSettings> => {
-    const { settingsApi } = await import("@/routes/api");
     const data = await settingsApi.uploadLogo(file);
     
     // Parse aboutFeatures JSON string to array
@@ -1122,7 +1308,6 @@ export const settingsAPI = {
     };
   },
   uploadHeroImage: async (file: File): Promise<PanchayatSettings> => {
-    const { settingsApi } = await import("@/routes/api");
     const data = await settingsApi.uploadHeroImage(file);
     
     // Parse aboutFeatures JSON string to array
@@ -1179,7 +1364,6 @@ export const superAdminAPI = {
     status?: string;
     search?: string;
   }): Promise<SuperAdminPanchayat[]> => {
-    const { adminPanchayatApi } = await import("@/routes/api");
     const result = await adminPanchayatApi.getAll({
       status: params?.status,
       search: params?.search,
@@ -1198,7 +1382,6 @@ export const superAdminAPI = {
     }));
   },
   getPanchayatById: async (id: string): Promise<SuperAdminPanchayat> => {
-    const { adminPanchayatApi } = await import("@/routes/api");
     const p = await adminPanchayatApi.getById(parseInt(id));
     return {
       id: String(p.panchayatId),
@@ -1221,7 +1404,6 @@ export const superAdminAPI = {
     contactEmail?: string;
     description?: string;
   }): Promise<SuperAdminPanchayat> => {
-    const { adminPanchayatApi } = await import("@/routes/api");
     const p = await adminPanchayatApi.create(data);
     return {
       id: String(p.panchayatId),
@@ -1247,7 +1429,6 @@ export const superAdminAPI = {
       description?: string;
     }>
   ): Promise<SuperAdminPanchayat> => {
-    const { adminPanchayatApi } = await import("@/routes/api");
     const p = await adminPanchayatApi.update(parseInt(id), data);
     return {
       id: String(p.panchayatId),
@@ -1261,15 +1442,12 @@ export const superAdminAPI = {
     };
   },
   updatePanchayatStatus: async (id: string, status: string): Promise<void> => {
-    const { adminPanchayatApi } = await import("@/routes/api");
     await adminPanchayatApi.updateStatus(parseInt(id), status);
   },
   deletePanchayat: async (id: string): Promise<void> => {
-    const { adminPanchayatApi } = await import("@/routes/api");
     await adminPanchayatApi.delete(parseInt(id));
   },
   getAllUsers: async (): Promise<AdminUser[]> => {
-    const { adminUserApi } = await import("@/routes/api");
     const result = await adminUserApi.getAll({ page: 0, size: 1000 });
     return result.content.map((u: any) => ({
       id: String(u.userId),
@@ -1287,11 +1465,9 @@ export const superAdminAPI = {
     }));
   },
   updateUserStatus: async (id: string, status: string): Promise<void> => {
-    const { adminUserApi } = await import("@/routes/api");
     await adminUserApi.updateStatus(parseInt(id), status);
   },
   getSystemAnalytics: async (): Promise<any> => {
-    const { adminAnalyticsApi } = await import("@/routes/api");
     const analytics = await adminAnalyticsApi.getSystemAnalytics();
     return {
       totalPanchayats: analytics.totalPanchayats || 0,
@@ -1302,7 +1478,6 @@ export const superAdminAPI = {
     };
   },
   getAuditLogs: async (): Promise<AuditLog[]> => {
-    const { adminAuditLogApi } = await import("@/routes/api");
     const result = await adminAuditLogApi.getAll({ page: 0, size: 100 });
     return result.content.map((log: any) => ({
       id: String(log.id),

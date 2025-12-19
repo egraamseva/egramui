@@ -212,18 +212,29 @@ export interface TeamMember {
 
 // Document Types
 export interface Document {
-  id: string;
+  documentId?: number;
+  id?: string;
   panchayatId: string;
   title: string;
   description?: string;
   category: string;
-  fileUrl: string;
+  fileUrl?: string; // Legacy field
   fileName: string;
   fileSize: number;
-  fileType: string;
-  uploadedBy: string;
+  fileType?: string;
+  mimeType?: string;
+  uploadedBy?: string;
+  uploadedByName?: string;
+  uploadedByUserId?: number;
   uploadedAt: string;
-  isPublic: boolean;
+  createdAt?: string;
+  isPublic?: boolean;
+  visibility?: "PUBLIC" | "PRIVATE";
+  googleDriveFileId?: string;
+  viewLink?: string; // Google Drive preview URL
+  isAvailable?: boolean;
+  downloadCount?: number;
+  showOnWebsite?: boolean; // Whether to display on public website
 }
 
 // Comment Types
