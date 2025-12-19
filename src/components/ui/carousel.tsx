@@ -387,7 +387,6 @@ export function Carousel({
       onMouseDown={handleMouseDown}
       onMouseMove={handleMouseMove}
       onMouseUp={handleMouseUp}
-      onMouseLeave={handleMouseUp}
       role="region"
       aria-label="Carousel"
       tabIndex={0}
