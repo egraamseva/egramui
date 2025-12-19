@@ -7,7 +7,6 @@ import {
   MapPin,
   Calendar,
   Users,
-  TrendingUp,
   Download,
   AlertCircle,
   Loader2,
@@ -1042,7 +1041,7 @@ export function PanchayatWebsite() {
             </div>
 
             {/* Bottom Row - Navigation Items */}
-            <div className="flex items-center gap-0.5 overflow-x-auto scrollbar-hide px-2 py-2 bg-[#F9F9F9]">
+            <div className="flex items-center gap-1 overflow-x-auto scrollbar-hide px-2 py-1 bg-[#F9F9F9]">
               {navItems.map((item) => {
                 const Icon = item.icon;
                 return (
@@ -1050,14 +1049,30 @@ export function PanchayatWebsite() {
                     key={item.id}
                     variant="ghost"
                     onClick={() => setActivePage(item.id)}
-                    className={`flex-1 min-w-0 flex flex-col items-center gap-1 h-auto py-2 px-2 rounded-lg transition-all ${
-                      activePage === item.id
-                        ? "text-[#E31E24] bg-[#E31E24]/10"
-                        : "text-[#1B2B5E] hover:text-[#E31E24] hover:bg-[#E31E24]/5"
-                    }`}
+                    style={{
+                      color: activePage === item.id 
+                        ? theme?.colors.primary || "#E31E24"
+                        : theme?.colors.text || "#1B2B5E",
+                      backgroundColor: activePage === item.id 
+                        ? `${theme?.colors.primary || "#E31E24"}10`
+                        : "transparent",
+                    }}
+                    className={`shrink-0 flex flex-col items-center justify-center gap-1 h-auto py-2.5 px-1 rounded-lg transition-all min-w-[68px]`}
+                    onMouseEnter={(e) => {
+                      if (activePage !== item.id) {
+                        e.currentTarget.style.color = theme?.colors.primary || "#E31E24";
+                        e.currentTarget.style.backgroundColor = `${theme?.colors.primary || "#E31E24"}08`;
+                      }
+                    }}
+                    onMouseLeave={(e) => {
+                      if (activePage !== item.id) {
+                        e.currentTarget.style.color = theme?.colors.text || "#1B2B5E";
+                        e.currentTarget.style.backgroundColor = "transparent";
+                      }
+                    }}
                   >
-                    <Icon className="h-5 w-5 flex-shrink-0" />
-                    <span className="text-[10px] font-medium leading-tight text-center">
+                    <Icon className="h-5 w-5 shrink-0" />
+                    <span className="text-[10px] font-medium leading-tight text-center whitespace-nowrap">
                       {item.label}
                     </span>
                   </Button>
