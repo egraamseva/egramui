@@ -178,6 +178,9 @@ export function DynamicSectionRenderer({ section, children }: DynamicSectionRend
       case 'CTA': // Backward compatibility
         return renderCTASection(content);
       
+      case 'SOCIAL_MEDIA_LINKS':
+        return renderSocialMediaSection(content);
+      
       default:
         // Use layout-based rendering for other types
         return renderByLayout(content, section.layoutType, mappedSectionType);
@@ -770,6 +773,41 @@ export function DynamicSectionRenderer({ section, children }: DynamicSectionRend
     );
   };
 
+  const renderSocialMediaSection = (content: any) => {
+    const items = content.items || [];
+    const columns = content.columns || 4;
+    
+    return (
+      <div className={`grid gap-6 grid-cols-2 sm:grid-cols-3 md:grid-cols-${Math.min(columns, 4)} justify-center`}>
+        {items.map((item: ContentItem, index: number) => (
+          <a
+            key={index}
+            href={item.link || '#'}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex flex-col items-center gap-2 p-4 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors border border-gray-200 dark:border-gray-700"
+          >
+            {item.image ? (
+              <ImageWithFallback
+                src={item.image}
+                alt={item.title || ''}
+                className="w-16 h-16 object-contain"
+              />
+            ) : item.icon ? (
+              <div className="w-16 h-16 flex items-center justify-center text-4xl">
+                {getIconComponent(item.icon)}
+              </div>
+            ) : null}
+            <span className="font-medium text-center">{item.title}</span>
+            {item.description && (
+              <span className="text-sm text-muted-foreground text-center">{item.description}</span>
+            )}
+          </a>
+        ))}
+      </div>
+    );
+  };
+
   const renderByLayout = (content: any, layoutType: LayoutType, sectionType?: string) => {
     const items = content.items || [];
     
@@ -1020,7 +1058,8 @@ export function DynamicSectionRenderer({ section, children }: DynamicSectionRend
 
   const renderItemCard = (item: ContentItem, index: number, sectionType?: string) => {
     const ItemImage = ({ src, alt, imageFit }: { src: string; alt: string; imageFit?: string }) => {
-      // Use src directly - Cloudflare public URLs don't expire
+      // ImageWithFallback will handle placeholder URLs automatically
+      if (!src) return null;
       return <ImageWithFallback src={src} alt={alt} className="h-full w-full" style={{ objectFit: imageFit || 'cover' }} />;
     };
 

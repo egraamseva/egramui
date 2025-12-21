@@ -2540,6 +2540,56 @@ class PanchayatWebsiteApi {
     return { imageUrl };
   }
 
+  async getTemplates(language?: string): Promise<SectionTemplate[]> {
+    const params = language ? `?language=${language}` : '';
+    const data = await this.http.get<{ templates: any[] }>(
+      `/panchayat/website/templates${params}`
+    );
+    return (data.templates || []).map(this.mapTemplate);
+  }
+
+  async createPageFromTemplate(templateId: string | number): Promise<PanchayatWebsiteSection[]> {
+    const data = await this.http.post<{ sections: any[] }>(
+      `/panchayat/website/templates/${templateId}/create-page`
+    );
+    return (data.sections || []).map(this.mapSection);
+  }
+
+  async createSectionFromTemplate(
+    templateId: string | number,
+    displayOrder?: number,
+    isVisible: boolean = true
+  ): Promise<PanchayatWebsiteSection> {
+    const payload: any = { isVisible };
+    if (displayOrder !== undefined) {
+      payload.displayOrder = displayOrder;
+    }
+    const data = await this.http.post<any>(
+      `/panchayat/website/templates/${templateId}/create-section`,
+      payload
+    );
+    return this.mapSection(data);
+  }
+
+  private mapTemplate(template: any): SectionTemplate {
+    return {
+      id: String(template.id),
+      name: template.name,
+      description: template.description,
+      category: template.category,
+      language: template.language,
+      templateData: typeof template.templateData === 'string' 
+        ? JSON.parse(template.templateData) 
+        : template.templateData,
+      colorTheme: template.colorTheme,
+      previewImageUrl: template.previewImageUrl,
+      isActive: template.isActive,
+      isSystem: template.isSystem,
+      isPageTemplate: template.isPageTemplate || false,
+      displayOrder: template.displayOrder,
+    };
+  }
+
   private mapSection(section: any): PanchayatWebsiteSection {
     // Parse content - handle both string and object
     let parsedContent: any = {};
@@ -2676,6 +2726,21 @@ class PublicPanchayatWebsiteApi {
 }
 
 export const platformLandingPageApi = new PlatformLandingPageApi(httpClient);
+export type SectionTemplate = {
+  id: string;
+  name: string;
+  description?: string;
+  category?: string;
+  language: string;
+  templateData: any;
+  colorTheme?: string;
+  previewImageUrl?: string;
+  isActive: boolean;
+  isSystem: boolean;
+  isPageTemplate: boolean;
+  displayOrder?: number;
+};
+
 export const panchayatWebsiteApi = new PanchayatWebsiteApi(httpClient);
 export const publicPlatformLandingPageApi = new PublicPlatformLandingPageApi(
   httpClient

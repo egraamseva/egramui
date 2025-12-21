@@ -53,6 +53,19 @@ export function isValidServerURL(url: string): boolean {
 }
 
 /**
+ * Check if URL is a placeholder service URL that might fail
+ */
+export function isPlaceholderServiceURL(url: string): boolean {
+  if (!url || typeof url !== 'string') return false;
+  // Remove retry parameters for detection
+  const cleanUrl = url.split('&_retry=')[0].split('?retry=')[0];
+  return cleanUrl.includes('via.placeholder.com') || 
+         cleanUrl.includes('placeholder.com') ||
+         cleanUrl.includes('placehold.it') ||
+         cleanUrl.includes('placehold.co');
+}
+
+/**
  * Recursively clean content object by removing blob URLs
  * This prevents expired blob URLs from causing image loading errors
  */
@@ -77,11 +90,12 @@ export function cleanContentBlobURLs(content: any): any {
              key === 'src' || key === 'url') && typeof value === 'string') {
           // Remove blob URLs and data URLs - they should not be stored in database
           // Only server URLs (http/https) should be stored
+          // Preserve placeholder URLs - ImageWithFallback will handle them
           if (isBlobURL(value) || isDataURL(value)) {
             console.warn(`Removed temporary URL (blob/data) from ${key}:`, value.substring(0, 50) + '...');
             cleaned[key] = null; // Set to null so ImageWithFallback can handle it
-          } else if (isValidServerURL(value)) {
-            // Valid server URL - preserve it
+          } else if (isValidServerURL(value) || isPlaceholderServiceURL(value)) {
+            // Valid server URL or placeholder URL - preserve it
             cleaned[key] = value;
           } else if (value.trim() === '' || value === 'null' || value === 'undefined') {
             // Empty or null string - set to null
@@ -117,6 +131,7 @@ export function cleanContentBlobURLs(content: any): any {
  * Process section content to ensure all image URLs are valid
  * Handles both direct image fields (like IMAGE_WITH_TEXT's content.image) and items array
  * IMPORTANT: Only removes blob/data URLs, preserves all valid server URLs (http/https)
+ * Note: Placeholder service URLs are preserved - ImageWithFallback will handle them
  */
 export function processSectionContent(content: any): any {
   if (!content) return content;
@@ -142,8 +157,8 @@ export function processSectionContent(content: any): any {
       if (isBlobURL(imageValue) || isDataURL(imageValue)) {
         console.warn('Removed temporary URL from content.image:', imageValue.substring(0, 50) + '...');
         cleaned.image = null;
-      } else if (isValidServerURL(imageValue)) {
-        // Valid server URL - preserve it
+      } else if (isValidServerURL(imageValue) || isPlaceholderServiceURL(imageValue)) {
+        // Valid server URL or placeholder URL - preserve it (ImageWithFallback will handle placeholders)
         cleaned.image = imageValue;
       } else {
         // Check if it's an empty string or "null" string
@@ -163,18 +178,22 @@ export function processSectionContent(content: any): any {
     cleaned.items = cleaned.items.map((item: any) => {
       if (item && typeof item === 'object') {
         // Remove blob/data URLs from item images - only server URLs should be stored
+        // Preserve placeholder URLs - ImageWithFallback will handle them
         if (item.image && typeof item.image === 'string') {
           if (isBlobURL(item.image) || isDataURL(item.image)) {
             console.warn('Removed temporary URL from item image:', item.image.substring(0, 50) + '...');
             item.image = null;
-          } else if (!isValidServerURL(item.image) && item.image.trim() !== '' && item.image !== 'null') {
-            // Invalid URL format but not empty/null - preserve for now
-            console.warn('Unusual URL format in item image, preserving:', item.image.substring(0, 50));
+          } else if (isValidServerURL(item.image) || isPlaceholderServiceURL(item.image)) {
+            // Valid server URL or placeholder URL - preserve it (don't modify)
+            // item.image stays as is
           } else if (item.image.trim() === '' || item.image === 'null') {
             item.image = null;
+          } else {
+            // Invalid URL format but not empty/null - preserve for now
+            console.warn('Unusual URL format in item image, preserving:', item.image.substring(0, 50));
           }
         }
-        // Clean nested structures
+        // Clean nested structures (but preserve placeholder URLs)
         return cleanContentBlobURLs(item);
       }
       return item;

@@ -3,12 +3,13 @@ import { useTranslation } from 'react-i18next';
 import { Button } from '../ui/button';
 import { Card, CardContent } from '../ui/card';
 import { Badge } from '../ui/badge';
-import { Plus, Edit, Trash2, Eye, EyeOff, Copy, GripVertical, Search, Filter } from 'lucide-react';
+import { Plus, Edit, Trash2, Eye, EyeOff, Copy, GripVertical, Search, Filter, Sparkles } from 'lucide-react';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '../ui/dialog';
 import { Input } from '../ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 import { SectionEditor } from '../admin/SectionEditor';
 import { DynamicSectionRenderer } from '../main/DynamicSectionRenderer';
+import { TemplateSelectionModal } from '../admin/TemplateSelectionModal';
 import { toast } from 'sonner';
 import { panchayatWebsiteApi } from '../../routes/api';
 import type { PanchayatWebsiteSection } from '../../types';
@@ -201,6 +202,7 @@ export function PanchayatWebsiteManager() {
   const [typeFilter, setTypeFilter] = useState<string>('all');
   const [visibilityFilter, setVisibilityFilter] = useState<string>('all');
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
+  const [isTemplateModalOpen, setIsTemplateModalOpen] = useState(false);
 
   useEffect(() => {
     fetchSections();
@@ -484,14 +486,27 @@ export function PanchayatWebsiteManager() {
       {sections.length === 0 ? (
         <Card>
           <CardContent className="py-12 text-center">
-            <p className="text-muted-foreground mb-4">No sections yet</p>
-            <p className="text-sm text-muted-foreground mb-6">
-              Create your first section to start building your panchayat website
-            </p>
-            <Button onClick={handleCreate}>
-              <Plus className="h-4 w-4 mr-2" />
-              Create First Section
-            </Button>
+            <div className="space-y-6">
+              <div>
+                <h3 className="text-2xl font-bold mb-2">Get Started with Your Website</h3>
+                <p className="text-muted-foreground mb-6">
+                  Create your first section manually or choose a professional template
+                </p>
+              </div>
+              <div className="flex flex-col sm:flex-row gap-4 justify-center">
+                <Button onClick={handleCreate} size="lg" variant="outline">
+                  <Plus className="h-4 w-4 mr-2" />
+                  Create Section Manually
+                </Button>
+                <Button onClick={() => setIsTemplateModalOpen(true)} size="lg">
+                  <Sparkles className="h-4 w-4 mr-2" />
+                  Create Using Template
+                </Button>
+              </div>
+              <p className="text-xs text-muted-foreground mt-4">
+                Templates include multiple pre-configured sections with dummy data that you can customize
+              </p>
+            </div>
           </CardContent>
         </Card>
       ) : filteredSections.length === 0 ? (
@@ -561,6 +576,16 @@ export function PanchayatWebsiteManager() {
           />
         </DialogContent>
       </Dialog>
+
+      <TemplateSelectionModal
+        isOpen={isTemplateModalOpen}
+        onClose={() => setIsTemplateModalOpen(false)}
+        onTemplateSelected={async (section) => {
+          await fetchSections();
+          setIsTemplateModalOpen(false);
+        }}
+        currentSectionsCount={sections.length}
+      />
     </div>
   );
 }
