@@ -222,7 +222,7 @@ export const publicAPI = {
       any,
       ApiResponse<PaginatedResponse<Panchayat>>
     >("/public/panchayats", {
-      params: { page: 0, size: 100 },
+      params: { pageNumber: 0, pageSize: 9999 },
     });
     return response.data.content;
   },
