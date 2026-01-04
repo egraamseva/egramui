@@ -179,6 +179,7 @@ export function getFieldDefaultValue(field: FieldDefinition): any {
       const strValue = String(field.defaultValue).toLowerCase();
       return strValue === 'true' || strValue === '1';
     }
+    if (field?.type === "URL" && field.defaultValue === "#") return "";
     return field.defaultValue;
   }
   
@@ -192,6 +193,8 @@ export function getFieldDefaultValue(field: FieldDefinition): any {
       return [];
     case 'GROUP':
       return {};
+    case 'URL':
+      return '';
     default:
       return '';
   }
