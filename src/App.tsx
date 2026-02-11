@@ -9,6 +9,7 @@ import { AppRoutes } from "./routes";
 import type { Language } from "./types";
 import { Header } from "./components/main/Header";
 import { useTranslation } from "react-i18next";
+import { isMainWebsiteDomain } from "./config/mainDomain";
 import "./i18n"; // Initialize i18next
 import "./utils/testAPI"; // Load test API for browser console testing
 
@@ -29,9 +30,7 @@ function AppContent() {
                              location.pathname === "/panchayat-demo";
 
   // Root on custom domain shows panchayat site (no platform header)
-  const mainDomains = ["localhost", "127.0.0.1", (import.meta.env.VITE_APP_DOMAIN as string)?.toLowerCase()].filter(Boolean);
-  const isMainDomain = mainDomains.some((d) => window.location.hostname.toLowerCase() === d || window.location.hostname.toLowerCase().endsWith("." + d));
-  const isCustomDomainRoot = location.pathname === "/" && !isMainDomain;
+  const isCustomDomainRoot = location.pathname === "/" && !isMainWebsiteDomain(window.location.hostname);
 
   // Determine if header should be shown
   const shouldShowHeader = !isDashboard && !isAdmin && !isAuthPage && !isPanchayatWebsite && !isCustomDomainRoot;

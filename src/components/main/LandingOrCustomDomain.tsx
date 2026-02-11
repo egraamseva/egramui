@@ -2,18 +2,7 @@ import { useState, useEffect } from "react";
 import { LandingPage } from "./LandingPage";
 import { PanchayatWebsite } from "../public/PanchayatWebsite";
 import { publicAPI } from "../../services/api";
-
-const MAIN_DOMAINS = [
-  "localhost",
-  "127.0.0.1",
-  import.meta.env.VITE_APP_DOMAIN as string | undefined,
-].filter(Boolean) as string[];
-
-function isMainDomain(hostname: string): boolean {
-  const h = hostname.toLowerCase();
-  if (MAIN_DOMAINS.some((d) => h === d || h.endsWith("." + d))) return true;
-  return false;
-}
+import { isMainWebsiteDomain } from "../../config/mainDomain";
 
 export function LandingOrCustomDomain() {
   const [resolvedSlug, setResolvedSlug] = useState<string | null>(null);
@@ -22,7 +11,7 @@ export function LandingOrCustomDomain() {
 
   useEffect(() => {
     const hostname = window.location.hostname;
-    if (isMainDomain(hostname)) {
+    if (isMainWebsiteDomain(hostname)) {
       setResolvedSlug(null);
       setLoading(false);
       return;
