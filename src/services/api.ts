@@ -234,6 +234,15 @@ export const publicAPI = {
     return response.data;
   },
 
+  getPanchayatByDomain: async (domain: string): Promise<Panchayat> => {
+    const response = await api.get<any, ApiResponse<Panchayat>>(
+      "/public/panchayats/by-domain",
+      { params: { domain } }
+    );
+    const body = response.data as ApiResponse<Panchayat> & { data?: Panchayat };
+    return body?.data ?? response.data;
+  },
+
   getHomePageData: async (slug: string): Promise<any> => {
     const response = await api.get<any, ApiResponse<any>>(
       `/public/${slug}/home`
@@ -1403,6 +1412,7 @@ export const superAdminAPI = {
     contactPhone?: string;
     contactEmail?: string;
     description?: string;
+    customDomain?: string;
   }): Promise<SuperAdminPanchayat> => {
     const p = await adminPanchayatApi.create(data);
     return {
@@ -1427,6 +1437,7 @@ export const superAdminAPI = {
       contactPhone?: string;
       contactEmail?: string;
       description?: string;
+      customDomain?: string;
     }>
   ): Promise<SuperAdminPanchayat> => {
     const p = await adminPanchayatApi.update(parseInt(id), data);

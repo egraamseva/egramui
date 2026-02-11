@@ -22,6 +22,8 @@ import {
   LogOut,
   Menu,
   X,
+  CreditCard,
+  LayoutList,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -75,6 +77,8 @@ import type {
 import { formatTimeAgo } from "../../utils/format";
 import { superAdminAPI } from "@/services/api";
 import { PlatformLandingPageManager } from "./PlatformLandingPageManager";
+import { SubscriptionsManager } from "./SubscriptionsManager";
+import { AdminPanchayatWebsiteManager } from "./AdminPanchayatWebsiteManager";
 import { adminPanchayatApi } from "@/routes/api";
 
 export function SuperAdminDashboard() {
@@ -97,6 +101,10 @@ export function SuperAdminDashboard() {
   const [statusFilter, setStatusFilter] = useState<PanchayatStatus | "all">(
     "all"
   );
+  /** Panchayat filter applied across dashboard sections (null = All panchayats) */
+  const [panchayatFilterId, setPanchayatFilterId] = useState<string | null>(
+    null
+  );
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [isPanchayatDialogOpen, setIsPanchayatDialogOpen] = useState(false);
   const [editingPanchayat, setEditingPanchayat] =
@@ -110,6 +118,7 @@ export function SuperAdminDashboard() {
     contactPhone: "",
     contactEmail: "",
     description: "",
+    customDomain: "",
   });
 
   useEffect(() => {
@@ -151,6 +160,33 @@ export function SuperAdminDashboard() {
       fetchDashboardData();
     }
   }, [searchQuery, statusFilter]);
+
+  // Panchayat-filtered lists for sections that support it
+  const filteredPanchayatsForList = panchayatFilterId
+    ? panchayats.filter((p) => String(p.id) === panchayatFilterId)
+    : panchayats;
+  const filteredUsersForList = panchayatFilterId
+    ? users.filter((u) => String(u.panchayatId) === panchayatFilterId)
+    : users;
+  const filteredAuditLogsForList = panchayatFilterId
+    ? auditLogs.filter(
+        (log) =>
+          log.resourceId === panchayatFilterId ||
+          (log as any).panchayatId === panchayatFilterId
+      )
+    : auditLogs;
+  const sectionsWithPanchayatFilter = [
+    "dashboard",
+    "panchayats",
+    "users",
+    "subscriptions",
+    "panchayat-websites",
+    "analytics",
+    "audit-logs",
+  ];
+  const showPanchayatFilter = sectionsWithPanchayatFilter.includes(
+    activeSection
+  );
 
   const handleLogout = async () => {
     await logout();
@@ -215,6 +251,7 @@ export function SuperAdminDashboard() {
       contactPhone: "",
       contactEmail: "",
       description: "",
+      customDomain: "",
     });
     setIsPanchayatDialogOpen(true);
   };
@@ -243,6 +280,7 @@ export function SuperAdminDashboard() {
           (fullPanchayat as any).officeEmail ||
           "",
         description: (fullPanchayat as any).description || "",
+        customDomain: (fullPanchayat as any).customDomain || "",
       });
       setIsPanchayatDialogOpen(true);
     } catch (error) {
@@ -258,6 +296,7 @@ export function SuperAdminDashboard() {
         contactPhone: "",
         contactEmail: "",
         description: "",
+        customDomain: "",
       });
       setIsPanchayatDialogOpen(true);
     }
@@ -275,6 +314,7 @@ export function SuperAdminDashboard() {
       contactPhone: "",
       contactEmail: "",
       description: "",
+      customDomain: "",
     });
   };
 
@@ -315,6 +355,7 @@ export function SuperAdminDashboard() {
         contactPhone: panchayatFormData.contactPhone.trim() || undefined,
         contactEmail: panchayatFormData.contactEmail.trim() || undefined,
         description: panchayatFormData.description.trim() || undefined,
+        customDomain: panchayatFormData.customDomain.trim() || undefined,
       });
       toast.success("Panchayat created successfully");
       closePanchayatDialog();
@@ -364,6 +405,7 @@ export function SuperAdminDashboard() {
         contactPhone: panchayatFormData.contactPhone.trim() || undefined,
         contactEmail: panchayatFormData.contactEmail.trim() || undefined,
         description: panchayatFormData.description.trim() || undefined,
+        customDomain: panchayatFormData.customDomain.trim() || undefined,
       });
       toast.success("Panchayat updated successfully");
       closePanchayatDialog();
@@ -394,7 +436,9 @@ export function SuperAdminDashboard() {
     { id: "dashboard", label: "Dashboard", icon: LayoutDashboard },
     { id: "panchayats", label: "Panchayats", icon: Building2 },
     { id: "users", label: "Users", icon: Users },
+    { id: "subscriptions", label: "Subscriptions", icon: CreditCard },
     { id: "landing-page", label: "Landing Page", icon: Globe },
+    { id: "panchayat-websites", label: "Panchayat Websites", icon: LayoutList },
     { id: "analytics", label: "Analytics", icon: BarChart3 },
     { id: "audit-logs", label: "Audit Logs", icon: FileText },
   ];
@@ -618,6 +662,37 @@ export function SuperAdminDashboard() {
 
           <div className="p-4 sm:p-6 lg:p-8">
             <div className="max-w-7xl mx-auto">
+              {showPanchayatFilter && (
+                <Card className="mb-4 sm:mb-6">
+                  <CardContent className="py-3 sm:py-4">
+                    <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4">
+                      <Label className="text-sm font-medium text-[#666] shrink-0">
+                        Filter by panchayat
+                      </Label>
+                      <Select
+                        value={panchayatFilterId ?? "all"}
+                        onValueChange={(v) =>
+                          setPanchayatFilterId(v === "all" ? null : v)
+                        }
+                      >
+                        <SelectTrigger className="w-full sm:w-[280px]">
+                          <SelectValue placeholder="All panchayats" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">All panchayats</SelectItem>
+                          {panchayats.map((p) => (
+                            <SelectItem key={p.id} value={String(p.id)}>
+                              {p.panchayatName}
+                              {p.slug ? ` (${p.slug})` : ""}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+
               {activeSection === "dashboard" && (
                 <div className="space-y-6">
                   <div>
@@ -667,7 +742,7 @@ export function SuperAdminDashboard() {
                     </CardHeader>
                     <CardContent>
                       <div className="space-y-3 sm:space-y-4">
-                        {auditLogs.slice(0, 10).map((log) => (
+                        {filteredAuditLogsForList.slice(0, 10).map((log) => (
                           <div
                             key={log.id}
                             className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1 sm:gap-0 py-2 border-b last:border-0"
@@ -745,12 +820,12 @@ export function SuperAdminDashboard() {
                     <CardContent>
                       {/* Mobile: Card View */}
                       <div className="block sm:hidden space-y-3">
-                        {panchayats.length === 0 ? (
+                        {filteredPanchayatsForList.length === 0 ? (
                           <div className="text-center py-8 text-[#666] text-sm">
                             No panchayats found
                           </div>
                         ) : (
-                          panchayats.map((panchayat) => (
+                          filteredPanchayatsForList.map((panchayat) => (
                             <Card key={panchayat.id}>
                               <CardContent className="p-4">
                                 <div className="space-y-3">
@@ -844,7 +919,7 @@ export function SuperAdminDashboard() {
                             </TableRow>
                           </TableHeader>
                           <TableBody>
-                            {panchayats.map((panchayat) => (
+                            {filteredPanchayatsForList.map((panchayat) => (
                               <TableRow key={panchayat.id}>
                                 <TableCell className="font-medium">
                                   {panchayat.panchayatName}
@@ -953,12 +1028,12 @@ export function SuperAdminDashboard() {
                     <CardContent>
                       {/* Mobile: Card View */}
                       <div className="block sm:hidden space-y-3">
-                        {users.length === 0 ? (
+                        {filteredUsersForList.length === 0 ? (
                           <div className="text-center py-8 text-[#666] text-sm">
                             No users found
                           </div>
                         ) : (
-                          users.map((userItem) => (
+                          filteredUsersForList.map((userItem) => (
                             <Card key={userItem.id}>
                               <CardContent className="p-4">
                                 <div className="space-y-3">
@@ -1035,7 +1110,7 @@ export function SuperAdminDashboard() {
                             </TableRow>
                           </TableHeader>
                           <TableBody>
-                            {users.map((userItem) => (
+                            {filteredUsersForList.map((userItem) => (
                               <TableRow key={userItem.id}>
                                 <TableCell className="font-medium">
                                   {userItem.name}
@@ -1096,9 +1171,29 @@ export function SuperAdminDashboard() {
                 </div>
               )}
 
+              {activeSection === "subscriptions" && (
+                <div className="space-y-4 sm:space-y-6">
+                  <SubscriptionsManager
+                    defaultPanchayatId={
+                      panchayatFilterId ?? undefined
+                    }
+                  />
+                </div>
+              )}
               {activeSection === "landing-page" && (
                 <div className="space-y-4 sm:space-y-6">
                   <PlatformLandingPageManager />
+                </div>
+              )}
+              {activeSection === "panchayat-websites" && (
+                <div className="space-y-4 sm:space-y-6">
+                  <AdminPanchayatWebsiteManager
+                    initialPanchayatId={
+                      panchayatFilterId
+                        ? Number(panchayatFilterId)
+                        : undefined
+                    }
+                  />
                 </div>
               )}
 
@@ -1167,12 +1262,12 @@ export function SuperAdminDashboard() {
                     <CardContent>
                       {/* Mobile: Card View */}
                       <div className="block sm:hidden space-y-3">
-                        {auditLogs.length === 0 ? (
+                        {filteredAuditLogsForList.length === 0 ? (
                           <div className="text-center py-8 text-[#666] text-sm">
                             No audit logs found
                           </div>
                         ) : (
-                          auditLogs.map((log) => (
+                          filteredAuditLogsForList.map((log) => (
                             <Card key={log.id}>
                               <CardContent className="p-4">
                                 <div className="space-y-2">
@@ -1216,7 +1311,7 @@ export function SuperAdminDashboard() {
                             </TableRow>
                           </TableHeader>
                           <TableBody>
-                            {auditLogs.map((log) => (
+                            {filteredAuditLogsForList.map((log) => (
                               <TableRow key={log.id}>
                                 <TableCell className="font-medium">
                                   {log.userName}
@@ -1299,6 +1394,26 @@ export function SuperAdminDashboard() {
               />
               <p className="text-xs sm:text-sm text-muted-foreground">
                 Only lowercase letters, numbers, and hyphens allowed
+              </p>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="customDomain" className="text-sm sm:text-base">
+                Custom domain (optional)
+              </Label>
+              <Input
+                id="customDomain"
+                placeholder="e.g., www.kgp.com"
+                value={panchayatFormData.customDomain}
+                onChange={(e) =>
+                  setPanchayatFormData({
+                    ...panchayatFormData,
+                    customDomain: e.target.value.trim(),
+                  })
+                }
+                className="text-sm sm:text-base"
+              />
+              <p className="text-xs sm:text-sm text-muted-foreground">
+                If set, this panchayat site can be accessed at this domain (DNS must point to this app).
               </p>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">

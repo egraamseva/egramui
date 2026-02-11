@@ -28,8 +28,13 @@ function AppContent() {
                               !location.pathname.startsWith("/panchayat/dashboard")) ||
                              location.pathname === "/panchayat-demo";
 
+  // Root on custom domain shows panchayat site (no platform header)
+  const mainDomains = ["localhost", "127.0.0.1", (import.meta.env.VITE_APP_DOMAIN as string)?.toLowerCase()].filter(Boolean);
+  const isMainDomain = mainDomains.some((d) => window.location.hostname.toLowerCase() === d || window.location.hostname.toLowerCase().endsWith("." + d));
+  const isCustomDomainRoot = location.pathname === "/" && !isMainDomain;
+
   // Determine if header should be shown
-  const shouldShowHeader = !isDashboard && !isAdmin && !isAuthPage && !isPanchayatWebsite;
+  const shouldShowHeader = !isDashboard && !isAdmin && !isAuthPage && !isPanchayatWebsite && !isCustomDomainRoot;
 
   const handleLanguageChange = (lang: Language) => {
     i18n.changeLanguage(lang);

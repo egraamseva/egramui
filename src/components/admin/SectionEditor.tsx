@@ -18,19 +18,29 @@ import type { SectionSchema } from '../../utils/sectionSchemas';
 import { HARDCODED_SCHEMAS, getSchemaByType, getRenderingHint } from '../../utils/sectionSchemas';
 import { fileToDataURL, cleanContentBlobURLs, isBlobURL, isDataURL, validateImageFile } from '../../utils/imageUtils';
 
+/** Optional API adapter for upload/update (e.g. admin panchayat website by id). When set, used instead of panchayatWebsiteApi. */
+export type SectionEditorWebsiteApi = {
+  uploadImage: (id: string | number, file: File, compressionQuality?: string) => Promise<{ imageUrl: string }>;
+  uploadImageGeneric: (file: File, compressionQuality?: string) => Promise<{ imageUrl: string }>;
+  updateSection: (id: string | number, payload: any) => Promise<any>;
+};
+
 interface SectionEditorProps {
   section?: PlatformSection | PanchayatWebsiteSection | null;
   isPlatform?: boolean;
   onSave: (section: any) => Promise<PlatformSection | PanchayatWebsiteSection>;
   onCancel: () => void;
   isOpen: boolean;
+  /** When provided (e.g. admin managing a panchayat website), used for uploads and post-save updates instead of panchayatWebsiteApi */
+  websiteApi?: SectionEditorWebsiteApi;
 }
 export  function SectionEditor({ 
   section, 
   isPlatform = false, 
   onSave, 
   onCancel,
-  isOpen 
+  isOpen,
+  websiteApi: websiteApiOverride,
 }: SectionEditorProps) {
   const [formData, setFormData] = useState({
     sectionType: (section?.sectionType || '') as PlatformSectionType | PanchayatSectionType,
@@ -508,8 +518,8 @@ export  function SectionEditor({
       if (imageFiles.length > 0 && savedSection) {
         const uploadToastId = toast.loading(`Uploading ${imageFiles.length} image(s)...`);
         try {
-          const uploadApi = isPlatform ? platformLandingPageApi : panchayatWebsiteApi;
-          const updateApi = isPlatform ? platformLandingPageApi : panchayatWebsiteApi;
+          const uploadApi = websiteApiOverride ?? (isPlatform ? platformLandingPageApi : panchayatWebsiteApi);
+          const updateApi = websiteApiOverride ?? (isPlatform ? platformLandingPageApi : panchayatWebsiteApi);
           
           // Save original section imageUrl to restore it later (since uploadImage overwrites it)
           const originalImageUrl = savedSection.imageUrl;
@@ -617,7 +627,7 @@ export  function SectionEditor({
           const contentChanged = JSON.stringify(cleanedContent) !== JSON.stringify(parsedContent);
           if (contentChanged) {
             try {
-              const updateApi = isPlatform ? platformLandingPageApi : panchayatWebsiteApi;
+              const updateApi = websiteApiOverride ?? (isPlatform ? platformLandingPageApi : panchayatWebsiteApi);
               await updateApi.updateSection(section.id, {
                 content: cleanedContent,
               });

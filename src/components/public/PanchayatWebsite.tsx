@@ -88,8 +88,14 @@ type PageType =
   | "documents"
   | "contact";
 
-export function PanchayatWebsite() {
+type PanchayatWebsiteProps = {
+  /** When set (e.g. from custom domain resolve), use this slug instead of route param */
+  effectiveSlug?: string;
+};
+
+export function PanchayatWebsite({ effectiveSlug }: PanchayatWebsiteProps = {}) {
   const { subdomain } = useParams();
+  const slugToUse = effectiveSlug ?? subdomain ?? "";
   const navigate = useNavigate();
   const { t, i18n } = useTranslation();
 
@@ -165,14 +171,14 @@ export function PanchayatWebsite() {
   useEffect(() => {
     fetchPanchayatData();
     fetchWebsiteSections();
-  }, [subdomain]);
+  }, [slugToUse]);
 
   const fetchWebsiteSections = async () => {
-    if (!subdomain) return;
+    if (!slugToUse) return;
     try {
       setLoadingSections(true);
       const sectionsData = await publicPanchayatWebsiteApi.getSections(
-        subdomain
+        slugToUse
       );
       if (sectionsData && sectionsData.length > 0) {
         // Process sections to clean any blob URLs that might have been stored
@@ -207,10 +213,10 @@ export function PanchayatWebsite() {
   // Fetch public documents when documents page is active
   useEffect(() => {
     const fetchPublicDocuments = async () => {
-      if (activePage === "documents" && subdomain) {
+      if (activePage === "documents" && slugToUse) {
         setLoadingDocuments(true);
         try {
-          const docs = await documentsAPI.getPublicDocuments(subdomain);
+          const docs = await documentsAPI.getPublicDocuments(slugToUse);
           console.log("Fetched public documents:", docs);
           setDocuments(docs || []);
         } catch (error) {
@@ -226,7 +232,7 @@ export function PanchayatWebsite() {
     };
 
     fetchPublicDocuments();
-  }, [activePage, subdomain]);
+  }, [activePage, slugToUse]);
 
   const handleViewDocument = async (doc: any) => {
     if (!doc.isAvailable && !doc.viewLink) {
@@ -243,9 +249,9 @@ export function PanchayatWebsite() {
     // Otherwise, try to fetch it using public API
     if (doc.id || doc.documentId) {
       try {
-        if (subdomain) {
+        if (slugToUse) {
           const viewData = await documentsAPI.getPublicDocumentView(
-            subdomain,
+            slugToUse,
             doc.id || String(doc.documentId)
           );
           if (viewData?.viewLink) {
@@ -282,10 +288,10 @@ export function PanchayatWebsite() {
   };
 
   const fetchAlbumImages = async (albumId: string) => {
-    if (!subdomain) return;
+    if (!slugToUse) return;
     setLoadingAlbumImages(true);
     try {
-      const result = await publicAPI.getPublicGallery(subdomain, {
+      const result = await publicAPI.getPublicGallery(slugToUse, {
         page: 0,
         size: 100,
         albumId: parseInt(albumId),
@@ -295,7 +301,7 @@ export function PanchayatWebsite() {
       const images = result.content || result.items || [];
       const mappedImages = images.map((img: any) => ({
         id: String(img.imageId || img.id),
-        panchayatId: subdomain,
+        panchayatId: slugToUse,
         title: img.caption || "Gallery Image",
         image: img.imageUrl || img.image,
         description: img.caption,
@@ -329,8 +335,7 @@ export function PanchayatWebsite() {
   const fetchPanchayatData = async () => {
     setLoading(true);
     try {
-      const subdomainToUse = subdomain || "";
-      const panchayatData = await panchayatAPI.getBySubdomain(subdomainToUse);
+      const panchayatData = await panchayatAPI.getBySubdomain(slugToUse);
       setPanchayat(panchayatData);
 
       // Apply theme if available
@@ -354,13 +359,13 @@ export function PanchayatWebsite() {
         newslettersResult,
         albumsResult,
       ] = await Promise.all([
-        publicAPI.getPublicPosts(subdomainToUse, { page: 0, size: 50 }),
-        publicAPI.getPublicSchemes(subdomainToUse, { page: 0, size: 50 }),
-        publicAPI.getPublicAnnouncements(subdomainToUse, { page: 0, size: 50 }),
-        publicAPI.getPublicMembers(subdomainToUse, { page: 0, size: 50 }),
-        publicAPI.getPublicGallery(subdomainToUse, { page: 0, size: 50 }),
+        publicAPI.getPublicPosts(slugToUse, { page: 0, size: 50 }),
+        publicAPI.getPublicSchemes(slugToUse, { page: 0, size: 50 }),
+        publicAPI.getPublicAnnouncements(slugToUse, { page: 0, size: 50 }),
+        publicAPI.getPublicMembers(slugToUse, { page: 0, size: 50 }),
+        publicAPI.getPublicGallery(slugToUse, { page: 0, size: 50 }),
         publicNewsletterApi
-          .list(subdomainToUse, { page: 0, size: 50 })
+          .list(slugToUse, { page: 0, size: 50 })
           .catch(() => ({
             items: [],
             page: 0,
@@ -371,7 +376,7 @@ export function PanchayatWebsite() {
             isLast: true,
           })),
         publicAPI
-          .getPublicAlbum(subdomainToUse, { page: 0, size: 50 })
+          .getPublicAlbum(slugToUse, { page: 0, size: 50 })
           .catch(() => ({
             items: [],
             page: 0,
@@ -542,7 +547,7 @@ export function PanchayatWebsite() {
       const rawAlbums = (albumsResult as any).items || (albumsResult as any).content || [];
       const mappedAlbums = rawAlbums.map((album: any) => ({
         id: String(album.albumId || album.id),
-        panchayatId: subdomainToUse,
+        panchayatId: slugToUse,
         title: album.albumName || album.title,
         description: album.description,
         coverImage: album.coverImageUrl || album.coverImage, // Map coverImageUrl to coverImage
@@ -555,8 +560,8 @@ export function PanchayatWebsite() {
       console.error("Error fetching panchayat data:", error);
       setPanchayat({
         id: "panchayat-1",
-        name: subdomain
-          ? subdomain.charAt(0).toUpperCase() + subdomain.slice(1)
+        name: slugToUse
+          ? slugToUse.charAt(0).toUpperCase() + slugToUse.slice(1)
           : "Ramnagar",
         district: "Varanasi",
         state: "Uttar Pradesh",
@@ -565,7 +570,7 @@ export function PanchayatWebsite() {
         aboutText: "",
         area: "0",
         wards: 0,
-        subdomain: subdomain || "ramnagar",
+        subdomain: slugToUse || "ramnagar",
         established: new Date().getFullYear(),
         description: "",
         contactInfo: {

@@ -356,6 +356,41 @@ export interface AuditLog {
   createdAt: string;
 }
 
+// Subscription (Super Admin only - record plan and payment)
+export interface SubscriptionPlanType {
+  id: number;
+  name: string;
+  description?: string;
+  amount: number;
+  currency: string;
+  durationMonths?: number;
+  isActive: boolean;
+  displayOrder: number;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export type SubscriptionStatusType = "PAID" | "EXPIRED" | "PENDING";
+
+export interface PanchayatSubscriptionType {
+  id: number;
+  panchayatId: number;
+  panchayatName: string;
+  panchayatSlug: string;
+  planId: number;
+  planName: string;
+  amountPaid: number;
+  paidAt?: string;
+  status: SubscriptionStatusType;
+  periodStart?: string;
+  periodEnd?: string;
+  referenceNumber?: string;
+  paymentMethod?: string;
+  notes?: string;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
 // Post Status
 export type PostStatus = "draft" | "published";
 

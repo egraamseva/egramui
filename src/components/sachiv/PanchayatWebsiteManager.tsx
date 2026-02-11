@@ -16,7 +16,7 @@ import type { PanchayatWebsiteSection } from '../../types';
 import { ImageWithFallback } from '../figma/ImageWithFallback';
 import { processSectionContent, isBlobURL } from '../../utils/imageUtils';
 
-function SectionItem({
+export function SectionItem({
   section,
   index,
   onEdit,

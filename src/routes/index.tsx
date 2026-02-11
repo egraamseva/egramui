@@ -114,7 +114,7 @@ const createLazyComponent = (importFn: () => Promise<any>, componentName: string
 
 // Lazy load pages - these will be split into separate chunks
 // Public pages (loaded on demand)
-const LandingPage = createLazyComponent(() => import('@/components/main/LandingPage'), 'LandingPage');
+const LandingOrCustomDomain = createLazyComponent(() => import('@/components/main/LandingOrCustomDomain'), 'LandingOrCustomDomain');
 const RegistrationFlow = createLazyComponent(() => import('@/components/main/RegistrationFlow'), 'RegistrationFlow');
 const AllPanchayatsPage = createLazyComponent(() => import('@/components/main/AllPanchayatsPage'), 'AllPanchayatsPage');
 const PanchayatWebsite = createLazyComponent(() => import('@/components/public/PanchayatWebsite'), 'PanchayatWebsite');
@@ -145,8 +145,8 @@ export function AppRoutes() {
   return (
     <Suspense fallback={<RouteLoader />}>
       <Routes>
-        {/* Public Routes */}
-        <Route path="/" element={<LandingPage />} />
+        {/* Public Routes - "/" resolves to platform landing or custom-domain panchayat site */}
+        <Route path="/" element={<LandingOrCustomDomain />} />
         <Route path="/registration" element={<RegistrationFlow />} />
         <Route path="/panchayats" element={<AllPanchayatsPage />} />
         <Route path="/panchayat/:subdomain" element={<PanchayatWebsite />} />
