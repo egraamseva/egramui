@@ -4,9 +4,13 @@
  *
  * - VITE_APP_MAIN_DOMAINS: comma-separated list (e.g. "egram.up.railway.app,egram.com")
  * - VITE_APP_DOMAIN: single primary domain (legacy, also included if set)
+ * - Built-in defaults include localhost and current production host so it works even if env is not set at build time.
  */
-
-const DEFAULT_MAIN_DOMAINS = ["localhost", "127.0.0.1"];
+const DEFAULT_MAIN_DOMAINS = [
+  "localhost",
+  "127.0.0.1",
+  "egram.up.railway.app", // production; add more here or via VITE_APP_MAIN_DOMAINS
+];
 
 function parseMainDomains(): string[] {
   const fromList =
