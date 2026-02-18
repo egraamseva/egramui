@@ -388,24 +388,33 @@ export function PanchayatWebsite({ effectiveSlug }: PanchayatWebsiteProps = {}) 
           })),
       ]);
 
-      // Map posts
+      // Map posts (support single mediaUrl and multiple mediaUrls)
       const mappedPosts = postsResult.content
         .filter((post: any) => post.bodyText)
-        .map((post: any) => ({
-          id: post.postId.toString(),
-          panchayatId: post.panchayatId?.toString(),
-          author: post.authorName || "Panchayat Sachiv",
-          authorRole: post.authorRole || "Sachiv",
-          timestamp:
-            post.publishedAt || post.createdAt || new Date().toISOString(),
-          content: post.bodyText || "",
-          media: post.mediaUrl
-            ? [{ type: "image" as const, url: post.mediaUrl }]
-            : [],
-          likes: post.likesCount || 0,
-          comments: post.commentsCount || 0,
-          shares: post.viewCount || 0,
-        }));
+        .map((post: any) => {
+          const urls =
+            post.mediaUrls?.length > 0
+              ? post.mediaUrls
+              : post.mediaUrl
+                ? [post.mediaUrl]
+                : [];
+          return {
+            id: post.postId.toString(),
+            panchayatId: post.panchayatId?.toString(),
+            author: post.authorName || "Panchayat Sachiv",
+            authorRole: post.authorRole || "Sachiv",
+            timestamp:
+              post.publishedAt || post.createdAt || new Date().toISOString(),
+            content: post.bodyText || "",
+            media: urls.map((url: string) => ({
+              type: "image" as const,
+              url,
+            })),
+            likes: post.likesCount || 0,
+            comments: post.commentsCount || 0,
+            shares: post.viewCount || 0,
+          };
+        });
 
       // Map schemes
       const mappedSchemes = schemesResult.content

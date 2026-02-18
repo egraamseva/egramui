@@ -28,14 +28,9 @@ export function PostsPage() {
 
     setLoading(true);
     try {
+      // Backend returns only current panchayat's posts (filtered by tenant from JWT)
       const result = await postApi.list({ pageSize: 50 });
-      // Filter posts to only show posts from the logged-in user's panchayat
-      const userPanchayatId = String(user.panchayatId);
-      const filteredPosts = result.items.filter(post => {
-        if (!post.panchayatId) return false;
-        return String(post.panchayatId) === userPanchayatId;
-      });
-      setPosts(filteredPosts);
+      setPosts(result.items);
     } catch (error) {
       console.error("Error fetching posts:", error);
       toast.error("Failed to load posts");
@@ -111,7 +106,7 @@ export function PostsPage() {
         onSubmit={handleCreatePost}
       />
 
-      {/* Posts List */}
+      {/* Posts List: PostCard shows single or multiple images (post.media) in a grid with lightbox */}
       <div>
         <h3 className="mb-3 sm:mb-4 text-base sm:text-lg font-semibold">Your Posts</h3>
         {loading ? (
