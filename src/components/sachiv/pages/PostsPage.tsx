@@ -54,14 +54,16 @@ export function PostsPage() {
     }
 
     try {
-      // Get the first file if available
-      const firstMedia = postData.media[0];
-      const imageFile = firstMedia?.file;
+      // Collect up to 4 image files from media (photos only for post API)
+      const imageFiles = postData.media
+        .filter((m) => m.type === "image" && m.file)
+        .map((m) => m.file as File)
+        .slice(0, 4);
 
       const newPost = await postApi.create({
         title: postData.content.slice(0, 60) || "Panchayat update",
         bodyText: postData.content || "Shared an update",
-        imageFile,
+        ...(imageFiles.length > 0 ? { imageFiles } : {}),
       });
       setPosts((prev) => [newPost, ...prev]);
       if (user.panchayatId) {

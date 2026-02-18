@@ -12,6 +12,8 @@ import { FILE_UPLOAD_LIMITS } from "../../constants";
 import { validateFileSize, validateFileType } from "../../utils/validation";
 import { toast } from "sonner";
 
+const MAX_POST_PHOTOS = 4;
+
 interface CreatePostProps {
   authorName: string;
   authorRole: string;
@@ -31,13 +33,18 @@ export function CreatePost({ authorName, authorRole, onSubmit }: CreatePostProps
     const files = e.target.files;
     if (!files) return;
 
+    const currentImageCount = mediaFiles.filter((m) => m.type === "image").length;
     const newMedia: PostMedia[] = [];
     Array.from(files).forEach((file) => {
+      if (file.type.startsWith("image/") && currentImageCount + newMedia.length >= MAX_POST_PHOTOS) {
+        toast.info(`You can add up to ${MAX_POST_PHOTOS} photos per post.`);
+        return;
+      }
       // Validate file type
       const acceptedTypes = file.type.startsWith("video/")
         ? [".mp4", ".mov", ".avi"]
         : [...FILE_UPLOAD_LIMITS.ACCEPTED_IMAGE_TYPES];
-      
+
       if (!validateFileType(file, acceptedTypes)) {
         toast.error(`Invalid file type: ${file.name}`);
         return;
@@ -47,7 +54,7 @@ export function CreatePost({ authorName, authorRole, onSubmit }: CreatePostProps
       const maxSize = file.type.startsWith("video/")
         ? 10 * 1024 * 1024 // 10MB for videos
         : FILE_UPLOAD_LIMITS.IMAGE_MAX_SIZE;
-      
+
       if (!validateFileSize(file, maxSize)) {
         toast.error(`File too large: ${file.name}. Max size: ${maxSize / 1024 / 1024}MB`);
         return;
@@ -61,8 +68,22 @@ export function CreatePost({ authorName, authorRole, onSubmit }: CreatePostProps
     });
 
     if (newMedia.length > 0) {
-      setMediaFiles([...mediaFiles, ...newMedia]);
+      const combined = [...mediaFiles, ...newMedia];
+      const imageCount = combined.filter((m) => m.type === "image").length;
+      const trimmed =
+        imageCount <= MAX_POST_PHOTOS
+          ? combined
+          : combined.reduce<PostMedia[]>((acc, m) => {
+              if (m.type !== "image") return [...acc, m];
+              if (acc.filter((x) => x.type === "image").length < MAX_POST_PHOTOS) return [...acc, m];
+              return acc;
+            }, []);
+      setMediaFiles(trimmed);
+      if (imageCount > MAX_POST_PHOTOS) {
+        toast.info(`Only the first ${MAX_POST_PHOTOS} photos are used for this post.`);
+      }
     }
+    e.target.value = "";
   };
 
   const handleRemoveMedia = (index: number) => {
@@ -173,7 +194,7 @@ export function CreatePost({ authorName, authorRole, onSubmit }: CreatePostProps
             <Label htmlFor="photo-upload">
               <div className="flex cursor-pointer items-center gap-2 rounded-lg px-3 py-2 transition-colors hover:bg-muted">
                 <ImageIcon className="h-5 w-5 text-[#138808]" />
-                <span className="text-sm">Photo</span>
+                <span className="text-sm">Photo (up to {MAX_POST_PHOTOS})</span>
               </div>
               <input
                 id="photo-upload"

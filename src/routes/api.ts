@@ -289,6 +289,7 @@ type ServerPost = {
   title?: string;
   bodyText: string;
   mediaUrl?: string;
+  mediaUrls?: string[];
   status?: string;
   publishedAt?: string;
   viewCount?: number;
@@ -337,13 +338,20 @@ class PanchayatPostApi {
     title?: string;
     bodyText: string;
     imageFile?: File;
+    imageFiles?: File[];
   }) {
-    // If there's a file, use FormData
-    if (payload.imageFile) {
+    const files = payload.imageFiles?.length
+      ? payload.imageFiles
+      : payload.imageFile
+        ? [payload.imageFile]
+        : [];
+    const useFormData = files.length > 0;
+
+    if (useFormData) {
       const formData = new FormData();
       formData.append("title", payload.title || "");
       formData.append("bodyText", payload.bodyText);
-      formData.append("imageFile", payload.imageFile);
+      files.forEach((file) => formData.append("imageFile", file));
 
       const data = await this.http.postFormData<ServerPost>(
         "/panchayat/posts",
@@ -352,7 +360,6 @@ class PanchayatPostApi {
       return mapPostResponse(data);
     }
 
-    // Otherwise use JSON
     const data = await this.http.post<ServerPost>("/panchayat/posts", {
       title: payload.title,
       bodyText: payload.bodyText,
@@ -647,25 +654,25 @@ class AnalyticsAdapter {
 /**
  * Mapping helpers
  */
-const mapPostResponse = (post: ServerPost): Post => ({
-  id: String(post.postId),
-  panchayatId: post.panchayatId ? String(post.panchayatId) : undefined,
-  author: post.authorName ?? "Panchayat Sachiv",
-  authorRole: "Panchayat Sachiv",
-  timestamp: post.publishedAt ?? post.createdAt ?? new Date().toISOString(),
-  content: post.bodyText ?? "",
-  media: post.mediaUrl
-    ? [
-        {
-          type: "image",
-          url: post.mediaUrl,
-        },
-      ]
-    : [],
-  likes: Number(post.likesCount ?? 0),
-  comments: Number(post.commentsCount ?? 0),
-  shares: Number(post.viewCount ?? 0),
-});
+const mapPostResponse = (post: ServerPost): Post => {
+  const urls = post.mediaUrls?.length
+    ? post.mediaUrls
+    : post.mediaUrl
+      ? [post.mediaUrl]
+      : [];
+  return {
+    id: String(post.postId),
+    panchayatId: post.panchayatId ? String(post.panchayatId) : undefined,
+    author: post.authorName ?? "Panchayat Sachiv",
+    authorRole: "Panchayat Sachiv",
+    timestamp: post.publishedAt ?? post.createdAt ?? new Date().toISOString(),
+    content: post.bodyText ?? "",
+    media: urls.map((url) => ({ type: "image" as const, url })),
+    likes: Number(post.likesCount ?? 0),
+    comments: Number(post.commentsCount ?? 0),
+    shares: Number(post.viewCount ?? 0),
+  };
+};
 
 const mapCommentResponse = (comment: ServerComment): Comment => ({
   id: String(comment.commentId),
