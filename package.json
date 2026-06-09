@@ -9,10 +9,11 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "preview": "vite preview",
+    "preview": "npm run build && wrangler dev",
     "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
     "type-check": "tsc --noEmit",
-    "start": "node server.js"
+    "start": "node server.js",
+    "deploy": "npm run build && wrangler deploy"
   },
   "dependencies": {
     "@radix-ui/react-accordion": "^1.2.12",
@@ -79,6 +80,7 @@
     "vaul": "^1.1.2"
   },
   "devDependencies": {
+    "@cloudflare/vite-plugin": "^1.40.1",
     "@tailwindcss/postcss": "^4.1.17",
     "@types/leaflet": "^1.9.21",
     "@types/node": "^24.10.0",
@@ -91,6 +93,7 @@
     "postcss": "^8.5.6",
     "tailwindcss": "^4.1.17",
     "typescript": "^5.9.3",
-    "vite": "^7.2.2"
+    "vite": "^7.2.2",
+    "wrangler": "^4.99.0"
   }
 }
