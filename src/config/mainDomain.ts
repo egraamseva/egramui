@@ -9,7 +9,8 @@
 const DEFAULT_MAIN_DOMAINS = [
   "localhost",
   "127.0.0.1",
-  "egram.up.railway.app", // production; add more here or via VITE_APP_MAIN_DOMAINS
+  "egram.up.railway.app",
+  "egramseva.com"
 ];
 
 function parseMainDomains(): string[] {
